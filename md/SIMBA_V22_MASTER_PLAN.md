@@ -180,11 +180,13 @@ per verb: `useClosePlayback()` in `src/infrastructure/player/` is the only
 thing that tears playback down, and every close affordance in both lanes
 routes through it. Two owners of one teardown drift.
 
-### D-10 — The PiP entry has ONE owner, and the ORDER is the contract ✅ locked 2026-11-03 · **corrected 2026-11-04**
+### D-10 — The PiP entry has ONE owner, and the ORDER is the contract ✅ locked 2026-11-03 · **corrected 2026-11-04 · re-measured 2026-11-05 · re-measured 2026-11-06 — the ORDER alone is NOT sufficient, and the path to the ask must be SHORT; the second clause is now DEVICE-PROVEN (5 of 5 on lib v3.3.5) — the chrome is still in the window (B-050 REOPENED) and a refused entry loses the chrome for good (B-054 OPEN)**
 
-**The chrome is gone from the frame the platform captures, and only then is
-the OS asked.** Not the other way round, and not "the OS is asked and the
-chrome is corrected afterwards".
+**THE CONTRACT: the chrome must be gone from the frame the platform captures,
+and only then is the OS asked.** Not the other way round, and not "the OS is
+asked and the chrome is corrected afterwards". **This contract is NOT yet met
+on the HOME path** — the 2026-11-05 re-measurement is at the end of this
+entry.
 
 **The CONSUMER performs the auto-enter; the platform does not.** The
 library used to arm Android's own switch
@@ -194,6 +196,21 @@ anything first. That is the wrong order for an app that draws its own
 chrome over the picture, because **the PiP window shows the app window's last
 drawn frame** — whatever was on screen when the transition happened is what
 the PiP window keeps showing.
+
+**⇒ AND `pip.autoEnterOnLeave` CHANGED WHAT IT MEANS — the semantic change, in
+one line.** Before lib v3.0.5 the flag **armed Android's own switch**
+(`PictureInPictureParams.Builder.setAutoEnterEnabled`, API 31+), so the
+**platform** performed the transition and the app's hooks were never
+consulted. **Since v3.0.5 that switch is never armed**: the flag is now a
+**consumer policy the library checks** before it enters
+(`pipAutoEnterForCompanion`, read from the resolved config), and the
+**library** performs the entry. The flag keeps its public meaning for the
+consumer — "enter Picture-in-Picture when the user leaves the app" — and only
+the **performer** changed. v3.2.0 then retired the library's `onUserLeaveHint`
+**event** (the library's event list is **26**, not 27), because the library
+took the HOME path over and that event's only consumer was the JS-driven entry
+it replaced. *(lib CHANGELOG v3.0.5 and v3.2.0; `MpvBridgeModule.kt`'s
+`pipAutoEnter` docblock; `md/SIMBA_PIP_STANDARD_PLAN.md` §5.)*
 
 **⇒ AND THE PLATFORM'S AUTO-ENTER DOES NOT EVEN CALL THE APP** (measured on
 emulator-5554, API 37, on 2026-11-04). With the switch armed, the transition
@@ -233,6 +250,35 @@ native entry never ran. lib **v3.3.1** disarms the switch, enters from
 `onPictureInPictureRequested()`, and hides the chrome **in the entry, before
 the window is asked for**.
 
+**⇒ AND RE-MEASURED ON 2026-11-05: THE ORDER IS NECESSARY AND NOT SUFFICIENT —
+B-050 is REOPENED.** With the app on npm 3.3.2 (v3.3.2 changed comments and
+tests only, so this is v3.3.1's behaviour), the HOME path opened the window
+and the video played live in it — and the window **still carried the app's
+full expanded chrome**, scaled down. The trace:
+
+```
+11-05 11:45:33.942 I/MainActivity: onPictureInPictureRequested: the platform asked the app to enter PiP
+11-05 11:45:34.002 I/MpvBridgeModule: companion.hideConsumerChrome: hid the chrome view with nativeID 'simba-expanded-chrome' visibility=8
+11-05 11:45:34.293 I/MpvBridgeModule: companion.notifyUserLeaveHint: entered PiP
+11-05 11:45:35.159 I/MainActivity: onPictureInPictureModeChanged: isInPip=true
+```
+
+The hide ran **291 ms before** the entry, and the chrome was still in the
+window. **⇒ THE ORDER IS NOT THE WHOLE CONTRACT: the hide has to be DRAWN.**
+A native `visibility = GONE` is a View-system mutation that **schedules** a
+traversal; it reaches the pixels only if a frame is actually drawn before the
+platform takes the window.
+
+**⇒ AND THE 2026-11-06 MEASUREMENT ANSWERED IT: the hide was NOT drawn.**
+`draws=6863` at `[before-entry]` and `draws=6863` at `[after-entry]` — the
+window's draw counter did **not** move at all between the hide and the entry,
+because **the hide and the entry run in the SAME main-thread message**, and a
+traversal can only run *between* messages. The chrome view itself was correct
+the whole way through (`GONE`, the same view identity before the hide and
+after the mode change, every child `shown=false` when the platform reported
+the mode change) — it simply never reached the pixels. **⇒ this entry's
+first sentence is now a FACT, not a requirement.**
+
 **Two facts, written together and read apart.** `pipActive` means "the
 chrome must be gone"; `pipEntryRequested` means "a window was asked for".
 `requestPip()` writes both in ONE store update, so there is no frame in
@@ -261,6 +307,75 @@ entry) · AOSP `Activity.java` (`onPictureInPictureRequested`,
 auto-enter refusal) and `ActivityThread.java`
 (`handlePictureInPictureRequested`) · Android's own guidance: "Remove other UI
 elements before your activity enters PiP" (`developer.android.com/develop/ui/views/picture-in-picture`).
+
+#### 2026-11-06 — the contract gained a SECOND clause: the path to the ask must be SHORT
+
+**The ORDER (hide, then ask) is not the whole contract. The TIME between
+the platform's request and the ask is part of it.** The Activity is only
+RESUMED for a few hundred milliseconds after
+`onPictureInPictureRequested()`, and `enterPictureInPictureMode` throws
+unless the Activity is RESUMED.
+
+That clause was violated twice, in opposite directions, and both are
+measured:
+
+- **lib v3.3.3** deferred the ask to the window's next draw. The ask landed
+  **1.8 s** after the request, the Activity had been paused, and the OS
+  **refused** the entry — **no PiP window opened at all**.
+- **lib v3.3.4** restored the synchronous ask, and the entry worked (69 ms
+  after the request) — but it was **flaky, 2 of 5**. The path to the ask
+  read the engine's state **FOUR times** (each read is three mpv properties
+  over JNI, each blocking until mpv's core thread answers) and made **two**
+  binder round trips, so it cost 0.1-2.3 s. The entry succeeded only when
+  the path happened to be fast.
+
+**lib v3.3.5** is the fix for the second one: the state is read **ONCE**, the
+params are built **ONCE**, and the separate `setPictureInPictureParams` is
+gone (`enterPictureInPictureMode(params)` carries them). **Twelve blocking
+reads become three; two builds become one; two round trips become one.**
+
+**⇒ D-10's contract, in its final form: the library owns the entry; the
+chrome is hidden before the ask; the ask happens INSIDE the callback; and
+the path to the ask must be short enough to fit in the RESUMED window.**
+The first three clauses are the library's to keep. The fourth is why the
+latency fix is part of the entry contract and not a performance nicety.
+
+#### 2026-11-06 — the second clause is now DEVICE-PROVEN (lib v3.3.5)
+
+Measured on emulator-5554 (API 37) with the app consuming **npm 3.3.5**,
+N=5 HOME presses with the media loaded and the video PLAYING — the
+pre-press screenshots confirm the chrome was drawn and the video running at
+the moment of every press:
+
+| press | request | `entered PiP` | latency |
+|---|---|---|---|
+| 1 | 18:02:33.260 | 18:02:33.360 | 100 ms |
+| 2 | 18:04:08.779 | 18:04:08.800 | 21 ms |
+| 3 | 18:04:22.094 | 18:04:22.128 | 34 ms |
+| 4 | 18:04:34.914 | 18:04:34.956 | 42 ms |
+| 5 | 18:04:47.544 | 18:04:47.551 | 7 ms |
+
+**All 5 of 5 presses opened a PiP window** — `dumpsys` reported
+`mLastReportedPictureInPictureMode=true` every time, against **2 of 5** on
+v3.3.4. **⇒ the fourth clause now holds in practice: the path to the ask
+fits inside the RESUMED window on every press.**
+
+**And the PAUSED case now opens too** (11 ms). On v3.3.4 a HOME press with
+the video paused was **refused**, and the cause was read as a policy. It
+was not: **it was the same latency.** The library never refused a paused
+session — the pause state does not block the entry.
+
+**What the latency fix did NOT change: the chrome.** Every capture still
+shows the app's header, scrub row, ±10 buttons and big play/pause button in
+the window. That is D-12's subject, and it is still open.
+
+**One more thing the fast entry exposed** (measured 2026-11-06, and it is a
+defect of its own): with the platform appop `PICTURE_IN_PICTURE` denied the
+OS refuses the entry **16 ms** after the hide, and the chrome is **never
+restored** — `restoreConsumerChrome()` is called from exactly one place
+(`onPictureInPictureModeChanged(false)`), and a refusal never produces a
+mode change. The app comes back with the **whole chrome gone** and the only
+recovery is to kill the app. **⇒ B-054, P1, OPEN.**
 
 ---
 
@@ -378,7 +493,7 @@ View-system mutation and schedules a real traversal.
 Recorded as `B-049` / `B-051` / `F-062` / `F-063` in
 `SIMBA_BUG_TRACKER_2026_10_21.md`.
 
-### D-12 — The PiP window holds the video and nothing else, and the HOME entry is NATIVE ✅ locked 2026-11-03 · **corrected 2026-11-04**
+### D-12 — The PiP window holds the video and nothing else, and the HOME entry is NATIVE ✅ locked 2026-11-03 · **corrected 2026-11-04 · re-measured 2026-11-05 · re-measured 2026-11-06 — the HOME path still carries the chrome, and the cause is now MEASURED; re-measured on lib v3.3.5: UNCHANGED (B-050 REOPENED)**
 
 **A Picture-in-Picture window contains the VIDEO and the platform's action
 row. Nothing else. Ever.** Not the app's chrome, not a frozen copy of the
@@ -452,13 +567,19 @@ platform has already frozen the window, so a hide there can never reach the
 PiP window's pixels. The platform's auto-enter switch is **not armed**, so the
 app owns the entry and the hook is AOSP's own.
 
-**⇒ AND THE RE-PARENT IS NOT NEEDED.** react-native-video and expo-video both
-re-parent the player into `android.R.id.content` and `GONE` every sibling.
-They have **no separate chrome view** to hide; we do, and the chrome root is a
-separate view from the picture, so hiding it makes the window video-only on
-its own. A re-parent would detach the `SurfaceView` → `surfaceDestroyed` →
-mpv VO teardown → the decoder rebuilt in software — mpv's decoder is not
-decoupled from its output surface the way ExoPlayer's is.
+**⇒ AND THE RE-PARENT IS NOT NEEDED — but the REASON changed, and one claim in it
+was false.** react-native-video and expo-video both re-parent the player into
+`android.R.id.content` and `GONE` every sibling. They have **no separate
+chrome view** to hide; we do. **The claim that hiding our chrome root "makes
+the window video-only on its own" was DISPROVED on 2026-11-05**: the native
+hide ran **291 ms before** the entry and the window still carried the chrome
+(D-10). Hiding the chrome root is still the right first step — it is what a
+**drawn** frame needs — but it is not sufficient by itself. What those two
+libraries actually do (the player re-parented, every sibling GONE) is now the
+reference shape for the step that is still missing. A re-parent would detach
+the `SurfaceView` → `surfaceDestroyed` → mpv VO teardown → the decoder rebuilt
+in software — mpv's decoder is not decoupled from its output surface the way
+ExoPlayer's is — so it is the LAST resort, not the first one.
 
 **⇒ AND THE CROP IS NOT A MECHANISM.** The 3.2.0 and 3.3.0 releases claimed
 that "the platform crops your window to the rect in `setSourceRectHint(...)`".
@@ -486,6 +607,63 @@ refusal as "PiP failed", and the chrome comes back over a live PiP window.
 
 **One entry, one owner, one order.** Recorded as `B-050` / `F-064` in
 `SIMBA_BUG_TRACKER_2026_10_21.md`.
+
+#### 2026-11-06 — the chrome's cause is MEASURED: the chrome-less frame is never DRAWN
+
+The rule above says "the PiP window holds the video and nothing else". The
+HOME path still breaks it, and for the first time the cause is measured
+rather than inferred. On emulator-5554 (API 37), on the npm 3.3.4 build:
+
+- the native hide lands on the **right view** — the chrome root goes `GONE`
+  and **stays** gone (the same view identity before the hide and after
+  `onPictureInPictureModeChanged(true)`), and every child of it reads
+  `shown=false` when the platform reports the mode change;
+- the window's draw counter does **not** move between the hide and the entry
+  (`draws=6863` at `[before-entry]`, `draws=6863` at `[after-entry]`);
+- the PiP window's **video layer is LIVE** — the frame advanced between two
+  captures taken two minutes apart — while its **UI layer is a FROZEN
+  SNAPSHOT**, still showing the scrub row's `0:44 / 5:09` from the moment of
+  the entry, together with the header, the ±10 buttons and the big pause
+  button.
+
+**⇒ THE MECHANISM: the hide and the entry run in the SAME main-thread
+message.** A traversal — and therefore a draw — can only run *between*
+main-thread messages. So the chrome-less frame is never drawn, the paused app
+never draws again, and the PiP window keeps the app's last drawn frame, which
+still has the chrome in it.
+
+**⇒ THE REMAINING FIX, in one sentence: the chrome-less frame has to be
+DRAWN before the window is asked for — one main-thread message between the
+hide and the ask, with the ask still inside the RESUMED window.** The 3.3.3
+release tried exactly that and broke the entry, because the path to the ask
+was 1.8 s long; with lib v3.3.5's latency fix there is finally room for one
+frame.
+
+**⇒ NOT FIXED. B-050 stays REOPENED, with a one-sentence cause.**
+
+#### 2026-11-06 (later) — re-measured on lib v3.3.5: the chrome is still there
+
+The v3.3.5 latency fix changed the **entry**, not the **chrome**. Measured
+on emulator-5554 (API 37) with the app consuming **npm 3.3.5**, N=5 HOME
+presses with the video playing plus the paused case: **6 of 6 windows
+opened**, and **every one of them carries the app's chrome** — the header,
+the scrub row, the ±10 buttons and the big play/pause button, painted over
+the live video (`.scratch-shots/pip-v335-p1.png`, playing, scrub row
+`0:30 / -5:23`; `.scratch-shots/pip-v335-p6.png`, paused, scrub row
+`3:38 / -2:15`).
+
+**⇒ D-12's rule is still broken on the HOME path, and the cause is the one
+measured above: the chrome-less frame is never drawn.** The fix is still
+owed, and the v3.3.5 latency fix is what finally makes it possible: the ask
+now takes 7-100 ms, so there is room for one main-thread message between
+the hide and the ask.
+
+**And a second, separate defect on the same path** — the one the fast
+refusal exposed: when the OS **refuses** the entry, the chrome is hidden
+and **never restored**, because `restoreConsumerChrome()` is reached only
+from `onPictureInPictureModeChanged(false)` and a refusal never produces a
+mode change. The app comes back with no controls at all. **⇒ B-054, P1,
+OPEN.**
 
 ### Stage 0 — Stopgap commit *(pending Paval's review)*
 `App.tsx` + `src/app/BrowsingStack.tsx` + `__tests__/app/` on a branch.

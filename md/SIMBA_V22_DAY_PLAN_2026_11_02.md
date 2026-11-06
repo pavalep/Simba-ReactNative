@@ -1,7 +1,37 @@
 # SIMBA — the day's plan (2026-11-02)
 
-**Status:** PROPOSED. Nothing in it has been executed. It starts on your
-confirmation.
+> ## ⚠️ SUPERSEDED — a dated plan, kept as the record of what was decided
+>
+> **This document is a dated plan (2026-11-02), and its "Status: PROPOSED"
+> line is out of date: the work it planned WAS executed.** It is kept as the
+> record of the decisions, and of the open questions that were still open at
+> the time.
+>
+> **One decision in it was decided WRONG and the device disproved it.**
+> **D-2** below asks *"what does the PiP source rect mean?"* and offers
+> option (a) — *"the PiP window crops exactly to the picture"*.
+> **There is no crop.** `setSourceRectHint` is a **TRANSITION** hint: it
+> tells the platform which region of the window the PiP window should
+> animate **from**. It does not crop the app's content. Measured on
+> `emulator-5554` (API 37) on **2026-11-04**, with the source rect
+> committed, the PiP window showed the app's **full** chrome, scaled down.
+> The hint is still shipped — option (a) was implemented, in lib **v3.0.3** —
+> but it is the **video's own rect** used as an animation hint, and it is
+> **not** what keeps the chrome out.
+>
+> **What keeps the chrome out** was measured on **2026-11-05**: the PiP
+> window's UI layer is the app's **last drawn frame** (a snapshot), so the
+> chrome must be gone from the frame the platform captures — which means
+> the hide has to be **drawn**, not merely applied. That is lib **v3.3.3**.
+>
+> Read **`md/SIMBA_PIP_STANDARD_PLAN.md`** for the current state of PiP, and
+> **`md/SIMBA_BUG_TRACKER_2026_10_21.md`** **B-050** for the measurement.
+
+**Status (as written on 2026-11-02):** PROPOSED. Nothing in it has been
+executed. It starts on your confirmation.
+
+**Status now:** the plan WAS executed; see the banner above. This line is
+kept as it was written on the day.
 
 **Baseline:** app `a2ba371` on `f5/w22-close-minimise-d9` (clean, pushed) ·
 lib `7b29563` (clean, pushed), npm `latest` = 2.1.0.

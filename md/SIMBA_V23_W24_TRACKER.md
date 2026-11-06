@@ -377,11 +377,66 @@ Every item that is **not** closed, listed on its own:
    down. **OPEN**, unrelated to this wave.
 7. **B-052** — the PiP play/pause fix is proven on the device; the tracker's
    status line still says "device proof pending" and has not been closed.
-8. **The `md/` sweep** — the plan and tracker docs still carry the
-   "JS-driven HOME entry" claim, which was **disproven by measurement**
-   (the Activity pauses 11 ms after `onPictureInPictureRequested` returns
-   true), and any claim that "the platform crops the app's window".
-9. **The plan doc's §5 row** for lib v3.3.1 still reads "PENDING — measured
-   on the v3.3.1 build".
-10. **D-10 / D-12** in `SIMBA_V22_MASTER_PLAN.md` do not yet record the
-    `pip.autoEnterOnLeave` semantic change.
+8. **The `md/` sweep — CLOSED 2026-11-06.** Every "JS-driven HOME entry" and
+   "the platform crops the app's window" hit left in `md/` is now inside a
+   labelled retraction or a correct statement that the entry CANNOT be driven
+   from JS. The sweep was re-run over `md/` after the v3.3.4 change.
+9. **The plan doc's §5 row for lib v3.3.1 — CLOSED 2026-11-06.** It carries
+   the measured result, and it now has rows for **v3.3.3** (the entry broke),
+   **v3.3.4** (the entry works again) and **v3.3.5** (the latency fix), plus
+   a row for the measured cause of the chrome.
+10. **D-10 / D-12 in `SIMBA_V22_MASTER_PLAN.md` — CLOSED 2026-11-06.** Both
+    record the `pip.autoEnterOnLeave` semantic change, and both now carry the
+    2026-11-06 measurement: D-10 the second clause (the path to the ask must
+    be short), D-12 the chrome's measured cause (the chrome-less frame is
+    never DRAWN).
+11. **B-050 — the chrome in the PiP window.** The HOME path opens a PiP
+    window on **every** press (**lib v3.3.5**, device-proven 2026-11-06:
+    5 of 5 with the video playing, plus the paused case). The **chrome is
+    still in the window**, and the cause is measured: the hide and the entry
+    run in the **same main-thread message**, so no traversal can run between
+    them, so **the chrome-less frame is never drawn**, and the paused app
+    never draws again. **The fix:** one main-thread message between the hide
+    and the ask, with the ask still inside the RESUMED window. **NOT DONE.**
+12. **lib v3.3.5 device proof — CLOSED 2026-11-06.** N=5 HOME presses with
+    the video playing, the video **paused** case, and the entry-path latency
+    in the log, all measured on emulator-5554 (API 37) with the app on
+    **npm 3.3.5**: **5 of 5 presses opened a window** (v3.3.4 gave 2 of 5),
+    the entry latency was **100 / 21 / 34 / 42 / 7 ms** (v3.3.4: 136 and
+    182 ms for the successes, 832-1570 ms for the refusals), and the
+    **paused** case opens in 11 ms — so the v3.3.4 paused refusal was a
+    **latency symptom, not a policy**. Raw numbers:
+    `X:/Development/SIMBA/.scratch-pip-v335-measure.log`.
+13. **The no-jank measurement — ATTEMPTED 2026-11-06, the goal stays
+    UNPROVEN.** Measured on an idle host with `dumpsys gfxinfo`, with a
+    **baseline** of the app idle in the fullscreen player for the same 5 s
+    window: baseline **12 frames, 12 janky (100 %), p50 29 ms**; PiP entry
+    **7 frames, 85.71 % janky, p50 109 ms**; PiP exit **17 frames,
+    88.24 % janky, p50 23 ms**. **⇒ the metric is saturated before any
+    transition happens** — the idle baseline is already 100 % janky, and
+    the samples are 7-17 frames because the app's UI is static (the video
+    is a separate SurfaceFlinger layer, not counted in the app's frame
+    stats). **This emulator cannot prove the goal either way; it needs a
+    real device.** Raw numbers:
+    `X:/Development/SIMBA/.scratch-pip-v335-jank2.log`.
+14. **The throwaway diagnostic — CLOSED 2026-11-06.** `PipDiag.kt` and its
+    four call sites in `MainActivity.kt` are gone: `MainActivity.kt` is back
+    at HEAD and the diagnostic file was moved out of the repo to
+    `X:/Development/SIMBA/.scratch-PipDiag.kt`. It is not in the commit.
+15. **The API 24-30 PiP path** — never device-measured; the emulator is
+    API 37.
+16. **B-054 — a REFUSED PiP entry leaves the app with NO controls (NEW,
+    found 2026-11-06).** Measured by denying the platform appop
+    (`adb shell appops set com.simba.player PICTURE_IN_PICTURE deny`): the OS
+    refuses 16 ms after the hide and **`restoreConsumerChrome` never runs**,
+    because it is reached only from `onPictureInPictureModeChanged(false)`
+    and a refusal never produces a mode change. The app comes back with the
+    **whole chrome gone** — no header, no scrub row, no transport row —
+    tapping the video does not bring it back, and **the only recovery is to
+    kill the app**. **P1, OPEN.** The fix is specified in the tracker: the
+    refusal branch must restore the chrome before it returns, and it belongs
+    to the next lib release.
+17. **The chrome fix itself (B-050) — NOT DONE.** One main-thread message
+    between the hide and the ask, with the ask still inside the RESUMED
+    window. The v3.3.5 latency fix (7-100 ms) is what finally leaves room
+    for one frame. Needs its own lib release, gates and a device re-proof.

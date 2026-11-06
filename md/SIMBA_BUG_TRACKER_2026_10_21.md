@@ -2306,7 +2306,7 @@ every step.
 
 ---
 
-### B-050 · P0 · app · pressing HOME does not enter Picture-in-Picture at all — the React commit never lands while the Activity is paused — **RESOLVED (lib v3.3.1, 2026-11-04)**
+### B-050 · P0 · app · pressing HOME does not enter Picture-in-Picture at all — the React commit never lands while the Activity is paused — **REOPENED (2026-11-05: the window opens, the chrome is still in it)**
 
 **Symptom (as first reported).** With the player expanded, pressing HOME opened **no** PiP window.
 The app went to the launcher, and when the user came back the player was **blank and
@@ -2403,30 +2403,231 @@ Two things were wrong with it, and both were found by measurement:
    is a TRANSITION hint, the region the PiP window animates *from*, not a
    content crop. It is retracted in lib v3.3.1.)
 
-**Stage 3 — lib v3.3.1: the app owns the entry, and the chrome is gone before
-the window is asked for.**
+**Stage 3 — lib v3.3.1: the app owns the entry, and the chrome is hidden
+before the window is asked for.**
 
 - The platform's auto-enter switch is **not armed**. `autoEnter` is a
   **consumer policy** the library checks before it enters — never a platform
   switch.
 - The entry runs from **`Activity.onPictureInPictureRequested()`** (API 31+),
   which AOSP calls while the Activity is still **RESUMED** — the only moment
-  `enterPictureInPictureMode()` is legal at all, and the moment the app is
-  still drawing. On API 24-30 the **same** library call is served from
-  `onUserLeaveHint()`. One entry, one owner, every API level.
+  `enterPictureInPictureMode()` is legal at all. On API 24-30 the **same**
+  library call is served from `onUserLeaveHint()`. One entry, one owner,
+  every API level.
 - The chrome is hidden **in the entry, BEFORE the window is asked for** — not
   in `onPictureInPictureModeChanged(true)`.
 - The **BUTTON** path is unchanged and still clean: React unmounts the chrome
   while the app is foregrounded, a frame is drawn, and only then is the OS
-  asked. The HOME path now does the same thing natively.
+  asked.
 
 **The PiP play/pause button is fixed in the same release** — see **B-052**.
 It was inert because the receiver read mpv's `playback-state`, a property mpv
 does **not** have, so the answer was always "not playing" and the button
 always called PLAY on an already-playing video.
 
-**State: RESOLVED — lib v3.3.1** (commit `1d96941`, tag `v3.3.1`, npm
-3.3.1). The device proof is recorded in `md/SIMBA_PIP_STANDARD_PLAN.md` §5.
+### Stage 4 — MEASURED 2026-11-05: the entry opens the window, and the chrome is STILL in it — ✘
+
+The stage-3 mechanism shipped and the ORDER it claims is real — but the
+outcome it claimed did not happen. Measured on emulator-5554 (API 37) on
+2026-11-05, with the app consuming **npm 3.3.2** (v3.3.2 changed comments
+and tests only, so this is v3.3.1's behaviour):
+
+```
+11-05 11:45:33.942 I/MainActivity: onPictureInPictureRequested: the platform asked the app to enter PiP
+11-05 11:45:34.002 I/MpvBridgeModule: companion.hideConsumerChrome: hid the chrome view with nativeID 'simba-expanded-chrome' visibility=8
+11-05 11:45:34.293 I/MpvBridgeModule: companion.notifyUserLeaveHint: entered PiP
+11-05 11:45:34.300 I/MainActivity: onUserLeaveHint: the user is leaving the app
+11-05 11:45:34.300 I/MpvBridgeModule: companion.notifyUserLeaveHint: already in PiP; not entering again
+11-05 11:45:35.159 I/MainActivity: onPictureInPictureModeChanged: isInPip=true
+11-05 11:45:35.184 I/MpvBridgeModule: companion.hideConsumerChrome: hid the chrome view with nativeID 'simba-expanded-chrome' visibility=8
+```
+
+The hide ran **291 ms BEFORE** the entry, and the window still carried the
+app's full expanded chrome — the header band, the ±10 buttons, the big pause
+button, the scrub row — scaled down over the live video. Screenshot:
+`X:/Development/SIMBA/.scratch-shots/probe-02-pip-idle.png` (the video frame
+in it differs from the 2026-11-04 capture, so the video was playing live
+behind the chrome).
+
+**What this disproves.** "Hide the chrome natively before the entry" does
+**not** keep the chrome out of the PiP window. That is measured, not
+inferred. The library's own docblock already carries the likely mechanism:
+*"the PiP window IS the Activity's own window, and it shows that window's
+LAST RENDERED FRAME"*. A native `visibility = GONE` is a View-system mutation
+that **schedules** a traversal; it reaches the pixels only if a frame is
+actually drawn before the platform takes the window. **Which of the two
+happened is what the next measurement separates** — a draw-count and the
+chrome view's own visibility/identity at each stage, from
+`android/app/src/main/java/com/simba/player/PipDiag.kt` (a throwaway
+diagnostic, not a shipped file).
+
+**What is NOT reopened.** The **BUTTON** path is untouched: React unmounts
+the chrome while the app is foregrounded, a frame is drawn, and the OS is
+asked afterwards. Its 2026-11-04 proof (video only, no chrome:
+`.scratch-shots/frames-01-pip.png`) stands; it was not re-measured on
+2026-11-05.
+
+**State: REOPENED (2026-11-05).** The HOME path opens the window and the
+chrome is still in it. The hide ran before the entry and did not reach the
+pixels.
+
+#### v3.3.3 broke the entry outright, and v3.3.4 put it back
+
+The 3.3.3 release gated the entry on the window's next draw, so the
+chrome-less frame would be on the screen before the platform took the
+window. Measured on emulator-5554 (API 37) on 2026-11-05, and again on
+2026-11-06:
+
+```
+15:21:28.392  onPictureInPictureRequested: the platform asked the app to enter PiP
+15:21:28.423  hideConsumerChrome: hid the chrome view ... visibility=8
+15:21:28.826  the PiP entry is scheduled for the next draw
+15:21:29.139  onUserLeaveHint: the user is leaving the app
+15:21:30.186  askForTheWindow: the OS refused the PiP entry
+```
+
+`dumpsys` reported `mLastReportedPictureInPictureMode=false`: **no PiP window
+opened at all**. The deferred ask landed 1.8 s after the platform's request,
+by which time the Activity had been paused, and `enterPictureInPictureMode`
+throws unless the Activity is RESUMED.
+
+**lib v3.3.4** restored the **synchronous** ask and withdrew the draw-gate
+claim in the same release — that claim was never proven, and the mechanism
+built on it is what broke the entry. Measured on 2026-11-06, on the npm 3.3.4
+build:
+
+```
+16:39:03.238  onPictureInPictureRequested: the platform asked the app to enter PiP
+16:39:03.239  [before-entry] draws=6863 chromeId=6394440 vis=0 shown=true
+16:39:03.273  hideConsumerChrome: hid the chrome view ... visibility=8
+16:39:03.307  notifyUserLeaveHint: entered PiP        ← 69 ms after the request
+16:39:03.308  [after-entry] draws=6863 inPip=true chromeId=6394440 vis=8 shown=false
+16:39:04.312  onPictureInPictureModeChanged: isInPip=true
+```
+
+`dumpsys` reported `mLastReportedPictureInPictureMode=true`. **⇒ the P0 is
+fixed: pressing HOME opens a PiP window again.**
+
+#### AND the entry is FLAKY (2 of 5) — the cause is the entry path's LATENCY
+
+The same run, N=5 HOME presses with the video playing: **presses 2 and 4
+opened a window; presses 1, 3 and 5 were REFUSED by the OS.** The log splits
+the path:
+
+```
+16:43:59.432  hideConsumerChrome
+16:43:59.805  commitPipParams: committed the PiP params   (373 ms)
+16:44:01.003  the OS refused the PiP entry               (1.2 s later)
+```
+
+**⇒ THE CAUSE: the entry path read the engine's state FOUR times and made
+TWO binder round trips.** `PlaybackState.live()` reads three mpv properties
+over JNI (`idle-active`, `eof-reached`, `pause`), and each blocks until mpv's
+core thread answers. The path read it for the "is media loaded" guard, again
+for the params builder's `playing` flag, again for its `autoEnter` policy,
+and then built the params a SECOND time for the entry itself. Twelve blocking
+reads, two builds, two round trips — and the Activity is only RESUMED for a
+few hundred milliseconds after the platform's request.
+
+**lib v3.3.5** reads the state ONCE, builds the params ONCE, and drops the
+separate `setPictureInPictureParams` (the entry carries them): **twelve
+blocking reads become three, two builds become one, two round trips become
+one.** The state is still read LIVE at the entry — the play/pause icon is not
+a cached flag.
+
+#### The chrome's cause is now MEASURED, not assumed
+
+Two captures of the same PiP window, two minutes apart
+(`.scratch-shots/pip-v334-play.png` and `pip-v334-later.png`):
+
+- the **video layer is LIVE** — the frame advanced between the two captures;
+- the **UI layer is a FROZEN SNAPSHOT** — the scrub row still read `0:44 /
+  5:09` in both, and the header, the ±10 buttons and the big pause button
+  are all still there.
+
+And the draw counter is the mechanism: `draws=6863` at `[before-entry]` and
+`draws=6863` at `[after-entry]`. **The hide and the entry run in the SAME
+main-thread message**, and a traversal can only run *between* main-thread
+messages — so **the chrome-less frame is never drawn**, and the paused app
+never draws again. The PiP window keeps the app's last drawn frame, and that
+frame still has the chrome in it.
+
+**⇒ THE REMAINING FIX, in one sentence: the chrome-less frame has to be
+DRAWN before the window is asked for — which needs one main-thread message
+between the hide and the ask, and the ask has to still be inside the
+RESUMED window.** The 3.3.3 release tried that and broke the entry, because
+the path to the ask was 1.8 s long. With the v3.3.5 latency fix there is
+finally room for one frame.
+
+#### v3.3.5 on the device: the entry is NO LONGER FLAKY
+
+Measured on emulator-5554 (API 37) on 2026-11-06, with the app consuming
+**npm 3.3.5**, the media loaded and the video **PLAYING**. N=5 HOME presses,
+each returning to the app in between so that at the moment of every press the
+chrome was drawn and the video was running — verified from the pre-press
+screenshots `.scratch-shots/pip-v335-pre2.png` and `pip-v335-pre5.png` (the
+chrome is fully drawn and the pause glyph is showing).
+
+**All 5 of 5 presses opened a PiP window** — `dumpsys` reported
+`mLastReportedPictureInPictureMode=true` every time. The same test on
+v3.3.4 gave **2 of 5**.
+
+The entry latency, from the platform's request to `entered PiP`:
+
+| press | request | entered PiP | latency |
+|---|---|---|---|
+| 1 | 18:02:33.260 | 18:02:33.360 | **100 ms** |
+| 2 | 18:04:08.779 | 18:04:08.800 | **21 ms** |
+| 3 | 18:04:22.094 | 18:04:22.128 | **34 ms** |
+| 4 | 18:04:34.914 | 18:04:34.956 | **42 ms** |
+| 5 | 18:04:47.544 | 18:04:47.551 | **7 ms** |
+
+For comparison, on v3.3.4 the two successful presses took 136 ms and 182 ms
+and the three REFUSED ones took 832-1570 ms. **⇒ the path to the ask now
+fits inside the RESUMED window every time.** That is the second clause of
+the entry contract (**D-10**), and it is now device-proven rather than
+argued.
+
+**The PAUSED case opens now too.** On v3.3.4 a HOME press with the video
+paused was REFUSED (`16:42:57.130 hide` → `16:42:57.443 refused`). On
+v3.3.5 it opens, in 11 ms (request `18:06:33.019` → `entered PiP`
+`18:06:33.030`). **⇒ that refusal was a LATENCY symptom, not a policy** —
+the library never refused a paused session, and the pause state does not
+block the entry.
+
+**The chrome is still in the window.** Every one of the 6 captured windows
+shows the app's header, the scrub row, the ±10 buttons and the big
+play/pause button painted over the live video:
+`.scratch-shots/pip-v335-p1.png` (playing, scrub row `0:30 / -5:23`) and
+`.scratch-shots/pip-v335-p6.png` (paused, scrub row `3:38 / -2:15`).
+**⇒ v3.3.5 changed the ENTRY, not the chrome. B-050 is unchanged: the entry
+is fixed, the chrome is not.**
+
+**State: REOPENED (2026-11-06).** The HOME path opens a PiP window on every
+press (v3.3.5, device-proven 5/5 plus the paused case). The chrome is still
+in the window, and its cause is measured.
+
+#### The NO-JANK goal is NOT proven, and this emulator cannot prove it
+
+The same session, measured with `dumpsys gfxinfo com.simba.player` on an
+idle host, with a **baseline** of the app sitting idle in the fullscreen
+player for the same 5 s window:
+
+| window | frames | janky | p50 | p90 |
+|---|---|---|---|---|
+| A baseline (idle 5 s, no transition) | 12 | 12 (100 %) | 29 ms | 34 ms |
+| B PiP entry (HOME) | 7 | 6 (85.71 %) | 109 ms | 450 ms |
+| C PiP exit (back to fullscreen) | 17 | 15 (88.24 %) | 23 ms | 34 ms |
+
+**⇒ the metric is saturated before any transition happens**: the IDLE
+baseline is already 100 % janky at a 29 ms median, and the samples are 7-17
+frames because the app's UI is static (the video is a separate
+SurfaceFlinger layer and is not counted in the app's own frame stats).
+
+So this measurement cannot show that the PiP transitions are jank-free, and
+it cannot show that they are not. **The NO-JANK goal stays UNPROVEN** — it
+needs a real device, not this emulator. Raw numbers:
+`X:/Development/SIMBA/.scratch-pip-v335-jank2.log`.
 
 ---
 
@@ -2462,7 +2663,7 @@ moment, but a native `visibility` change can.
 
 ---
 
-### B-052 · P3 · lib · the PiP play/pause button shows ▶ while the video is PLAYING — **FIXED (lib v3.3.1), device proof pending**
+### B-052 · P3 · lib · the PiP play/pause button shows ▶ while the video is PLAYING — **FIXED (lib v3.3.1) — device proof LANDED 2026-11-05**
 
 **Symptom.** In the Picture-in-Picture window the library's own action row
 carries a **Play** glyph (`android.R.drawable.ic_media_play`) on the
@@ -2506,10 +2707,21 @@ show ⏸.
     (`MpvBridgeModule.onPlaybackStateChanged()` → `commitPipParams`), so the
     glyph follows the **live** state rather than the state at entry.
 
-**Not closed until the device shows it.** The code is right and the fix is
-pinned by tests, but the glyph on the screen is a device fact, and the
-tracker does not close a defect on a reading of the source. The proof is
-recorded in `md/SIMBA_PIP_STANDARD_PLAN.md` §5.
+**The device proof landed on 2026-11-05** (emulator-5554, API 37), and it is
+recorded in `md/SIMBA_PIP_STANDARD_PLAN.md` §5:
+
+- the action row's play/pause **works** — the receiver logged
+  `play/pause: played` (00:04:15), `play/pause: paused` (00:04:22),
+  `play/pause: played` (00:05:08) and `play/pause: paused` (00:09:41);
+- the **glyph follows the live state**: the action row carried the ⏸ pause
+  glyph while the video was PLAYING (`.scratch-shots/pip-row3-paused.png`,
+  captured 00:07:49 — the file name says "paused", but the receiver log puts
+  the next pause at 00:09:41, so the video was playing in that frame), and the
+  ▶ play glyph after the 00:09:41 pause
+  (`.scratch-shots/pip-paused-icon.png`, 00:10:08). Two captures on either
+  side of one pause: the icon is state-driven, not fixed.
+
+**State: FIXED and PROVEN (lib v3.3.1; proven on the device 2026-11-05).**
 
 ---
 
@@ -2560,11 +2772,77 @@ drive the row — is still the better design on the evidence, and it is still
 **And the crop claim that shaped this row's story was retracted.** The
 3.2.0 and 3.3.0 releases said the platform crops the app's window to the
 source rect, and that this is what kept the chrome out of the PiP window.
-That was false: `setSourceRectHint` is a TRANSITION hint, and the chrome is
-kept out by HIDING it before the entry (lib v3.3.1). See **B-050** and
+That was false: `setSourceRectHint` is a TRANSITION hint. **And the
+replacement claim is ALSO not proven:** *"the chrome is kept out by HIDING it
+before the entry (lib v3.3.1)"* was measured on 2026-11-05 and it did **not**
+keep the chrome out — the native hide ran 291 ms before the entry and the
+window still carried the chrome. **⇒ The mechanism that keeps the chrome out
+is NOT identified yet.** See **B-050** (REOPENED) and
 `md/SIMBA_PIP_STANDARD_PLAN.md` §7.
 
 ---
+
+### B-054 · P1 · lib · a REFUSED PiP entry leaves the app with NO controls at all — **OPEN**
+
+**Symptom.** Press HOME in the player, the OS refuses the Picture-in-Picture
+entry, and the app comes back to a player with **the whole chrome gone** — no
+header, no scrub row, no transport row, no bottom row. Just the video, and
+nothing to control it with.
+
+**Measured** on emulator-5554 (API 37) on 2026-11-06, with the app
+consuming **npm 3.3.5**. The refusal was produced by denying the platform
+appop — `adb shell appops set com.simba.player PICTURE_IN_PICTURE deny` —
+which is the same class of refusal as a device where the user has turned
+Picture-in-Picture off for the app. (The appop was set back to `allow`
+after the measurement.)
+
+```
+18:14:49.332  onPictureInPictureRequested: the platform asked the app to enter PiP
+18:14:49.332  notifyUserLeaveHint: autoEnter=true chromeNativeId=simba-expanded-chrome
+18:14:49.334  hideConsumerChrome: hid the chrome view with nativeID 'simba-expanded-chrome' visibility=8
+18:14:49.348  the OS refused the PiP entry          ← 16 ms later
+18:14:49.349  onUserLeaveHint: the user is leaving the app
+18:14:49.349  notifyUserLeaveHint: autoEnter=true chromeNativeId=simba-expanded-chrome
+18:14:49.349  hideConsumerChrome: hid the chrome view ... visibility=8
+18:14:49.372  the OS refused the PiP entry
+```
+
+**`restoreConsumerChrome` never runs.** It is called from exactly one place
+— `onPictureInPictureModeChanged(false)` (`MpvBridgeModule.kt:319`) — and a
+REFUSED entry never produces a mode change, because the app never entered
+PiP. The refusal branch returns without restoring the chrome
+(`MpvBridgeModule.kt:648-651`). The hide ran **twice** — the entry path is
+reached from both `onPictureInPictureRequested()` and `onUserLeaveHint()`,
+and neither call restores what the other hid.
+
+**What the user gets.** The app comes back to the player with the whole
+chrome gone (`.scratch-shots/pip-v335-refused-back.png`). Tapping the video
+does **not** bring it back (`.scratch-shots/pip-v335-tap-recover.png`): the
+chrome root was set `GONE` natively, and RN 0.86 has no `visibility` prop,
+so no React commit can put it back. **The only recovery is to kill the
+app** — verified: after `am force-stop` and a relaunch, the player is drawn
+with its chrome again.
+
+**Severity: P1.** The player is unusable until the app is restarted, and the
+user is given nothing that says why.
+
+**Why it matters more than it looks.** The v3.3.5 latency fix made the
+entry fast enough that a refusal is now **prompt** (16 ms) rather than a
+side-effect of a slow path. Every OS-level reason to refuse — the user
+turning PiP off for the app, the platform refusing under memory pressure —
+now lands on this branch, and the branch is not covered by the lib's
+device proofs because on the tested configuration the refusal no longer
+happens at all.
+
+**The fix, specified.** The refusal branch must restore the chrome before
+it returns — `restoreConsumerChrome()` on the `!entered` path, so the
+restore has exactly one owner and does not depend on a PiP mode change that
+a refusal never produces. It belongs to the **next lib release**: a lib
+change needs its own gates, its own release, and a device re-proof, and
+this wave is a docs-and-measure wave.
+
+**State: OPEN.**
+
 
 
 ## FIXED
