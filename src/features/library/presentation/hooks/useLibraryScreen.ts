@@ -174,7 +174,7 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
   // ── Navigation Handlers ──
   // V16 Phase 73: removed 6 `(navigation as any).navigate(...)` casts.
   // The `as any` was hiding 3 real type issues:
-  //   1. `navigate('Settings')` needs the object form (no params)
+  //   1. `navigate('Settings')` needed the object form (no params)
   //      for the discriminated union to resolve.
   //   2. `navigate('FolderLinkingWizard')` had no string-form
   //      overload available in this composite.
@@ -184,18 +184,18 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
   //      silently dropping the album name on navigation, leaving
   //      the AlbumScreen to render with `albumName === ''`.
   // Each call uses the typed `{name, params?}` object form.
+  //
+  // The settings screens are ROOT routes now (they used to live in a
+  // nested `SettingsStack`), so the nested `{screen: …}` form is gone:
+  // `Settings`, `LinkedFolders` and `FolderLinkingWizard` are siblings
+  // of every other route, reached with one plain `navigate` call.
   const navigateToSettings = useCallback(() => {
-    // Settings is a nested-stack route on the root stack; the
-    // typed `navigate` requires the inner screen shape.
-    navigation.navigate({name: 'Settings', params: {screen: 'SettingsHome', params: undefined}});
+    navigation.navigate({name: 'Settings', params: undefined});
   }, [navigation]);
 
   const navigateToLinkedFolders = useCallback(
     (type: 'video' | 'audio') => {
-      navigation.navigate({
-        name: 'Settings',
-        params: {screen: 'LinkedFolders', params: {type}},
-      });
+      navigation.navigate({name: 'LinkedFolders', params: {type}});
     },
     [navigation],
   );
@@ -208,10 +208,7 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
   );
 
   const handleLinkFolder = useCallback(() => {
-    // FolderLinkingWizard is inside the Settings nested stack;
-    // its typed `params` object is required even though its
-    // inner `type` is optional.
-    navigation.navigate({name: 'Settings', params: {screen: 'FolderLinkingWizard', params: {}}});
+    navigation.navigate({name: 'FolderLinkingWizard', params: {}});
   }, [navigation]);
 
   const handleArtistPress = useCallback(

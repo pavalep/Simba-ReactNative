@@ -14,7 +14,6 @@ import {ActivityOrb} from '../../../components/feedback/ActivityOrb/ActivityOrb'
 import {Placeholder} from '../../../components/feedback/Placeholder';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
-import {useNavigation} from '@react-navigation/native';
 import {spacing} from '../../../theme/tokens';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {SectionHeader} from '../../../components/utility/SectionHeader/SectionHeader';
@@ -31,8 +30,7 @@ import {useSettingsStore} from '../../../state';
 
 type Props = SettingsScreenProps;
 
-export const SettingsScreen: React.FC<Props> = ({navigation: _nav}) => {
-  const nav = useNavigation<any>();
+export const SettingsScreen: React.FC<Props> = ({navigation: nav}) => {
   const {
     colors,
     styles,
@@ -161,13 +159,13 @@ export const SettingsScreen: React.FC<Props> = ({navigation: _nav}) => {
           {/* ── Discover Section (3) ── */}
           <Animated.View style={entrance.styles[3]}>
             <SectionHeader label="Discover" />
-            <SettingsRow label="Movies" description="Browse films and videos" onPress={() => nav.getParent()?.navigate('MoviesScreen')} />
-            <SettingsRow label="Podcasts" description="Browse podcast feeds and episodes" onPress={() => nav.getParent()?.navigate('PodcastsScreen')} />
-            <SettingsRow label="Music" description="Browse music and genres" onPress={() => nav.getParent()?.navigate('MusicScreen')} />
-            <SettingsRow label="Live TV" description="Browse live television channels" onPress={() => nav.getParent()?.navigate('LiveTVScreen')} />
-            <SettingsRow label="Live Radio" description="Browse live radio stations" onPress={() => nav.getParent()?.navigate('RadioScreen')} />
-            <SettingsRow label="Audiobooks" description="Browse spoken-word books" onPress={() => nav.getParent()?.navigate('AudiobooksScreen')} />
-            <SettingsRow label="Archives" description="Browse Internet Archive media" onPress={() => nav.getParent()?.navigate('ArchiveScreen')} />
+            <SettingsRow label="Movies" description="Browse films and videos" onPress={() => nav.navigate('MoviesScreen')} />
+            <SettingsRow label="Podcasts" description="Browse podcast feeds and episodes" onPress={() => nav.navigate('PodcastsScreen')} />
+            <SettingsRow label="Music" description="Browse music and genres" onPress={() => nav.navigate('MusicScreen')} />
+            <SettingsRow label="Live TV" description="Browse live television channels" onPress={() => nav.navigate('LiveTVScreen')} />
+            <SettingsRow label="Live Radio" description="Browse live radio stations" onPress={() => nav.navigate('RadioScreen')} />
+            <SettingsRow label="Audiobooks" description="Browse spoken-word books" onPress={() => nav.navigate('AudiobooksScreen')} />
+            <SettingsRow label="Archives" description="Browse Internet Archive media" onPress={() => nav.navigate('ArchiveScreen')} />
           </Animated.View>
           <View style={styles.sectionDivider} />
 

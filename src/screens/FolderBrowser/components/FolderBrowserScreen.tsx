@@ -217,7 +217,7 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
         action: error.toLowerCase().includes('permission')
           ? {
               label: 'Settings',
-              onPress: () => navigation.navigate('Settings', {screen: 'SettingsHome'}),
+              onPress: () => navigation.navigate('Settings'),
             }
           : {label: 'Retry', onPress: () => readDirectory(currentPath)},
       });

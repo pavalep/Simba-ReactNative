@@ -1,12 +1,38 @@
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
-import type {CompositeScreenProps, NavigatorScreenParams} from '@react-navigation/native';
 
 export type RootStackParamList = {
   Splash: undefined;
   Login: undefined;
   Home: undefined;
   Library: undefined;
-  Settings: NavigatorScreenParams<SettingsStackParamList>;
+  // ── The settings screens are ROOT routes (not a nested stack) ────────────
+  // They used to live in a `SettingsStack` mounted under the root route
+  // "Settings". That nesting forced three kinds of workaround, all of them
+  // symptoms of the same shape:
+  //   • the inner screen had to be renamed "SettingsHome", because React
+  //     Navigation warns when a screen name is nested inside a screen of the
+  //     same name (the warning the 3bf2666 commit silenced by renaming);
+  //   • every caller that wanted a settings screen had to spell the nested
+  //     form `navigate('Settings', {screen: 'Privacy'})`, which only works
+  //     for screens outside the navigator through `navigationRef`;
+  //   • `SettingsScreen`'s own rows had to reach THROUGH their navigator
+  //     with `nav.getParent()?.navigate(...)` to push root routes — and the
+  //     `?.` made a missing parent a silent no-op.
+  // The app has no tabs and exactly one stack, so the settings screens are
+  // siblings of every other screen. The deep-link PATHS are unchanged
+  // (`settings`, `settings/privacy`, …) — see navigation/linking.ts.
+  Settings: undefined;
+  About: undefined;
+  AudioSettings: undefined;
+  Equalizer: undefined;
+  LinkedFolders: {type: 'video' | 'audio'};
+  FolderLinkingWizard: {type?: 'video' | 'audio'};
+  Changelog: undefined;
+  Licenses: undefined;
+  Credits: undefined;
+  Privacy: undefined;
+  Terms: undefined;
+  Help: undefined;
   Bookmarks: undefined;
   Profile: undefined;
   History: undefined;
@@ -93,27 +119,6 @@ export type RootStackParamList = {
   Downloads: undefined;
 };
 
-export type SettingsStackParamList = {
-  // The main settings screen. It is NOT named "Settings": the root stack
-  // already has a route called "Settings" that hosts this stack, and React
-  // Navigation warns when a screen name is nested inside a screen of the
-  // same name ("Found screens with the same name nested inside one another:
-  // Settings, Settings > Settings"). The deep-link path is still
-  // "settings" — see navigation/linking.ts.
-  SettingsHome: undefined;
-  About: undefined;
-  AudioSettings: undefined;
-  Equalizer: undefined;
-  LinkedFolders: {type: 'video' | 'audio'};
-  FolderLinkingWizard: {type?: 'video' | 'audio'};
-  Changelog: undefined;
-  Licenses: undefined;
-  Credits: undefined;
-  Privacy: undefined;
-  Terms: undefined;
-  Help: undefined;
-};
-
 export type RootStackScreenProps<T extends keyof RootStackParamList> =
   NativeStackScreenProps<RootStackParamList, T>;
 
@@ -151,25 +156,23 @@ export type ShowDetailScreenProps = RootStackScreenProps<'ShowDetail'>;
 export type QueueScreenProps = RootStackScreenProps<'Queue'>;
 export type DownloadsScreenProps = RootStackScreenProps<'Downloads'>;
 
-// ── Helper for screens inside the Settings root stack navigator ──
-type SettingsStackScreenProps<T extends keyof SettingsStackParamList> = CompositeScreenProps<
-  NativeStackScreenProps<SettingsStackParamList, T>,
-  RootStackScreenProps<keyof RootStackParamList>
->;
-
-/** Composite props for Settings stack screens (rendered in RootStack). */
-export type SettingsScreenProps = SettingsStackScreenProps<'SettingsHome'>;
-export type AboutScreenProps = SettingsStackScreenProps<'About'>;
-export type AudioSettingsScreenProps = SettingsStackScreenProps<'AudioSettings'>;
-export type EqualizerScreenProps = SettingsStackScreenProps<'Equalizer'>;
-export type LinkedFoldersScreenProps = SettingsStackScreenProps<'LinkedFolders'>;
-export type FolderLinkingWizardScreenProps = SettingsStackScreenProps<'FolderLinkingWizard'>;
-export type ChangelogScreenProps = SettingsStackScreenProps<'Changelog'>;
-export type LicensesScreenProps = SettingsStackScreenProps<'Licenses'>;
-export type CreditsScreenProps = SettingsStackScreenProps<'Credits'>;
-export type PrivacyScreenProps = SettingsStackScreenProps<'Privacy'>;
-export type TermsScreenProps = SettingsStackScreenProps<'Terms'>;
-export type HelpScreenProps = SettingsStackScreenProps<'Help'>;
+// ── The settings screens ───────────────────────────────────────────
+//
+// These used to be typed as `CompositeScreenProps<SettingsStack…, RootStack…>`
+// so they could reach the root navigator from inside the nested one. They are
+// root routes now, so the composite is gone: one navigator, one props type.
+export type SettingsScreenProps = RootStackScreenProps<'Settings'>;
+export type AboutScreenProps = RootStackScreenProps<'About'>;
+export type AudioSettingsScreenProps = RootStackScreenProps<'AudioSettings'>;
+export type EqualizerScreenProps = RootStackScreenProps<'Equalizer'>;
+export type LinkedFoldersScreenProps = RootStackScreenProps<'LinkedFolders'>;
+export type FolderLinkingWizardScreenProps = RootStackScreenProps<'FolderLinkingWizard'>;
+export type ChangelogScreenProps = RootStackScreenProps<'Changelog'>;
+export type LicensesScreenProps = RootStackScreenProps<'Licenses'>;
+export type CreditsScreenProps = RootStackScreenProps<'Credits'>;
+export type PrivacyScreenProps = RootStackScreenProps<'Privacy'>;
+export type TermsScreenProps = RootStackScreenProps<'Terms'>;
+export type HelpScreenProps = RootStackScreenProps<'Help'>;
 
 declare global {
   namespace ReactNavigation {

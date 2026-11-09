@@ -308,13 +308,13 @@ export const ProfileScreen: React.FC<Props> = ({navigation}) => {
             <SettingsRow
               label="Local Media"
               description="Linked folders and device library"
-              onPress={() => navigation.navigate('Settings', {screen: 'LinkedFolders', params: {type: 'audio'}})}
+              onPress={() => navigation.navigate('LinkedFolders', {type: 'audio'})}
               trailing={<SvgIcon name="chevronRight" size={18} color={colors.text.tertiary} />}
             />
             <SettingsRow
               label="Settings"
               description="Appearance, audio, storage"
-              onPress={() => navigation.navigate('Settings', {screen: 'SettingsHome'})}
+              onPress={() => navigation.navigate('Settings')}
               trailing={<SvgIcon name="chevronRight" size={18} color={colors.text.tertiary} />}
             />
           </View>

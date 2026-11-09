@@ -33,25 +33,26 @@ export const linking: LinkingOptions<RootStackParamList> = {
             Stats: 'stats',
       Home: 'home',
       Library: 'library',
-      Settings: {
-        screens: {
-          SettingsHome: 'settings',
-          Equalizer: 'settings/equalizer',
-          About: 'settings/about',
-          AudioSettings: 'settings/audio',
-          LinkedFolders: 'settings/folders/:type',
-          FolderLinkingWizard: {
-            path: 'settings/folder-wizard/:type?',
-            parse: {type: decodeURIComponent},
-          },
-          Changelog: 'settings/changelog',
-          Licenses: 'settings/licenses',
-          Credits: 'settings/credits',
-          Privacy: 'settings/privacy',
-          Terms: 'settings/terms',
-          Help: 'settings/help',
-        },
+      // ── The settings screens ────────────────────────────────────────
+      // These used to sit in a nested `Settings` group. They are root
+      // routes now, but the PATHS are deliberately unchanged — the same
+      // URLs that resolved before still resolve, because a linking config
+      // maps a route NAME to a path, and the name is all that changed.
+      Settings: 'settings',
+      Equalizer: 'settings/equalizer',
+      About: 'settings/about',
+      AudioSettings: 'settings/audio',
+      LinkedFolders: 'settings/folders/:type',
+      FolderLinkingWizard: {
+        path: 'settings/folder-wizard/:type?',
+        parse: {type: decodeURIComponent},
       },
+      Changelog: 'settings/changelog',
+      Licenses: 'settings/licenses',
+      Credits: 'settings/credits',
+      Privacy: 'settings/privacy',
+      Terms: 'settings/terms',
+      Help: 'settings/help',
       Bookmarks: 'bookmarks',
       // 48.1: full-page queue deep link
       Queue: 'queue',

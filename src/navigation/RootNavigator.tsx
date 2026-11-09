@@ -2,10 +2,23 @@ import React, {useEffect, useState} from 'react';
 import {View, StyleSheet} from 'react-native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {useAuthStore, useSettingsStore} from '../state';
-import {RootStackParamList} from './types';
+import {
+  RootStackParamList,
+  SettingsScreenProps,
+  AboutScreenProps,
+  AudioSettingsScreenProps,
+  EqualizerScreenProps,
+  LinkedFoldersScreenProps,
+  FolderLinkingWizardScreenProps,
+  ChangelogScreenProps,
+  LicensesScreenProps,
+  CreditsScreenProps,
+  PrivacyScreenProps,
+  TermsScreenProps,
+  HelpScreenProps,
+} from './types';
 import HomeScreen from '../screens/Home';
 import {LibraryScreen} from '../features/library/presentation/screens/Library';
-import {SettingsStack} from './SettingsStack';
 import {SplashScreen} from '../screens/Splash';
 import {LoginScreen} from '../screens/Login';
 import {BookmarksScreen} from '../screens/Bookmarks';
@@ -45,9 +58,110 @@ import {ShowsScreen} from '../screens/ShowsScreen';
 import {ShowDetailScreen} from '../screens/ShowDetailScreen';
 import {QueueScreen} from '../screens/QueueScreen';
 import {DownloadsScreen} from '../screens/DownloadsScreen';
+// ── The settings screens ──────────────────────────────────────────
+// These were a nested stack (`SettingsStack`) under the root route
+// "Settings". They are root routes now, so the whole app is ONE flat
+// native stack — which is what it already was everywhere else. See the
+// note on `RootStackParamList` in ./types.ts for what the nesting cost.
+import {SettingsScreen} from '../screens/Settings';
+import {AboutScreen} from '../screens/About';
+import {AudioSettingsScreen} from '../screens/AudioSettings';
+import {EqualizerScreen} from '../screens/Equalizer';
+import {LinkedFoldersScreen} from '../screens/LinkedFolders';
+import {FolderLinkingWizard} from '../screens/FolderLinkingWizard';
+import {ChangelogScreen} from '../screens/Changelog';
+import {LicensesScreen} from '../screens/Licenses';
+import {CreditsScreen} from '../screens/Credits';
+import {PrivacyScreen} from '../screens/Privacy';
+import {TermsScreen} from '../screens/Terms';
+import {HelpScreen} from '../screens/Help';
 import {OfflineBanner} from '../components/status/OfflineBanner/OfflineBanner';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+
+// ─── The settings screens' render functions ─────────────────────────
+//
+// These used to live in `SettingsStack.tsx`, which wrapped each settings
+// screen in a `ScreenErrorBoundary` and gave it a typed props object. The
+// screens are root routes now, so the wrappers live here — but they are the
+// same wrappers, with the same "a broken settings screen still offers a
+// way back" behaviour.
+//
+// The props types are the ROOT stack's now (not a composite), which is the
+// point of the flattening: a settings screen navigates to its siblings
+// directly, with no parent to reach through.
+
+const SettingsRender = (props: SettingsScreenProps) => (
+  <ScreenErrorBoundary>
+    <SettingsScreen {...props} />
+  </ScreenErrorBoundary>
+);
+
+const AboutRender = (props: AboutScreenProps) => (
+  <ScreenErrorBoundary onGoBack={() => props.navigation?.goBack()}>
+    <AboutScreen {...props} />
+  </ScreenErrorBoundary>
+);
+
+const AudioSettingsRender = (props: AudioSettingsScreenProps) => (
+  <ScreenErrorBoundary onGoBack={() => props.navigation?.goBack()}>
+    <AudioSettingsScreen {...props} />
+  </ScreenErrorBoundary>
+);
+
+const EqualizerRender = (props: EqualizerScreenProps) => (
+  <ScreenErrorBoundary onGoBack={() => props.navigation?.goBack()}>
+    <EqualizerScreen {...props} />
+  </ScreenErrorBoundary>
+);
+
+const LinkedFoldersRender = (props: LinkedFoldersScreenProps) => (
+  <ScreenErrorBoundary onGoBack={() => props.navigation?.goBack()}>
+    <LinkedFoldersScreen {...props} />
+  </ScreenErrorBoundary>
+);
+
+const FolderLinkingWizardRender = (props: FolderLinkingWizardScreenProps) => (
+  <ScreenErrorBoundary onGoBack={() => props.navigation?.goBack()}>
+    <FolderLinkingWizard {...props} />
+  </ScreenErrorBoundary>
+);
+
+const ChangelogRender = (props: ChangelogScreenProps) => (
+  <ScreenErrorBoundary onGoBack={() => props.navigation?.goBack()}>
+    <ChangelogScreen {...props} />
+  </ScreenErrorBoundary>
+);
+
+const LicensesRender = (props: LicensesScreenProps) => (
+  <ScreenErrorBoundary onGoBack={() => props.navigation?.goBack()}>
+    <LicensesScreen {...props} />
+  </ScreenErrorBoundary>
+);
+
+const CreditsRender = (props: CreditsScreenProps) => (
+  <ScreenErrorBoundary onGoBack={() => props.navigation?.goBack()}>
+    <CreditsScreen {...props} />
+  </ScreenErrorBoundary>
+);
+
+const PrivacyRender = (props: PrivacyScreenProps) => (
+  <ScreenErrorBoundary onGoBack={() => props.navigation?.goBack()}>
+    <PrivacyScreen {...props} />
+  </ScreenErrorBoundary>
+);
+
+const TermsRender = (props: TermsScreenProps) => (
+  <ScreenErrorBoundary onGoBack={() => props.navigation?.goBack()}>
+    <TermsScreen {...props} />
+  </ScreenErrorBoundary>
+);
+
+const HelpRender = (props: HelpScreenProps) => (
+  <ScreenErrorBoundary onGoBack={() => props.navigation?.goBack()}>
+    <HelpScreen {...props} />
+  </ScreenErrorBoundary>
+);
 
 // ─── Direct authenticated destinations ─────────────────────────────
 
@@ -91,12 +205,69 @@ export const RootNavigator: React.FC = () => {
         component={LibraryScreen}
         options={{animation: 'slide_from_right'}}
       />
+      {/* ── The settings screens ────────────────────────────────────────
+          Each one keeps the `ScreenErrorBoundary` the nested stack gave
+          it, so a throwing settings screen still offers a way back
+          instead of taking the app down with it. */}
       <Stack.Screen
         name="Settings"
-        component={SettingsStack}
-        options={{
-          animation: 'slide_from_right',
-        }}
+        component={SettingsRender}
+        options={{animation: 'slide_from_right'}}
+      />
+      <Stack.Screen
+        name="About"
+        component={AboutRender}
+        options={{animation: 'slide_from_right'}}
+      />
+      <Stack.Screen
+        name="AudioSettings"
+        component={AudioSettingsRender}
+        options={{animation: 'slide_from_right'}}
+      />
+      <Stack.Screen
+        name="Equalizer"
+        component={EqualizerRender}
+        options={{animation: 'slide_from_right'}}
+      />
+      <Stack.Screen
+        name="LinkedFolders"
+        component={LinkedFoldersRender}
+        options={{animation: 'slide_from_right'}}
+      />
+      <Stack.Screen
+        name="FolderLinkingWizard"
+        component={FolderLinkingWizardRender}
+        options={{animation: 'slide_from_right'}}
+      />
+      <Stack.Screen
+        name="Changelog"
+        component={ChangelogRender}
+        options={{animation: 'slide_from_right'}}
+      />
+      <Stack.Screen
+        name="Licenses"
+        component={LicensesRender}
+        options={{animation: 'slide_from_right'}}
+      />
+      <Stack.Screen
+        name="Credits"
+        component={CreditsRender}
+        options={{animation: 'slide_from_right'}}
+      />
+      <Stack.Screen
+        name="Privacy"
+        component={PrivacyRender}
+        options={{animation: 'slide_from_right'}}
+      />
+      <Stack.Screen
+        name="Terms"
+        component={TermsRender}
+        options={{animation: 'slide_from_right'}}
+      />
+      <Stack.Screen
+        name="Help"
+        component={HelpRender}
+        options={{animation: 'slide_from_right'}}
       />
       {/* 57.7: detail pushes all slide_from_right; fade stays for root/auth/player */}
       <Stack.Screen

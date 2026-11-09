@@ -203,7 +203,7 @@ export const LoginScreen: React.FC<Props> = ({navigation}) => {
           {/* 51.2: legal links — open the in-app Privacy / Terms screens */}
           <View style={styles.legalRow}>
             <TouchableOpacity
-              onPress={() => navigationRef.navigate('Settings', {screen: 'Privacy'})}
+              onPress={() => navigationRef.navigate('Privacy')}
               activeOpacity={0.7}
               hitSlop={{top: 12, bottom: 12, left: 12, right: 12}}
               accessibilityRole="link"
@@ -214,7 +214,7 @@ export const LoginScreen: React.FC<Props> = ({navigation}) => {
             </TouchableOpacity>
             <View style={[styles.legalDot, {backgroundColor: colors.text.tertiary}]} />
             <TouchableOpacity
-              onPress={() => navigationRef.navigate('Settings', {screen: 'Terms'})}
+              onPress={() => navigationRef.navigate('Terms')}
               activeOpacity={0.7}
               hitSlop={{top: 12, bottom: 12, left: 12, right: 12}}
               accessibilityRole="link"
