@@ -187,7 +187,7 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
   const navigateToSettings = useCallback(() => {
     // Settings is a nested-stack route on the root stack; the
     // typed `navigate` requires the inner screen shape.
-    navigation.navigate({name: 'Settings', params: {screen: 'Settings', params: undefined}});
+    navigation.navigate({name: 'Settings', params: {screen: 'SettingsHome', params: undefined}});
   }, [navigation]);
 
   const navigateToLinkedFolders = useCallback(

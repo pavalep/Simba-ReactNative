@@ -325,7 +325,7 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
   );
 
   const handleSettingsPress = useCallback(
-    () => navigation.navigate('Settings', {screen: 'Settings', params: undefined}),
+    () => navigation.navigate('Settings', {screen: 'SettingsHome', params: undefined}),
     [navigation],
   );
   const handleSearchPress = useCallback(

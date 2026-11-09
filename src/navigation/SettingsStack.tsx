@@ -88,7 +88,7 @@ const HelpRender = (props: HelpScreenProps) => (
 
 export const SettingsStack: React.FC = () => (
   <Stack.Navigator screenOptions={{headerShown: false}}>
-    <Stack.Screen name="Settings">
+    <Stack.Screen name="SettingsHome">
       {(props) => (
         <ScreenErrorBoundary>
           <SettingsScreen {...props} />

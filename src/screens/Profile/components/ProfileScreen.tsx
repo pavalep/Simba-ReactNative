@@ -314,7 +314,7 @@ export const ProfileScreen: React.FC<Props> = ({navigation}) => {
             <SettingsRow
               label="Settings"
               description="Appearance, audio, storage"
-              onPress={() => navigation.navigate('Settings', {screen: 'Settings'})}
+              onPress={() => navigation.navigate('Settings', {screen: 'SettingsHome'})}
               trailing={<SvgIcon name="chevronRight" size={18} color={colors.text.tertiary} />}
             />
           </View>

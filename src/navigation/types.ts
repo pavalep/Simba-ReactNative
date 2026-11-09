@@ -94,7 +94,13 @@ export type RootStackParamList = {
 };
 
 export type SettingsStackParamList = {
-  Settings: undefined;
+  // The main settings screen. It is NOT named "Settings": the root stack
+  // already has a route called "Settings" that hosts this stack, and React
+  // Navigation warns when a screen name is nested inside a screen of the
+  // same name ("Found screens with the same name nested inside one another:
+  // Settings, Settings > Settings"). The deep-link path is still
+  // "settings" — see navigation/linking.ts.
+  SettingsHome: undefined;
   About: undefined;
   AudioSettings: undefined;
   Equalizer: undefined;
@@ -152,7 +158,7 @@ type SettingsStackScreenProps<T extends keyof SettingsStackParamList> = Composit
 >;
 
 /** Composite props for Settings stack screens (rendered in RootStack). */
-export type SettingsScreenProps = SettingsStackScreenProps<'Settings'>;
+export type SettingsScreenProps = SettingsStackScreenProps<'SettingsHome'>;
 export type AboutScreenProps = SettingsStackScreenProps<'About'>;
 export type AudioSettingsScreenProps = SettingsStackScreenProps<'AudioSettings'>;
 export type EqualizerScreenProps = SettingsStackScreenProps<'Equalizer'>;

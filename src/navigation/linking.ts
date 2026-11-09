@@ -35,7 +35,7 @@ export const linking: LinkingOptions<RootStackParamList> = {
       Library: 'library',
       Settings: {
         screens: {
-          Settings: 'settings',
+          SettingsHome: 'settings',
           Equalizer: 'settings/equalizer',
           About: 'settings/about',
           AudioSettings: 'settings/audio',
