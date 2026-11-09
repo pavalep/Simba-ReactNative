@@ -294,24 +294,45 @@ override. The weight column is the weight the source asks for; note §4.1's cave
 
 ### 4.1 The weight caveat (read before you set the font in Figma)
 
-The v8 architecture encodes weight in the **family key** and removes the `fontWeight` axis, because
-Android's font picker is biased to Bold above weight 500 when the family has only two files
-(`src/constants/fontFamily.ts:24-43`). Two of this screen's runs still use `fontWeight` as an
-override:
+> **CORRECTED 2026-11-09.** The paragraph below originally claimed that
+> *"`fontFamily: 'Inter'` + weight 600 resolves to **Inter-Bold.ttf** on
+> Android"*. That was wrong twice over. React Native opens ONE exact asset
+> path — `"fonts/" + family + suffix`, where the suffix is `""` /
+> `"_bold"` / `"_italic"` / `"_bold_italic"`, chosen by the weight
+> (`>= 700` selects the bold slots) — and falls back to the **system font**
+> when that path does not exist (`ReactFontManager.kt:138-144, :162-178,
+> :187`). So `'Inter'` + weight 600 asked for `fonts/Inter.ttf`, which the
+> app did not ship, and the run rendered in **Roboto**. The shipped files
+> have been renamed to RN's convention (`fonts/Inter.ttf`,
+> `fonts/Inter_bold.ttf`, `fonts/Inter SemiBold.ttf`, …) and the tokens
+> carry the weight again (`src/theme/tokens.ts`). Evidence:
+> `md/SIMBA_APP_PAGE_ISSUE_SCAN.md` S-025 … S-029.
 
-- **T3** (`Sign in with Google`) — `fontFamily` comes from the `body1` token = **`'Inter'`**
-  (`src/theme/tokens.ts:388`) and `fontWeight: '600'` is set on top
-  (`src/components/core/GoogleSignInButton/GoogleSignInButton.tsx:87`). `Inter-SemiBold.ttf` has
-  `nameId=1 = "Inter SemiBold"`, so on Android a family of `'Inter'` + weight 600 resolves to
-  **Inter-Bold.ttf**, while iOS picks the semibold face. **Set this run to Inter SemiBold in Figma**
-  (the intended design) and record the discrepancy.
-- **T5** (`Try Again`) — `fontFamily` from `bodySmall` = `'Inter'` + `fontWeight: '600'`; same
-  situation. **Set Inter SemiBold.**
+The architecture now encodes the weight in **two** places, because that is
+what the runtime actually needs:
 
-Both files ship in `assets/fonts/` (`react-native.config.js:13`): `Inter-Regular.ttf`,
-`Inter-Medium.ttf`, `Inter-SemiBold.ttf`, `Inter-Bold.ttf`, `Allura-Regular.ttf`,
-`CormorantGaramond-Regular.ttf`, `CormorantGaramond-Bold.ttf`, `CormorantGaramond-Italic.ttf`,
-`Manrope-SemiBold.ttf`, `Manrope-Bold.ttf`, `JetBrainsMono-Regular.ttf`.
+- **the family name** — when the font vendor bakes the weight into
+  `nameId=1` (`Inter SemiBold`, `Inter Medium`, `Manrope SemiBold`), and
+- **the `fontWeight`** — when one family ships several files under one name
+  (`Inter` Regular + Bold, `Cormorant Garamond` Regular + Bold + Italic).
+
+Two of this screen's runs use a weight-specific family:
+
+- **T3** (`Sign in with Google`) — `GoogleSignInButton.tsx:84-92` sets
+  `fontFamily: FONT_FAMILY.inter.semibold` = **`'Inter SemiBold'`** with
+  `fontWeight: '600'`, so the path RN opens is `fonts/Inter SemiBold.ttf`.
+  (Before the fix the label inherited `body1`'s `'Inter'` and asked for
+  `fonts/Inter.ttf` → Roboto Regular.) **Set this run to Inter SemiBold.**
+- **T5** (`Try Again`) — `LoginScreen.tsx:297-305` sets the same
+  `fontFamily` + `fontWeight: '600'`. **Set Inter SemiBold.**
+
+The files these runs resolve to are in `assets/fonts/`:
+`Allura.ttf`, `Cormorant Garamond.ttf`, `Cormorant Garamond_bold.ttf`,
+`Cormorant Garamond_italic.ttf`, `Inter.ttf`, `Inter_bold.ttf`,
+`Inter Medium.ttf`, `Inter SemiBold.ttf`, `JetBrains Mono.ttf`,
+`Manrope SemiBold.ttf`, `Manrope_bold.ttf`.
+`scripts/check-font-resolution.js` resolves every usage in `src/` the way
+RN does and fails if any of them would fall back to the system font.
 
 ### 4.2 Three typography facts the designer should know
 

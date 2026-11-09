@@ -139,6 +139,11 @@ const styles = StyleSheet.create({
   },
   copyHint: {
     marginTop: 4,
-    fontStyle: 'italic',
+    // Deliberately NOT italic. The app ships no italic Inter face, and
+    // `fontStyle: 'italic'` on Android would resolve to
+    // fonts/Inter_italic.ttf — a file that is not shipped — so the run
+    // would silently fall back to the system font. The hint reads as a
+    // hint through the accent colour instead.
+    // (scripts/check-font-resolution.js proves the resolution.)
   },
 });

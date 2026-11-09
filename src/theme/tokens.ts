@@ -339,21 +339,35 @@ export const lightColors: ColorTokens = {
 };
 
 // ─── Typography Tokens ────────────────────────────────────
-// v8 architecture. Every variant declares its `fontFamily` via
-// the v8 per-weight `FONT_FAMILY` keys (src/constants/fontFamily.ts)
-// — never as a hard-coded string, never with a `fontWeight` field.
+// Every variant declares its `fontFamily` via the per-weight
+// `FONT_FAMILY` keys (src/constants/fontFamily.ts) — never as a
+// hard-coded string.
 //
-// The `fontWeight` axis has been REMOVED from the typography
-// tokens. Why: Android's font-weight picker is biased to Bold for
-// weights > 500 when the family has only 2 weight files. So
-// (fontFamily: Manrope + fontWeight: 600) resolved to
-// Manrope-Bold.ttf (chunky) instead of Manrope-SemiBold.ttf
-// (the spec's intent). Encoding the weight in the family key
-// eliminates the cross-axis ambiguity — there's only one TTF
-// per `(family, style)` tuple, so the pick is deterministic.
+// The variant ALSO declares the `fontWeight` that selects the file,
+// because that is how React Native actually resolves an asset font on
+// Android: the path it opens is
+//   "fonts/" + <fontFamily> + <styleSuffix> + <ext>
+// where the suffix is "" / "_bold" / "_italic" / "_bold_italic",
+// chosen by the weight (>= 700 selects the bold slots). The TTF's
+// internal name table is never consulted.
 //
-// See `md/UI_UX_Elevation_Specification_v8.md` §2 for the full
-// rationale and the Android picker bug analysis.
+// So each token names a family AND a weight, and the pair resolves to
+// exactly one shipped file:
+//   'Inter' + 700              → fonts/Inter_bold.ttf
+//   'Inter' + 400              → fonts/Inter.ttf
+//   'Inter SemiBold' + 600    → fonts/Inter SemiBold.ttf
+//   'Cormorant Garamond' + 700 → fonts/Cormorant Garamond_bold.ttf
+// Where the weight is baked into the family name by the font vendor
+// (Inter Medium, Inter SemiBold, Manrope SemiBold) the weight stays
+// below 700, so the suffix stays empty and the family name alone
+// selects the file.
+//
+// `scripts/check-font-resolution.js` proves that every usage in
+// `src/` resolves to a file that exists.
+//
+// See `md/SIMBA_APP_PAGE_ISSUE_SCAN.md` S-025 … S-028 for the
+// evidence behind this rule, and `src/constants/fontFamily.ts` for
+// the platform sources it is read from.
 
 export interface TypographyTokens {
   // v3 Atlas variants (Inter, workhorse) — weight encoded in the
@@ -380,25 +394,26 @@ export interface TypographyTokens {
 }
 
 export const typography: TypographyTokens = {
-  // v3 Atlas variants — all Inter, weight picked via family key.
-  display:     {fontFamily: FONT_FAMILY.inter.bold,     fontSize: 36, lineHeight: 44},
-  h1:          {fontFamily: FONT_FAMILY.inter.bold,     fontSize: 32, lineHeight: 40},
-  h2:          {fontFamily: FONT_FAMILY.inter.bold,     fontSize: 24, lineHeight: 32},
-  h3:          {fontFamily: FONT_FAMILY.inter.semibold, fontSize: 20, lineHeight: 28},
-  body1:       {fontFamily: FONT_FAMILY.inter.regular,  fontSize: 17, lineHeight: 24},
-  body2:       {fontFamily: FONT_FAMILY.inter.regular,  fontSize: 15, lineHeight: 22},
-  bodySmall:   {fontFamily: FONT_FAMILY.inter.regular,  fontSize: 14, lineHeight: 20},
-  caption:     {fontFamily: FONT_FAMILY.inter.regular,  fontSize: 13, lineHeight: 18},
-  overline:    {fontFamily: FONT_FAMILY.inter.medium,   fontSize: 11, lineHeight: 16, letterSpacing: 0.5},
-  button:      {fontFamily: FONT_FAMILY.inter.semibold, fontSize: 15, lineHeight: 22, letterSpacing: 0.3},
-  tab:         {fontFamily: FONT_FAMILY.inter.medium,   fontSize: 13, lineHeight: 18, letterSpacing: 0.2},
-  mono:        {fontFamily: FONT_FAMILY.jetbrainsMono.regular, fontSize: 13, lineHeight: 20},
+  // v3 Atlas variants — Inter. The family names the family; the
+  // weight selects the file (see the note above this object).
+  display:     {fontFamily: FONT_FAMILY.inter.bold,     fontWeight: '700', fontSize: 36, lineHeight: 44},
+  h1:          {fontFamily: FONT_FAMILY.inter.bold,     fontWeight: '700', fontSize: 32, lineHeight: 40},
+  h2:          {fontFamily: FONT_FAMILY.inter.bold,     fontWeight: '700', fontSize: 24, lineHeight: 32},
+  h3:          {fontFamily: FONT_FAMILY.inter.semibold, fontWeight: '600', fontSize: 20, lineHeight: 28},
+  body1:       {fontFamily: FONT_FAMILY.inter.regular,  fontWeight: '400', fontSize: 17, lineHeight: 24},
+  body2:       {fontFamily: FONT_FAMILY.inter.regular,  fontWeight: '400', fontSize: 15, lineHeight: 22},
+  bodySmall:   {fontFamily: FONT_FAMILY.inter.regular,  fontWeight: '400', fontSize: 14, lineHeight: 20},
+  caption:     {fontFamily: FONT_FAMILY.inter.regular,  fontWeight: '400', fontSize: 13, lineHeight: 18},
+  overline:    {fontFamily: FONT_FAMILY.inter.medium,   fontWeight: '500', fontSize: 11, lineHeight: 16, letterSpacing: 0.5},
+  button:      {fontFamily: FONT_FAMILY.inter.semibold, fontWeight: '600', fontSize: 15, lineHeight: 22, letterSpacing: 0.3},
+  tab:         {fontFamily: FONT_FAMILY.inter.medium,   fontWeight: '500', fontSize: 13, lineHeight: 18, letterSpacing: 0.2},
+  mono:        {fontFamily: FONT_FAMILY.jetbrainsMono.regular, fontWeight: '400', fontSize: 13, lineHeight: 20},
   // v7 NEW: brand wordmark — Allura, single weight, no fontWeight field.
   brandScript: {fontFamily: FONT_FAMILY.allura,           fontSize: 48, lineHeight: 56},
   // v7 NEW: cinematic display — Cormorant Garamond Bold.
-  displaySerif:{fontFamily: FONT_FAMILY.cormorant.bold,   fontSize: 48, lineHeight: 56},
+  displaySerif:{fontFamily: FONT_FAMILY.cormorant.bold,   fontWeight: '700', fontSize: 48, lineHeight: 56},
   // v7 NEW: section titles — Manrope SemiBold.
-  displaySans: {fontFamily: FONT_FAMILY.manrope.semibold, fontSize: 22, lineHeight: 28},
+  displaySans: {fontFamily: FONT_FAMILY.manrope.semibold, fontWeight: '600', fontSize: 22, lineHeight: 28},
 };
 
 // ─── Spacing Tokens (4pt Grid) ────────────────────────────

@@ -3,6 +3,7 @@ import {TouchableOpacity, View, StyleSheet} from 'react-native';
 import Svg, {Path} from 'react-native-svg';
 import {useTheme} from '../../../theme';
 import type {ColorTokens} from '../../../theme/tokens';
+import {FONT_FAMILY} from '../../../constants/fontFamily';
 import {AppText} from '../AppText/AppText';
 import {ActivityOrb} from '../../feedback/ActivityOrb/ActivityOrb';
 
@@ -83,6 +84,15 @@ const createStyles = (colors: ColorTokens) =>
     },
     label: {
       color: colors.text.primary,
+      // The label is Inter SEMI BOLD. The family has to be named
+      // explicitly: the AppText default variant is `body1`, whose
+      // family is 'Inter' — and 'Inter' + weight 600 resolves to the
+      // NORMAL slot (fonts/Inter.ttf), i.e. the Regular face. The
+      // SemiBold file is `fonts/Inter SemiBold.ttf` and is reached by
+      // the family name 'Inter SemiBold'.
+      // (ReactFontManager.kt:138-144, :178 — the suffix is empty for
+      // any weight below 700.)
+      fontFamily: FONT_FAMILY.inter.semibold,
       fontSize: 16,
       fontWeight: '600',
       letterSpacing: 0.3,

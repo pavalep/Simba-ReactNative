@@ -96,11 +96,10 @@ export const greetingPrefix: TextStyle = {
 /** The user name in the greeting — Inter Bold gold. */
 export const greetingName: TextStyle = {
   ...uiH2,
-  // v8: NO fontWeight override. The uiH2 token now maps to
-  // `fontFamily: FONT_FAMILY.inter.bold` (Inter-Bold.ttf)
-  // directly — encoding the weight in the family key means
-  // there's no axis for Android's font-weight picker to
-  // bias toward extra-bold.
+  // The uiH2 token maps to `fontFamily: FONT_FAMILY.inter.bold` with
+  // `fontWeight: '700'`, which resolves to fonts/Inter_bold.ttf.
+  // The weight is part of the token because the weight is what selects
+  // the file on Android — the family string alone cannot.
 };
 
 /** Section header — "Your Library", "Movies", "Recently Played", etc. */
@@ -116,6 +115,11 @@ export const splashWordmark: TextStyle = brandScript;
 /** Splash / Login tagline — Cormorant Italic when used in splash. */
 export const splashTagline: TextStyle = {
   ...displaySerif,
+  // Cormorant Garamond ITALIC, not bold-italic: the weight drops to
+  // 400 so the asset path is fonts/Cormorant Garamond_italic.ttf. The
+  // bold-italic file is not shipped, and a bold-italic request would
+  // silently fall back to the system font.
+  fontWeight: '400',
   fontStyle: 'italic',
   fontSize: 16,
   lineHeight: 22,

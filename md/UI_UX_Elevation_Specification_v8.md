@@ -8,11 +8,78 @@
 
 ---
 
+> ## ⚠️ CORRECTION — 2026-11-09 (S-025 … S-028)
+>
+> **The resolution model described in §1 and §2 of this document is wrong, and
+> it was wrong when it was written.** The architecture it prescribes never
+> worked on Android; it was verified only on the shape of the code, never on
+> a screen. The corrections are recorded here rather than rewritten away, so
+> the history of the mistake stays readable.
+>
+> **What React Native actually does on Android** (`ReactFontManager.kt:138-144`,
+> `:162-178`, `:187`):
+>
+> ```
+> path = "fonts/" + <fontFamily> + <styleSuffix> + <ext>
+> ```
+>
+> - `<fontFamily>` is the `fontFamily` string, used **verbatim**;
+> - `<styleSuffix>` is `""` / `"_bold"` / `"_italic"` / `"_bold_italic"`,
+>   chosen by the **weight** (`>= 700` selects the bold slots);
+> - if that file is missing, RN falls back to the **system font**, silently.
+>
+> The TTF's internal name table is **never consulted** on Android, and RN
+> never "walks the available TTFs" to find a closest match — it opens one
+> exact path.
+>
+> **Consequences for this document:**
+>
+> - §1's *"the font manager picks the one TTF whose family name matches"* is
+>   false. The manager picks the one file **path** it builds.
+> - §2's *"Android walks the available Manrope TTFs and picks the closest"*
+>   describes the **system** font picker, which is not the code path RN
+>   takes for an asset family.
+> - *"Encoding the weight in the family key"* only works when the weight is
+>   already part of the family name (`Inter SemiBold`, `Manrope SemiBold`).
+>   For a family that ships several faces under one name — `Inter`
+>   (Regular + Bold), `Cormorant Garamond` (Regular + Bold + Italic) — the
+>   family string alone cannot select the face, so the `fontWeight` has to
+>   stay in the token.
+> - The v8 refactor as shipped left the app with **no font resolving at all
+>   except the wordmark**: the shipped files were named `Inter-Regular.ttf`,
+>   `CormorantGaramond-Bold.ttf`, … while RN opens `fonts/Inter.ttf`,
+>   `fonts/Cormorant Garamond_bold.ttf`, … Every other family fell back to
+>   Roboto on every screen. Measured on the emulator: the login tagline
+>   measured 247.5 dp, which is Roboto's width (247.8) and not Cormorant's
+>   (221.8).
+>
+> **The corrected architecture** (shipped 2026-11-09):
+>
+> 1. the family string is the TTF's `nameId=1` family name;
+> 2. the shipped file is named `<family><styleSuffix>.ttf`, so the path RN
+>    builds is exactly the path that exists;
+> 3. the typography token carries the `fontWeight` that selects the file
+>    (`src/theme/tokens.ts`);
+> 4. `scripts/check-font-resolution.js` resolves every usage in `src/` the
+>    way RN does and fails if any usage would fall back to the system font.
+>
+> Evidence: `md/SIMBA_APP_PAGE_ISSUE_SCAN.md` S-025 … S-028.
+
+---
+
 ## 1. TL;DR
 
 Replace the per-role `FONT_FAMILY` map (5 string keys) with a **per-family, per-weight nested map**. The `fontFamily` field in every `TextStyle` becomes a single string — the specific TTF's family name. The `fontWeight` field **disappears from the typography tokens entirely** (still legal in raw `TextStyle` for callers that need it, but no longer in the brand tokens).
 
 This makes the family name encode the weight: there's no axis to misalign. The font manager picks the one TTF whose family name matches.
+
+> ⚠️ **This paragraph is wrong on Android — see the CORRECTION at the top of
+> this file.** RN opens one exact asset path built from the family string and
+> the weight; it never matches the TTF's family name, and it never walks the
+> available files. The per-weight family keys only work for the families
+> whose weight is already part of the name (`Inter SemiBold`,
+> `Manrope SemiBold`); `Inter` and `Cormorant Garamond` need the
+> `fontWeight` back in the token.
 
 ```ts
 // BEFORE (v7 — cross-axis ambiguity):
@@ -35,6 +102,16 @@ Same `fontFamily` value (the string `'Manrope'`) as before, but the architecture
 ## 2. The Bug (for posterity)
 
 **On Android, `fontWeight` is a hint, not a selector.** When you set `fontFamily: 'Manrope' + fontWeight: '600'`, Android's `Typeface` manager walks the available Manrope TTFs and picks the **closest** one by visual weight. With only `Manrope-SemiBold.ttf` (600) and `Manrope-Bold.ttf` (700) in the bundle, the "closest" pick is biased toward Bold for any weight ≥ 500 — so `'600'`, `'700'`, `'800'`, `'900'` all resolve to `Manrope-Bold.ttf`. That's why "Recently Played", "Bookmarks", "Followed Podcasts", "Movies" all rendered as the chunky Bold.
+
+> ⚠️ **The mechanism described in this paragraph is not React Native's.**
+> See the CORRECTION at the top of this file. RN opens one exact asset path
+> — `"fonts/" + family + suffix` — where the suffix comes from the weight.
+> It never walks the bundle. The symptom this paragraph describes (a chunky
+> Bold where SemiBold was intended) is real, but the cause was a **missing
+> asset path**, not a closest-match bias: the app asked for
+> `fonts/Manrope.ttf` and shipped `Manrope-SemiBold.ttf` and
+> `Manrope-Bold.ttf`, so it got the system font — and the "chunky Bold"
+> was the system font's, not Manrope's.
 
 **On iOS the bug doesn't show** because iOS's font manager is more strict: `fontFamily: 'Manrope' + fontWeight: '600'` looks up the exact font description `(family=Manrope, weight=600)`. The static TTF has a name table entry with `weight=600`, so the manager picks it. Android skips the name-table lookup and does a "closest match" by visual stroke width instead.
 

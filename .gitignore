@@ -87,6 +87,7 @@ GoogleService-Info.plist
 scripts/*.mjs
 scripts/*.js
 !scripts/check-import-boundaries.js
+!scripts/check-font-resolution.js
 !scripts/eslint-sweep.js
 !scripts/gen-mcp-descriptors.js
 !scripts/generate-icons.js
@@ -161,3 +162,11 @@ COMMIT_MSG_*.txt
 jest_*.txt
 kotlin_*.txt
 lint_*.txt
+
+# ── Design build scratch (2026-11-09) ───────────────────────────────
+# `designs/build-login-design.js` writes the FigCraft command list and the
+# imported SVG artwork into designs/.build/ before the CLI turns them into
+# designs/Simba_UI_UX_Complete_Design.figcraft. Only the generated design,
+# its renders and the export are meant to be committed; the intermediate
+# build is not.
+designs/.build/
