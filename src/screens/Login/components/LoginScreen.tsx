@@ -18,6 +18,7 @@ import type {AuthErrorKind} from '../../../state';
 import type {LoginScreenProps} from '../types';
 import {navigationRef} from '../../../navigation/navigationHelper';
 import {BRAND} from '../../../constants/brand';
+import {FONT_FAMILY} from '../../../constants/fontFamily';
 
 type Props = LoginScreenProps;
 
@@ -140,7 +141,7 @@ export const LoginScreen: React.FC<Props> = ({navigation}) => {
                 styles.logoWrap,
                 {opacity: logoOpacity, transform: [{scale: logoscale}]},
               ]}>
-              <SvgIcon name="lion" size={96} color="#5C3A1E" />
+              <SvgIcon name="lion" size={108} color="#5C3A1E" />
               <AppText
                 variant="brandScript"
                 style={[styles.logoText, {color: '#5C3A1E'}]}>
@@ -263,17 +264,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // v7: wordmark uses the brandScript typography token
-  // (Allura, 48px by default). We add a small optical
-  // marginTop so the script sits comfortably under the lion.
+  // The lockup inside the orb, as a hierarchy:
+  //   the LION is the emblem, the WORDMARK is the hero (the brand's name),
+  //   the TAGLINE supports the name with one quiet line under it.
+  //
+  // The wordmark overrides the brandScript token (Allura 48/56) with a
+  // larger 52/60, because it is the hero of this screen.
   logoText: {
-    marginTop: 14,
+    fontSize: 58,
+    lineHeight: 66,
+    marginTop: 12,
   },
   taglineWrap: {
-    marginTop: 2,
+    marginTop: 4,
     alignItems: 'center',
   },
   tagline: {
+    // Cormorant Garamond ITALIC — the `displaySerif` token is the Bold face,
+    // and a bold serif at this size would outweigh the wordmark above it.
+    // `fontWeight: '400'` is required: the token asks for 700, and 700 +
+    // italic resolves to `Cormorant Garamond_bold_italic.ttf`, which does
+    // not ship — RN would fall back to the system font silently.
+    fontFamily: FONT_FAMILY.cormorant.italic,
+    fontStyle: 'italic',
+    fontWeight: '400',
+    fontSize: 22,
+    lineHeight: 28,
+    letterSpacing: 0.4,
     textAlign: 'center',
   },
   bottomSection: {
@@ -295,6 +312,11 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   retryText: {
+    // Inter SEMI BOLD. The `bodySmall` token's family is 'Inter', and
+    // 'Inter' + weight 600 resolves to the NORMAL slot (the Regular
+    // face) — the SemiBold file is reached by the family name
+    // 'Inter SemiBold'.
+    fontFamily: FONT_FAMILY.inter.semibold,
     fontWeight: '600',
     textDecorationLine: 'underline',
   },

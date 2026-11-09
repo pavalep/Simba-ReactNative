@@ -41,6 +41,15 @@ it already owns; cross-references are listed at the end.
 | P3 | 8 |
 | **Total** | **24** |
 
+> The **2026-11-09 addendum** (Login page vs the FigCraft design, device
+> verified) adds **7** more findings — P0 ×1, P1 ×4, P2 ×1, P3 ×1 — for a
+> running total of **P0 1 · P1 10 · P2 11 · P3 9 · 31 total**. See the
+> addendum at the end of this file.
+>
+> **S-032** (the login lockup's hierarchy and the tagline's 1 dp clearance to
+> the orb's arc) was added afterwards: **P2 ×1**, so the running total is
+> **P0 1 · P1 10 · P2 12 · P3 9 · 32 total**.
+
 Screens read: **38 of 38**. Screens with at least one finding: **21**. Screens
 read clean: **17**. Screens not readable: **0**.
 
@@ -84,7 +93,7 @@ read clean: **17**. Screens not readable: **0**.
 | 34 | MusicDetailScreen (`MusicDetailScreen.tsx`) | read — no issues found | — |
 | 35 | Licenses (`LicensesScreen.tsx`) | read — no issues found | — |
 | 36 | MovieDetailScreen (`MovieDetailScreen.tsx`) | read — issues found | S-008, S-020 |
-| 37 | Login (`LoginScreen.tsx`) | read — no issues found | — |
+| 37 | Login (`LoginScreen.tsx`) | read — issues found | S-032 |
 | 38 | LiveTVScreenNew (`LiveTVContent.tsx`) | read — issues found | S-011, S-023 |
 
 Shared code read alongside the screens: `ScreenContainer`, `SettingsRow`,
@@ -719,3 +728,324 @@ settle them. Each states what would settle it.
    store playlist.
    *Settle with:* play a playlist, open the Queue screen, and read the React
    duplicate-key warning.
+
+---
+
+# Addendum — 2026-11-09 · Login page vs the FigCraft design (device-verified)
+
+**Method.** The login screen was rebuilt **from the app's own sources** into a
+FigCraft document (`designs/simba-login.figcraft`, frame `Login / light`
+411 × 914 — the emulator's real dp size) and rendered to PNG at 411 × 914.
+The app was captured on `emulator-5554` (API 37, 1080 × 2400 @ 420 dpi =
+411 × 914 dp, signed out, on the real Login screen) and measured with the
+**same** ink-detection script that measured the design render, so the two
+columns are comparable to a fraction of a dp.
+
+**Result of the geometry diff — the layout is correct.** Every measured
+element lands within 1 dp of the design. The *only* reason the login page
+looks wrong is the font resolution (S-025 / S-026 / S-029).
+
+| element | FigCraft design | app on emulator | Δ |
+|---|---|---|---|
+| background | rgb(245, 240, 232) | rgb(245, 240, 232) | 0 |
+| button box (white fill) | x 76.5 … 333.3, y 752.5 … 804.3 | x 76.8 … 333.8, y 752.3 … 803.8 | ≤ 0.5 |
+| wordmark ink | x 152.5 … 257.3, y 346.5 … 375.3 | x 151.8 … 258.8, y 345.5 … 375.3 | ≤ 1.0 |
+| lion ink | x 167.5 … 238.3, y 233.5 … 315.3 | x 168.3 … 238.8, y 232.5 … 319.3 | ≤ 4.0 (rasterisation) |
+| tagline line 1 ink | x **93.5 … 315.3** (Cormorant, w 221.8) | x **80.5 … 328.0** (w 247.5) | **25.7 in x — S-025** |
+| tagline line 2 ink | x **120.5 … 289.3** (w 168.8) | x **111.8 … 298.8** (w 187.0) | **9.3 in x — S-025** |
+| legal "Privacy Policy" ink | x 99.5 (Inter) | x 105.0 (w 81.8) | family differs — S-025 |
+| gold orb, pulse peak | x 40.0 … 370.0 | x 40.0 … 370.7 | 0.7 |
+| orb fill over background | rgb(235, 225, 202) | rgb(236, 225, 203) | ≤ 1 / 255 |
+
+The orb's 4 dp vertical difference is the pulse phase, not a layout defect:
+`LoginScreen.tsx:107-115` drives the orb's scale (1 → 1.12) and opacity
+(0.08 → 0.16) from **one** animated value, so the capture caught it at a
+different phase than the static design.
+
+---
+
+### S-025 · P0 · app-shell · every screen — on Android 10 of the 11 shipped font families never resolve, so the whole app renders in Roboto — **FIXED**
+
+**Defect.** React Native resolves a `fontFamily` on Android by opening an
+**asset file whose path is built from the family string** — not by matching the
+string against the font's internal name table. The app's shipped font files
+are named so that **none** of the paths RN builds exist, so every family
+except one silently falls back to the system font.
+
+**Evidence (source-proven).**
+- `node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/common/assets/ReactFontManager.kt:162-163` — `private val EXTENSIONS = arrayOf("", "_bold", "_italic", "_bold_italic")` and `private val FILE_EXTENSIONS = arrayOf(".ttf", ".otf")`.
+- `…/ReactFontManager.kt:178` — `val fileName = "$FONTS_ASSET_PATH$fontFamilyName$extension$fileExtension"`, with `FONTS_ASSET_PATH = "fonts/"` (`:164`). The family string is used **verbatim**; nothing is normalised.
+- `…/ReactFontManager.kt:187` — the fallback when the file is missing: `return Typeface.create(fontFamilyName, style)` — the **system** font. The failure is silent: no error, no log.
+- `…/ReactFontManager.kt:138-144` — `nearestStyle`: `weight < 700` → `NORMAL`/`ITALIC`, `weight >= 700` → `BOLD`/`BOLD_ITALIC`. So the suffix is decided by `fontWeight`, not by the file's own weight.
+- The families the code asks for — `src/constants/fontFamily.ts:66` (`'Allura-Regular'`), `:72-75` (`'Cormorant Garamond'`), `:86` (`'Manrope SemiBold'`), `:89` (`'Manrope'`), `:99-105` (`'Inter'`, `'Inter Medium'`, `'Inter SemiBold'`), `:112` (`'JetBrains Mono'`).
+- The files that exist — `assets/fonts/` and `android/app/src/main/assets/fonts/` both hold exactly the same 11: `Allura-Regular.ttf`, `CormorantGaramond-{Regular,Bold,Italic}.ttf`, `Inter-{Regular,Bold,Medium,SemiBold}.ttf`, `JetBrainsMono-Regular.ttf`, `Manrope-{Bold,SemiBold}.ttf`. *(These are the names as they stood when this was found. The fix below renamed them.)*
+- Therefore the paths RN opens for weight < 700 are `fonts/Cormorant Garamond.ttf`, `fonts/Manrope SemiBold.ttf`, `fonts/Manrope.ttf`, `fonts/Inter.ttf`, `fonts/Inter Medium.ttf`, `fonts/Inter SemiBold.ttf`, `fonts/JetBrains Mono.ttf` — **none of them exist**. The only path that does is `fonts/Allura-Regular.ttf`, which is why the wordmark is the one piece of brand type that renders.
+- There is no other route: `android/app/src/main/res/font` does not exist, and no `addCustomFont` / `Typeface` registration exists anywhere under `android/app/src/main` (a search for `addCustomFont|ReactFontManager|Typeface` over every `.kt`/`.java` file there returns nothing).
+
+**Evidence (device-measured).**
+- The login tagline line 1 measures **247.5 dp** on the emulator. The same string rendered in the design measures **247.8 dp** in Roboto Regular and **221.8 dp** in Cormorant Garamond Bold ⇒ the app draws **Roboto**.
+- The legal "Privacy Policy" measures **81.8 dp** on the device; Roboto Regular predicts **81**, Inter Regular predicts **86** ⇒ also Roboto.
+- The wordmark measures **107.0 dp** against Allura's **108** ⇒ Allura resolves, exactly as the file names predict.
+
+**Why it's a defect.** Every piece of text in the app except the wordmark is
+drawn in Android's default typeface. The design system, the type ramp, the
+wordmark lockup and the "premium" spacing all assume the brand families.
+
+**Impact.** App-wide on Android. The login page's serif tagline renders as a
+generic sans-serif 26 dp wider than the design, which is what makes the
+wordmark look wrong rather than the layout.
+
+**RESOLUTION (2026-11-09). — FIXED.** The 11 font files were renamed to the
+path React Native actually opens — `"fonts/" + <family> + <styleSuffix>` —
+in `assets/fonts/` and `android/app/src/main/assets/fonts/`, and the two
+`link-assets-manifest.json` files, `ios/CinePlayer/Info.plist` and
+`ios/CinePlayer.xcodeproj/project.pbxproj` were updated to the new names:
+
+| before | after | family used in the code |
+|---|---|---|
+| `Allura-Regular.ttf` | `Allura.ttf` | `Allura` |
+| `CormorantGaramond-Regular.ttf` | `Cormorant Garamond.ttf` | `Cormorant Garamond` + 400 |
+| `CormorantGaramond-Bold.ttf` | `Cormorant Garamond_bold.ttf` | `Cormorant Garamond` + 700 |
+| `CormorantGaramond-Italic.ttf` | `Cormorant Garamond_italic.ttf` | `Cormorant Garamond` + italic |
+| `Inter-Regular.ttf` | `Inter.ttf` | `Inter` + 400 |
+| `Inter-Bold.ttf` | `Inter_bold.ttf` | `Inter` + 700 |
+| `Inter-Medium.ttf` | `Inter Medium.ttf` | `Inter Medium` + 500 |
+| `Inter-SemiBold.ttf` | `Inter SemiBold.ttf` | `Inter SemiBold` + 600 |
+| `JetBrainsMono-Regular.ttf` | `JetBrains Mono.ttf` | `JetBrains Mono` + 400 |
+| `Manrope-SemiBold.ttf` | `Manrope SemiBold.ttf` | `Manrope SemiBold` + 600 |
+| `Manrope-Bold.ttf` | `Manrope_bold.ttf` | `Manrope` + 700 |
+
+**Verified by** `scripts/check-font-resolution.js`, which resolves every text
+usage in `src/` the way RN does (733 usages) and fails if any of them would
+fall back to the system font. It reports **0 fallbacks**.
+
+---
+
+### S-026 · P1 · app-shell · every screen — the typography tokens carry no `fontWeight`, so the bold faces never render even where the family does resolve — **FIXED**
+
+**Defect.** `src/theme/tokens.ts:382-402` defines all 13 typography variants
+with a `fontFamily` and **no `fontWeight`**. On both platforms the weight
+therefore defaults to 400, and the faces the tokens name as "bold" resolve to
+the family's Regular face.
+
+**Evidence (source-proven).**
+- `src/theme/tokens.ts:384-402` — `display`, `h1`, `h2` all use `FONT_FAMILY.inter.bold`; `h3` uses `FONT_FAMILY.inter.semibold`; `displaySerif` uses `FONT_FAMILY.cormorant.bold`; `displaySans` uses `FONT_FAMILY.manrope.semibold` — and **not one of them sets `fontWeight`**.
+- `src/constants/fontFamily.ts:99` and `:104` — `inter.regular` and `inter.bold` are **the same string**, `'Inter'`. So even on a platform where the family resolves, the two tokens are indistinguishable: `inter.bold` can only be Inter Regular.
+- `node_modules/react-native/React/Views/RCTFont.mm:401` — `const RCTFontWeight defaultFontWeight = UIFontWeightRegular;` and `:426` — `fontWeight = weight ? [RCTConvert RCTFontWeight:weight] : fontWeight;` ⇒ with no `fontWeight` in the style the search weight stays 400.
+- `…/RCTFont.mm:478-491` — iOS then picks *"the closest font that matches the given weight"* inside the family. With weight 400 that is the Regular face.
+- `…/ReactFontManager.kt:138-144` — on Android the same default selects the `""` suffix, i.e. the Regular file.
+
+**Why it's a defect.** `displaySerif` (the cinematic hero) is supposed to be
+**Cormorant Garamond Bold** (`src/constants/fontFamily.ts:74`, and
+`md/SIMBA_FIGMA_SPEC_LOGIN.md:287` for the tagline) but no platform is asked
+for the bold face. `inter.bold` is supposed to be Inter Bold and is not
+distinguishable from `inter.regular` at all.
+
+**Impact.** App-wide on **both** platforms. On iOS the families *do* resolve
+(the 11 TTFs are bundled through `ios/CinePlayer.xcodeproj/project.pbxproj`
+and registered by `ios/CinePlayer/Info.plist:57-70`), so iOS shows the right
+typeface at the wrong weight; on Android it shows the wrong typeface
+(S-025) at the wrong weight.
+
+**RESOLUTION (2026-11-09). — FIXED.** Every variant in
+`src/theme/tokens.ts` now carries the `fontWeight` that selects the file
+(`display`/`h1`/`h2` → 700, `h3`/`button`/`displaySans` → 600,
+`overline`/`tab` → 500, the body variants and `mono` → 400, `displaySerif` →
+700). `brandScript` stays weightless because Allura ships a single face.
+The `fontWeight` axis is back in the tokens on purpose: it is the axis RN
+uses to pick the asset, and the previous "no axis" architecture was based on
+a resolution model the platform does not implement (S-027).
+
+**Verified by** `scripts/check-font-resolution.js` (0 fallbacks over 733
+usages) and by the device capture in the addendum above.
+
+---
+
+### S-027 · P1 · app-shell · `src/constants/fontFamily.ts` documents a font-resolution rule that the platform does not implement — **FIXED**
+
+**Defect.** The file's header block states the resolution mechanism, and the
+statement is false in the part that matters.
+
+**Evidence (source-proven).**
+- `src/constants/fontFamily.ts:35-43` — *"each leaf key MUST match the TTF's `name` table `nameId=1` (family name) EXACTLY. Android's font manager matches the `fontFamily` string against `nameId=1` byte-for-byte."* — Android never reads the name table. `ReactFontManager.kt:178` opens `fonts/<family><suffix>.<ext>` and the family string is used verbatim; the TTF's `nameId=1` is irrelevant to the lookup.
+- `src/constants/fontFamily.ts:24-31` — *"Why per-weight keys (not a flat "Inter" + fontWeight: '700'): … Encoding the weight in the family key eliminates the cross-axis ambiguity — there's only one TTF that matches the family."* — `inter.regular` and `inter.bold` are both `'Inter'` (`:99`, `:104`), so for Inter there is exactly one match for **both** keys and no ambiguity is eliminated. The same applies to `cormorant.regular` / `cormorant.bold` / `cormorant.italic` (`:72-75`).
+- `src/constants/fontFamily.ts:58-65` — *"On Android API 28+ the asset registry uses the PostScript name (or filename) as the lookup key."* — the lookup key is the **filename**; the PostScript name plays no part on Android.
+- `src/constants/fontFamily.ts:24-31` also claims Android's picker is *"biased to Bold for weights > 500"* — that is the behaviour of the **system** font picker, which is not the code path RN takes for an asset family. RN's asset path is deterministic (`createAssetTypeface` picks exactly one file).
+
+**Why it's a defect.** This file is the app's stated single source of truth for
+fonts, and it teaches the opposite of what the runtime does. The v8 change
+that removed the `fontWeight` axis was made on the strength of this rule, so
+the rule is what kept the app broken.
+
+**Impact.** Maintenance: the next change to `fontFamily.ts` will be made
+against a false model of the platform.
+
+**RESOLUTION (2026-11-09). — FIXED.** `src/constants/fontFamily.ts` was
+rewritten: the header now states the resolution rule read from the two
+platform sources (`ReactFontManager.kt:138-144, :162-178, :187` and
+`RCTFont.mm:401, :426, :478-491`), the four false claims are gone, and each
+family entry documents the file it resolves to. `src/theme/tokens.ts`
+carries the matching explanation.
+
+---
+
+### S-028 · P1 · app-shell · `md/UI_UX_Elevation_Specification_v8.md` states the same false rule as the architecture — **FIXED**
+
+**Defect.** The v8 specification documents the font-resolution mechanism the
+same wrong way, and is the document the code's comments cite.
+
+**Evidence (source-proven).**
+- `md/UI_UX_Elevation_Specification_v8.md:26` — *"no fontWeight needed; Manrope-SemiBold.ttf"* — implies the file name selects the face.
+- `md/UI_UX_Elevation_Specification_v8.md:37` — *"Android's `Typeface` manager walks the available Manrope TTFs and picks the **closest** one by visual weight … the 'closest' pick is biased toward Bold"* — RN does not walk the available TTFs; it opens one deterministic asset path and, if that path is missing, uses the system font.
+- `md/UI_UX_Elevation_Specification_v8.md:104` — *"Each leaf key maps to one TTF file. `(family='Manrope', style=normal, weight=600)` is unique to `Manrope-SemiBold.ttf`. Android's font manager picks the right one because there's only one match."* — the family `'Manrope'` opens `fonts/Manrope.ttf` or `fonts/Manrope_bold.ttf`; `Manrope-SemiBold.ttf` is never reachable through the family string `'Manrope'`.
+- `src/theme/tokens.ts:344-350` repeats the claim in the token file itself.
+
+**Why it's a defect.** The spec is the contract the implementation is judged
+against. A spec that describes a mechanism the platform does not have will
+keep passing review while the app renders the wrong typeface.
+
+**RESOLUTION (2026-11-09). — FIXED.** `md/UI_UX_Elevation_Specification_v8.md`
+now opens with a dated **CORRECTION** block that states the real resolution
+model, lists the consequences for §1 and §2, and points at the corrected
+architecture; the two false paragraphs in §1 and §2 carry inline markers
+that refer to it. The history of the mistake stays readable.
+
+---
+
+### S-029 · P1 · login · the "Sign in with Google" label renders Inter Regular, not the Inter SemiBold the design calls for — **FIXED**
+
+**Defect.** The button label sets a weight on a family whose weight axis
+cannot express SemiBold, and its size does not match the button token.
+
+**Evidence (source-proven).**
+- `src/components/core/GoogleSignInButton/GoogleSignInButton.tsx:52` — `<AppText style={styles.label}>` — **no `variant`**, so `AppText` falls back to its default `variant = 'body1'` (`src/components/core/AppText/AppText.tsx:55`) ⇒ `typography.body1` ⇒ `fontFamily: FONT_FAMILY.inter.regular` = `'Inter'` (`src/theme/tokens.ts:388`).
+- `src/components/core/GoogleSignInButton/GoogleSignInButton.tsx:84-89` — the label style sets `fontSize: 16`, `fontWeight: '600'`, `letterSpacing: 0.3` and **no `fontFamily`**.
+- `ReactFontManager.kt:138-144` — weight 600 is `< 700`, so `nearestStyle` is `NORMAL` and the path RN opens is `fonts/Inter.ttf` — the **Regular** face. The SemiBold file (`Inter-SemiBold.ttf`) is unreachable through the family `'Inter'` at any weight.
+- `RCTFont.mm:478-491` — on iOS the family `'Inter'` contains only the Regular and Bold faces, so weight 600 cannot reach the separate `"Inter SemiBold"` family either; it lands on Regular.
+- `md/SIMBA_FIGMA_SPEC_LOGIN.md:287` and `:304` — the spec calls for **Inter SemiBold** and names `Inter-SemiBold.ttf` as the file that carries it.
+- `src/theme/tokens.ts:393` — the `button` token is `fontSize: 15`, `fontFamily: FONT_FAMILY.inter.semibold`, `letterSpacing: 0.3`. The label uses **16** and a different family.
+
+**Why it's a defect.** The label is the single most important word on the
+screen and it is rendered a whole weight lighter than the design, at a size
+the token system does not use.
+
+**RESOLUTION (2026-11-09). — FIXED.** The label now names the family it
+needs — `fontFamily: FONT_FAMILY.inter.semibold` (`'Inter SemiBold'`) — so
+the path RN opens is `fonts/Inter SemiBold.ttf` (Android) and iOS resolves
+the `"Inter SemiBold"` family. The **size stays 16**, which is what the
+design calls for (`md/SIMBA_FIGMA_SPEC_LOGIN.md` §4, run T3: 16 / 24,
+weight 600, letter-spacing 0.3); the `button` token's 15 is a different
+token, not this screen's run.
+
+---
+
+### S-030 · P2 · app-shell · `splashTagline` is dead code that also names a file that cannot exist — **PARTLY FIXED**
+
+**Defect.** `src/theme/typographyStyles.ts:117-122` defines a `splashTagline`
+style that nothing uses, and it combines `fontStyle: 'italic'` with the
+`displaySerif` family.
+
+**Evidence (source-proven).**
+- A search for `splashTagline` over `src/**/*.ts` and `src/**/*.tsx` returns only its own definition (`:117`) and its own export into `allTypographyStyles` (`:159`). No component references it.
+- `src/theme/typographyStyles.ts:117-122` — `{...displaySerif, fontStyle: 'italic', fontSize: 16, lineHeight: 22}`.
+- `ReactFontManager.kt:162` — the italic suffix is `"_italic"`, and the bold-italic suffix is `"_bold_italic"`. If `displaySerif` ever gains `fontWeight: '700'` (which is what it needs — S-026), this style would ask for `fonts/Cormorant Garamond_bold_italic.ttf`, which is not shipped, and would fall through to the system font.
+
+**Impact.** Dead code today; a live silent-fallback the moment `displaySerif`
+is corrected.
+
+**RESOLUTION (2026-11-09). — PARTLY FIXED.** `splashTagline` now carries
+`fontWeight: '400'`, so it resolves to `fonts/Cormorant Garamond_italic.ttf`
+instead of asking for the file that cannot exist
+(`fonts/Cormorant Garamond_bold_italic.ttf`). The style is still unused —
+nothing references it — so the dead-code half of this finding stays open.
+
+---
+
+### S-031 · P3 · app-shell · a 246 KB disabled font file is shipped inside the Android bundle — **FIXED**
+
+**Defect.** `android/app/src/main/assets/fonts/` contains
+`Allura-Regular.v1.110.ttf.disabled` (246,632 bytes) next to the 11 real
+fonts.
+
+**Evidence (source-proven).**
+- `android/app/src/main/assets/fonts/` listing — `Allura-Regular.v1.110.ttf.disabled` is present; `assets/fonts/` (the canonical source) does not contain it.
+- `ReactFontManager.kt:178-185` — RN opens only the exact paths it builds, so the file is never read; but Android packages **every** file under `assets/` into the APK regardless.
+
+**Impact.** ~240 KB of dead weight in the shipped APK, and a second Allura
+in the fonts folder that invites a future "which one is live?" mistake.
+
+**RESOLUTION (2026-11-09). — FIXED.** The file was removed from
+`android/app/src/main/assets/fonts/` (`git rm`). The fonts folder now holds
+exactly the 11 files the app resolves, and nothing else.
+
+---
+
+### S-032 · P2 · login · the lockup inside the orb had no hierarchy, and the tagline's descender was 1 dp from the orb's edge — **FIXED**
+
+**Defect.** The three elements inside the gold orb — the lion emblem, the
+`Simba` wordmark and the tagline — were set at almost the same size
+(wordmark `Allura` 48/56, tagline `Cormorant Garamond Bold` 48/56), so the
+supporting line carried more visual mass than the brand's name. The tagline
+wrapped to two lines, and because the orb is a **circle**, the second line
+descended into the narrowing band of the disc, where the space to the edge
+collapses.
+
+**Evidence (measured on a FigCraft render of the pre-change lockup —
+`designs/measure-lockup.js`, same ruler as the device capture).**
+
+| band | ink box (dp) | min clearance to the arc |
+|---|---|---|
+| lion | y 231.5 … 320.3, x 167.5 … 239.3 | 29.2 dp |
+| `Simba` | y 345.5 … 376.3, x 151.5 … 259.3 | 111.4 dp |
+| tagline, line 1 (`Your media,`) | y 403.5 … 448.3, x 91.5 … 316.3 | 32.3 dp |
+| tagline, line 2 (`your way`) | y 475.5 … 507.3, x 117.5 … 291.3 | **1.0 dp** |
+
+The descender of the `y` in `your way` sat **1 dp** from the arc — the
+tagline was touching the edge of the disc it sits on. The tagline was also
+**224.8 dp wide against the wordmark's 107.8 dp**: the supporting line was
+twice the width of the name.
+
+**RESOLUTION (2026-11-09). — FIXED.** The lockup was rebuilt as a hierarchy —
+the emblem, then the name, then one quiet supporting line — and the fit is
+now measured instead of eyeballed:
+
+| band | ink box (dp) | min clearance to the arc |
+|---|---|---|
+| lion | y 263.5 … 362.3, x 162.5 … 243.3 | 61.0 dp |
+| `Simba` | y 387.5 … 424.3, x 139.5 … 270.3 | 81.1 dp |
+| tagline (one line) | y 453.5 … 476.3, x 116.5 … 294.3 | 30.9 dp |
+
+- the lion emblem `96 → 108` dp, the wordmark `48 → 58` dp (the hero), and the
+  tagline `48 → 22` dp in **Cormorant Garamond Italic** on **one line** — the
+  bold serif was what made the supporting line outweigh the name;
+- the tagline's weight is pinned to `400`: the `displaySerif` token asks for
+  `700`, and `700` + italic resolves to
+  `fonts/Cormorant Garamond_bold_italic.ttf`, which is not shipped — RN would
+  fall back to the system font silently (the same trap as S-030);
+- the air above the lockup is 61.2 dp and below it 57.5 dp — a 3.7 dp
+  difference, so the group reads centred in the orb.
+
+The device agrees with the design to within **1 dp** on every element
+(0.3 dp on the lion, 0.8 dp on the wordmark, 0.7 dp on the tagline) — see
+`designs/login-design-vs-app.png`.
+
+---
+
+## Addendum — what was checked and found correct
+
+Recording these so the next pass does not re-open them.
+
+- **The login page's layout is correct.** Measured against the design render,
+  every element lands within 1 dp (table above). The orb's 4 dp y-difference
+  is the pulse phase (`LoginScreen.tsx:107-115`), not a layout defect.
+- **The gold orb's colour and geometry are correct.** App
+  `rgb(236,225,203)` over the parchment vs the design's `rgb(235,225,202)`
+  — a 1/255 difference, which is the `0.16` vs `0.16` pulse opacity rounding.
+- **The app's insets are `top 24 / bottom 24` dp**, confirmed from the device
+  (`dumpsys window displays` → `navigationBars … bottom=63` px = 24 dp at
+  420 dpi) and cross-checked against the measured logo-stack top edge.
+- **The background token is applied correctly** — `colors.background.primary`
+  paints the whole frame edge-to-edge, including under the status bar.
+- **The wordmark resolves** — `Allura-Regular.ttf` is the one shipped file
+  whose name happens to equal the path RN builds.
+
