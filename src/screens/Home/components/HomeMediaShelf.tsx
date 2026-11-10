@@ -50,11 +50,6 @@ interface HomeMediaShelfProps {
    * a hard-coded 8 against a 10-entry store, so "max 10" rendered 8.
    */
   maxItems?: number;
-  emptyTitle?: string;
-  emptyDescription?: string;
-  emptyIcon?: 'video' | 'music' | 'headphones' | 'bookmark' | 'list' | 'search' | 'play' | 'folder';
-  emptyActionLabel?: string;
-  onEmptyAction?: () => void;
 }
 
 export const HomeMediaShelf: React.FC<HomeMediaShelfProps> = ({
@@ -64,24 +59,13 @@ export const HomeMediaShelf: React.FC<HomeMediaShelfProps> = ({
   onItemLongPress,
   onSeeAll,
   maxItems = MAX_RECENT_HISTORY_ENTRIES,
-  emptyTitle = 'Nothing Played Yet',
-  emptyDescription = 'Files you open will appear here — start playing something to see it show up.',
-  emptyIcon = 'video',
-  emptyActionLabel,
-  onEmptyAction,
 }: HomeMediaShelfProps) => (
   <MediaRail
     title={title}
-    icon="clock"
     items={items}
     keyExtractor={item => item.id ?? item.fileUri}
     maxItems={maxItems}
     onSeeAll={onSeeAll}
-    emptyTitle={emptyTitle}
-    emptyDescription={emptyDescription}
-    emptyIcon={emptyIcon}
-    emptyActionLabel={emptyActionLabel}
-    onEmptyAction={onEmptyAction}
     renderItem={item => {
       const hasDuration = typeof item.duration === 'number' && item.duration > 0;
       const progress =

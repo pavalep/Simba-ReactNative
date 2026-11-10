@@ -18,16 +18,27 @@
  * which makes "Pinned Playlists" true again. (Superseded by the user's
  * decision of 2026-11-05.)
  *
- * **2. The collapse.** Spec §4.11 says a rail with nothing to show takes
- * its TITLE with it. That is right for a rail that only appears once it
- * has data — but this rail is the feature's front door, and a Home page
- * that never mentions it is how the feature went missing without anyone
- * noticing. So the rail stays on the page and says what would fill it.
+ * **2. The empty rail — REVERSED.** On 2026-11-05 the rail stayed on the
+ * page and said what would fill it, on the grounds that it is the
+ * feature's front door: "a Home page that never mentions it is how the
+ * feature went missing without anyone noticing."
+ *
+ * V2 reverses that. The page now has ONE rule — **a rail with nothing in
+ * it is not drawn** — and the playlist rail is no longer the exception
+ * that makes the rule a lie. Two headings on a screen that has one
+ * grammar is exactly what the redesign removed; the lonely "Pinned
+ * Playlists" line over an empty row was one of them.
+ *
+ * The feature did not go missing with it. The rail's own "See All" opens
+ * All Playlists, and the Library and the Profile both open it too — the
+ * front door is still a door, it is just no longer a sentence on an
+ * otherwise blank page.
  *
  * The screen is rendered with its DATA seam mocked (`useHomeScreen`) —
  * the hook's own behaviour (which playlists are in the rail, and in what
- * order) is covered by `useHomeScreenPlaylistOrder.test.tsx`. What is
- * under test here is the wiring: the title the rail is given, and what the
+ * order) is covered by `useHomeScreenPlaylistOrder.test.tsx`, and the
+ * SHAPE of the section list by `homeSections.test.tsx`. What is under
+ * test here is the wiring: the title the rail is given, and what the
  * rail does when it has nothing.
  */
 
@@ -68,12 +79,14 @@ function mockHomeState(playlists: Playlist[]) {
       accent: {gold: '#C9A84C'},
     },
     insets: {top: 0, bottom: 0},
-    refreshing: false,
-    isSettled: true,
-    hasError: false,
     isScanning: false,
     sections: [{type: 'PINNED_PLAYLISTS', items: playlists}],
-    greeting: {text: 'Good evening', weather: '', condition: ''},
+    greeting: {
+      text: 'Good evening',
+      condition: 'partlyCloudy',
+      weather: null,
+      isFirstLoad: false,
+    },
     userFirstName: 'Paval',
     handleRemoveRecent: jest.fn(),
     handleRemoveBookmark: jest.fn(),
@@ -81,14 +94,11 @@ function mockHomeState(playlists: Playlist[]) {
     handleOpenMedia: jest.fn(),
     handleItemPress: jest.fn(),
     handlePlaylistPress: jest.fn(),
-    handleGenrePress: jest.fn(),
+    handleTogglePin: jest.fn(),
     handleSeeAll: jest.fn(),
-    handleSettingsPress: jest.fn(),
     handleSearchPress: jest.fn(),
     handleAvatarPress: jest.fn(),
     handleBookmarksSeeAll: jest.fn(),
-    onRefresh: jest.fn(),
-    setHasError: jest.fn(),
   };
 }
 
@@ -111,22 +121,26 @@ describe('HomeScreen — the pinned playlist rail', () => {
     expect(screen.getByText('Pinned Playlists')).toBeOnTheScreen();
   });
 
-  it('keeps the rail on the page when nothing is pinned', async () => {
-    // The rail used to collapse — and take its title with it — so a Home
-    // page with no pinned playlists said nothing at all about them. The
-    // title stays, so the feature is on the page whether or not it is in
-    // use.
+  it('draws no rail at all when nothing is pinned', async () => {
+    // V2: a rail with nothing in it is not drawn — not even its title.
+    // The section builder leaves the rail out of the page entirely, and
+    // the "Your Library" divider goes with it when every rail under it
+    // is empty.
     await renderHome([]);
 
-    expect(screen.getByText('Pinned Playlists')).toBeOnTheScreen();
+    expect(screen.queryByText('Pinned Playlists')).toBeNull();
   });
 
-  it('says what would fill the rail when nothing is pinned', async () => {
+  it('says nothing about what would fill the rail when nothing is pinned', async () => {
+    // The 2026-11-05 behaviour — a line of text saying "Nothing pinned
+    // yet — pin a playlist to keep it here." — is gone. It was the one
+    // rail that stayed when every other rail disappeared, and it made
+    // the page's grammar a rule with an exception.
     await renderHome([]);
 
     expect(
-      screen.getByText('Nothing pinned yet — pin a playlist to keep it here.'),
-    ).toBeOnTheScreen();
+      screen.queryByText('Nothing pinned yet — pin a playlist to keep it here.'),
+    ).toBeNull();
   });
 
   it('shows the pinned playlist itself', async () => {

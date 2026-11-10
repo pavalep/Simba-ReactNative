@@ -94,6 +94,15 @@ module.exports = {
       '<rootDir>/__mocks__/@react-native-documents-picker.js',
     '^@react-native-async-storage/async-storage$':
       '<rootDir>/__mocks__/@react-native-async-storage-async-storage.js',
+    // The sheet engine ships ES modules, and Jest does not transform that
+    // package — a plain import of it fails with
+    // "SyntaxError: Unexpected token 'export'".
+    //
+    // Six test files used to carry their own byte-identical copy of this
+    // mock. There is ONE now (see `__mocks__/@lodev09-react-native-true-sheet.js`),
+    // and a test that renders a sheet says nothing about it.
+    '^@lodev09/react-native-true-sheet$':
+      '<rootDir>/__mocks__/@lodev09-react-native-true-sheet.js',
     // V21 W5 P17 — MMKV mock is Map-backed (see __mocks__/react-native-mmkv.js).
     '^react-native-mmkv$':
       '<rootDir>/__mocks__/react-native-mmkv.js',

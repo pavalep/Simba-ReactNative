@@ -4,24 +4,27 @@
 // Layout (left → right):
 //   ┌─────────────────────────────────────────────────────┐
 //   │  ◼ SIMBA                          🔍  ◯            │
-//   │    YOUR MEDIA, YOUR WAY                           │
 //   └─────────────────────────────────────────────────────┘
 //
 // Notes:
 //   • The wordmark "SIMBA" is the hero — large, weight 800,
-//     tight letter-spacing, gold accent. The "YOUR MEDIA, YOUR
-//     WAY" tagline sits beneath as a small, all-caps, tracked
-//     caption in a softer tone. The Home screen may override
-//     this with a time-of-day greeting ("GOOD EVENING") so the
-//     header mirrors the body greeting.
+//     tight letter-spacing, gold accent.
 //   • A single search icon replaces the previous stack of
 //     bookmark + search. Bookmarks is now a section on Home
 //     (the rail itself is the entry point), so the dedicated
 //     header shortcut is redundant.
 //   • The profile avatar is a small gold-bordered ring with
-//     the user's photo (or initial fallback).
+//     the user's photo (or initial fallback). It opens the
+//     Profile screen, which is where Settings lives.
 //   • The scanning dot animates next to the wordmark when a
 //     library scan is running.
+//
+// The header has NO settings button. It used to accept an
+// `onSettingsPress` prop that it never rendered — a handler
+// that went nowhere, passed from Home on every render. Settings
+// is reached from Profile (the avatar), from the Library and
+// from the folder browser; a fourth door on the Home header
+// would be one more place for the same screen to live.
 
 import React, {useEffect, useRef} from 'react';
 import {
@@ -33,6 +36,7 @@ import {
 } from 'react-native';
 import {MediaImage} from '../../utility/MediaImage';
 import {useNavigation} from '@react-navigation/native';
+import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useTheme} from '../../../theme';
 import {spacing} from '../../../theme/tokens';
 import {AppText} from '../../core/AppText/AppText';
@@ -40,9 +44,9 @@ import {SvgIcon} from '../../utility/SvgIcon';
 import {useAccessibility} from '../../../hooks/useAccessibility';
 import {useAuthStore} from '../../../state';
 import {BRAND} from '../../../constants/brand';
+import type {RootStackParamList} from '../../../navigation/types';
 
 interface HomeHeaderProps {
-  onSettingsPress?: () => void;
   onSearchPress?: () => void;
   onAvatarPress?: () => void;
   isScanning?: boolean;
@@ -50,7 +54,6 @@ interface HomeHeaderProps {
 }
 
 export const HomeHeader: React.FC<HomeHeaderProps> = ({
-  onSettingsPress,
   onSearchPress,
   onAvatarPress,
   isScanning,
@@ -58,7 +61,7 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
 }) => {
   const {colors} = useTheme();
   const {reduceMotion} = useAccessibility();
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   // V17 Phase 78: selectAuthUser moved to `useAuthStore`.
   const authUser = useAuthStore(s => s.user);
   const scanAnim = useRef(new Animated.Value(1)).current;

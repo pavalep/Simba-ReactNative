@@ -1,22 +1,32 @@
 // ─── Followed Podcasts Shelf ─────────────────────────────────
+//
 // Phase 35.5: horizontal cards of followed podcasts for Home.
-// P54: always renders — if the user has no followed podcasts, the
-// section header stays visible with an empty-state hint.
-// P55 (premium redesign): large circular artwork (the established
-// Apple Podcasts / Spotify / Pocket Casts pattern) with the title
-// and author centered *underneath* the circle. No card background
-// — the circle is the visual anchor and lifts off the surface via
-// a soft shadow. The two text lines do all the metadata work.
+//
+// V2: A CIRCLE OF ARTWORK, AND ITS NAME UNDER IT.
+//
+// The circle is the app's own 132 dp. V2 drops the heavy drop shadow
+// for a ring of the app's own border colour, which separates the
+// artwork from the parchment without the blur.
+//
+// The card's text is centred under the circle — the same hierarchy
+// Apple Podcasts and Spotify use — and it is the app's `bodySmall`
+// metrics with the semibold family, so the title can actually be read
+// at arm's length.
+//
+// The rail is NOT drawn when the user follows nothing: the section
+// builder leaves it out of the section list entirely, and the "Your
+// Library" divider above it goes with it when every rail under it is
+// empty. A rail with nothing in it is not drawn.
 
-import React, {useCallback, useState} from 'react';
+import React from 'react';
 import {View, FlatList, TouchableOpacity, StyleSheet} from 'react-native';
 import {MediaImage} from '../../../components/utility/MediaImage';
 import {useTheme} from '../../../theme';
 import {spacing} from '../../../theme/tokens';
 import {SectionHeader} from '../../../components/utility/SectionHeader/SectionHeader';
-import {EmptyState} from '../../../components/feedback/EmptyState/EmptyState';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
 import {AppText} from '../../../components/core/AppText/AppText';
+import {FONT_FAMILY} from '../../../constants/fontFamily';
 import type {FollowedPodcast} from '../../../features/followedPodcasts';
 
 interface FollowedPodcastsShelfProps {
@@ -34,123 +44,108 @@ export const FollowedPodcastsShelf: React.FC<FollowedPodcastsShelfProps> =
   React.memo(({items, onPodcastPress, onSeeAll}) => {
     const {colors} = useTheme();
 
-    // P58: the rail owns its collapse state — default is
-    // collapsed when empty, expanded when has data. The user can
-    // flip with the chevron; the choice is in-memory only.
-    const [userCollapsed, setUserCollapsed] = useState<boolean | null>(null);
-    const hasData = items.length > 0;
-    const collapsed = userCollapsed ?? !hasData;
-    const onToggleCollapsed = useCallback(() => {
-      setUserCollapsed(prev => (prev ?? !hasData) ? false : true);
-    }, [hasData]);
-    // P58: the rail always renders. `collapsed` is owned here.
-    //   • collapsed === true  → header only (collapsed tile)
-    //   • collapsed === false → header + body
-    //       └─ body = podcast list when items.length > 0
-    //       └─ body = empty-state when items.length === 0
-    const showBody = !collapsed;
+    // A RAIL WITH NOTHING IN IT IS NOT DRAWN.
+    //
+    // The header is not drawn either. A title over no circles is a
+    // heading over nothing, and the section builder already leaves this
+    // rail out of the page entirely when the user follows nothing.
+    //
+    // The early return is BELOW the hooks on purpose: an early return
+    // above them would change the hook count between renders, and React
+    // would throw on the next one.
+    if (items.length === 0) {
+      return null;
+    }
 
     return (
       <View style={styles.container}>
         <SectionHeader
           label="Followed Podcasts"
-          leadingIcon="podcastRings"
+          variant="plain"
           // P58: "See All" only appears when the rail has more than
           // one item — if there's only one, the See All link is
           // misleading (nothing more to "see"). Hidden when the
           // list is empty too.
           actionLabel={items.length > 1 ? 'See All' : undefined}
           onAction={onSeeAll}
-          collapsible
-          collapsed={collapsed}
-          onToggleCollapsed={onToggleCollapsed}
+          actionAccessibilityLabel="See all Followed Podcasts"
         />
-        {showBody && items.length === 0 ? (
-          <EmptyState
-            icon="headphones"
-            title="No Followed Podcasts"
-            description="Open a podcast page and tap Follow — it will show up here for quick access."
-            variant="compact"
-          />
-        ) : null}
-        {showBody && items.length > 0 ? (
-          <FlatList
-            horizontal
-            data={items}
-            keyExtractor={podcast => String(podcast.id)}
-            renderItem={({item: podcast}) => (
-              <TouchableOpacity
-                activeOpacity={0.78}
-                onPress={() => onPodcastPress(podcast)}
-                style={styles.card}
-                accessibilityRole="button"
-                accessibilityLabel={`Open podcast ${podcast.title}${podcast.author ? ` by ${podcast.author}` : ''}`}>
-                {/* ── Circular artwork ──
-                    The outer View carries the shadow so it renders
-                    correctly across iOS + Android. The inner image
-                    gets a matching borderRadius so it reads as a true
-                    circle. */}
-                <View
-                  style={[
-                    styles.artworkShadow,
-                    {
-                      width: ARTWORK_SIZE,
-                      height: ARTWORK_SIZE,
-                      borderRadius: ARTWORK_SIZE / 2,
-                      shadowColor: colors.shadow,
-                    },
-                  ]}>
-                  {podcast.image ? (
-                    <MediaImage
-                      source={podcast.image}
-                      style={styles.artwork}
-                      resizeMode="cover"
+        <FlatList
+          horizontal
+          data={items}
+          keyExtractor={podcast => String(podcast.id)}
+          renderItem={({item: podcast}) => (
+            <TouchableOpacity
+              activeOpacity={0.78}
+              onPress={() => onPodcastPress(podcast)}
+              style={styles.card}
+              accessibilityRole="button"
+              accessibilityLabel={`Open podcast ${podcast.title}${podcast.author ? ` by ${podcast.author}` : ''}`}>
+              {/* ── Circular artwork ──
+                  V2: a RING of the app's own border colour instead of
+                  the heavy drop shadow. The shadow blurred the
+                  artwork's edge into the parchment; the ring separates
+                  them without the blur. */}
+              <View
+                style={[
+                  styles.artworkRing,
+                  {
+                    width: ARTWORK_SIZE,
+                    height: ARTWORK_SIZE,
+                    borderRadius: ARTWORK_SIZE / 2,
+                    borderColor: colors.border.subtle,
+                  },
+                ]}>
+                {podcast.image ? (
+                  <MediaImage
+                    source={podcast.image}
+                    style={styles.artwork}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View
+                    style={[
+                      styles.artwork,
+                      styles.artworkFallback,
+                      {backgroundColor: colors.accent.goldDim},
+                    ]}>
+                    <SvgIcon
+                      name="headphones"
+                      size={36}
+                      color={colors.accent.gold}
                     />
-                  ) : (
-                    <View
-                      style={[
-                        styles.artwork,
-                        styles.artworkFallback,
-                        {backgroundColor: colors.accent.goldDim},
-                      ]}>
-                      <SvgIcon
-                        name="headphones"
-                        size={36}
-                        color={colors.accent.gold}
-                      />
-                    </View>
-                  )}
-                </View>
+                  </View>
+                )}
+              </View>
 
-                {/* ── Details underneath ──
-                    Two centered lines. Title is the primary read,
-                    author is the secondary read — same hierarchy
-                    Apple Podcasts / Spotify use. */}
+              {/* ── Details underneath ──
+                  Two centered lines. Title is the primary read,
+                  author is the secondary read — same hierarchy
+                  Apple Podcasts / Spotify use. */}
+              <AppText
+                variant="bodySmall"
+                color="primary"
+                numberOfLines={1}
+                style={styles.title}>
+                {podcast.title}
+              </AppText>
+              {podcast.author ? (
                 <AppText
-                  variant="bodySmall"
-                  color="primary"
+                  variant="caption"
+                  color="secondary"
                   numberOfLines={1}
-                  style={styles.title}>
-                  {podcast.title}
+                  style={styles.author}>
+                  {podcast.author}
                 </AppText>
-                {podcast.author ? (
-                  <AppText
-                    variant="caption"
-                    color="secondary"
-                    numberOfLines={1}
-                    style={styles.author}>
-                    {podcast.author}
-                  </AppText>
-                ) : null}
-              </TouchableOpacity>
-            )}
-            contentContainerStyle={styles.scroll}
-            showsHorizontalScrollIndicator={false}
-            initialNumToRender={Math.min(items.length, 24)}
-            windowSize={5}
-            maxToRenderPerBatch={12}
-          />
-        ) : null}
+              ) : null}
+            </TouchableOpacity>
+          )}
+          contentContainerStyle={styles.scroll}
+          showsHorizontalScrollIndicator={false}
+          initialNumToRender={Math.min(items.length, 24)}
+          windowSize={5}
+          maxToRenderPerBatch={12}
+        />
       </View>
     );
   });
@@ -162,25 +157,20 @@ const styles = StyleSheet.create({
   scroll: {
     // The card itself is `width: 144` (132 circle + 6px each side).
     // Padding the scroll container the same as every other Home rail
-    // (`spacing.md`) keeps the first card visually aligned with the
+    // (`spacing.lg`) keeps the first card visually aligned with the
     // page gutter.
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
     gap: spacing.md,
   },
   card: {
     width: 144,
     alignItems: 'center', // centers the circle + the two text lines
   },
-  artworkShadow: {
-    // Soft lift under the circle — premium "album art" look. iOS uses
-    // real shadows; Android falls back to elevation. Opacity is on the
-    // low side so the shadow doesn't fight the dark surface.
-    shadowOffset: {width: 0, height: 6},
-    shadowOpacity: 0.32,
-    shadowRadius: 12,
-    elevation: 10,
-    backgroundColor: 'transparent', // shadow wrapper must be transparent
-                                    // or the circle gets a square fill.
+  artworkRing: {
+    // The ring that replaces the shadow. The artwork itself gets the
+    // matching borderRadius so it reads as a true circle.
+    borderWidth: 1,
+    overflow: 'hidden',
   },
   artwork: {
     width: '100%',
@@ -194,16 +184,12 @@ const styles = StyleSheet.create({
   title: {
     marginTop: spacing.md, // 12px between circle bottom and title — same
                            // rhythm Apple Podcasts uses.
-    fontWeight: '700',
-    fontSize: 14,
-    lineHeight: 18,
+    fontFamily: FONT_FAMILY.inter.semibold,
     textAlign: 'center',
     width: '100%',
   },
   author: {
     marginTop: 2, // tight pairing so title + author read as one block
-    fontSize: 12,
-    lineHeight: 16,
     textAlign: 'center',
     width: '100%',
   },

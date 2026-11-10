@@ -30,27 +30,6 @@ import {screen, fireEvent} from '@testing-library/react-native';
 
 import {renderChrome} from '../../../helpers/renderChrome';
 
-jest.mock('@lodev09/react-native-true-sheet', () => {
-  const ReactLocal = require('react');
-  const {View: RNView} = require('react-native');
-
-  // The imperative surface `BottomSheet` drives. A mock without it is a
-  // crash, not a sheet.
-  const mockPresent = jest.fn(() => Promise.resolve());
-  const mockDismiss = jest.fn(() => Promise.resolve());
-  const mockResize = jest.fn(() => Promise.resolve());
-
-  return {
-    TrueSheet: ReactLocal.forwardRef((props: {children?: unknown}, ref: unknown) => {
-      ReactLocal.useImperativeHandle(ref, () => ({
-        present: mockPresent,
-        dismiss: mockDismiss,
-        resize: mockResize,
-      }));
-      return ReactLocal.createElement(RNView, {testID: 'true-sheet'}, props.children);
-    }),
-  };
-});
 
 import {PlaylistActionMenu} from '../../../../src/components/playlist/PlaylistActionMenu/PlaylistActionMenu';
 import type {Playlist} from '../../../../src/types/playlist';

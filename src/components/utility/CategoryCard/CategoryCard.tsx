@@ -1,15 +1,21 @@
 // ─── CategoryCard ───────────────────────────────────────────────
-// P53: Single source of truth for the "All + content cards" tiles used
-// in every Home-page shelf. Every card is 140px wide.
 //
-// Two visual modes:
-//   • With `image` (P53+): the local cover renders full-bleed at the
-//     back, with a dark linear gradient overlay (opaque at the bottom,
-//     transparent at the top) so the title and description at the
-//     bottom stay readable. The icon switches to a translucent dark
-//     disc with a white glyph — like a small vinyl/poster badge.
-//   • Without `image`: falls back to the original plain tile with the
-//     gold icon disc.
+// V2: THE POSTER IS THE CARD.
+//
+// V1 laid the title and the description over the poster on a dark
+// scrim, and the description was one long line that ran past the card
+// and was cut off by the next card. V2 puts both UNDER the poster, and
+// breaks the description the way the app's own `numberOfLines={2}`
+// breaks it.
+//
+// The poster keeps the app's 140 : 160 shape, scaled to the page's
+// 160 dp rail pitch, and the app's own 40 dp icon disc sits in its
+// top-left corner.
+//
+// One card, one grammar: the media card, the playlist tile, the
+// podcast tile and this one all put their artwork whole and their text
+// underneath. Apple Music, Spotify, Plex, Jellyfin and the Apple TV
+// app all draw their rails this way.
 
 import React from 'react';
 import {
@@ -19,24 +25,27 @@ import {
   View,
   StyleSheet,
 } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
 import {useTheme} from '../../../theme';
 import {radius, spacing} from '../../../theme/tokens';
 import {SvgIcon} from '../SvgIcon';
 import {AppText} from '../../core/AppText/AppText';
+import {FONT_FAMILY} from '../../../constants/fontFamily';
+import {RAIL_CARD_WIDTH} from '../../media/railMetrics';
+
+/** The rail pitch — every card on the page is 160 dp wide. */
+const CARD_WIDTH = RAIL_CARD_WIDTH;
+/** The app's 140 : 160 poster shape, scaled to the rail pitch. */
+const POSTER_HEIGHT = Math.round((CARD_WIDTH * 160) / 140);
 
 export interface CategoryCardProps {
   name: string;
   description: string;
   icon: string;
   onPress: () => void;
-  /** Optional local cover image. When set, the card renders the
-   *  image as a full-bleed background with a dark gradient overlay. */
+  /** Optional local cover image. When set, the poster renders full-bleed. */
   image?: ImageSourcePropType;
   /** Optional override for the touchable's accessibility label. */
   accessibilityLabel?: string;
-  /** Theme-driven visual treatment for entries without artwork. */
-  fallbackVariant?: 'default' | 'localFiles';
 }
 
 export const CategoryCard: React.FC<CategoryCardProps> = React.memo(
@@ -47,11 +56,9 @@ export const CategoryCard: React.FC<CategoryCardProps> = React.memo(
     onPress,
     image,
     accessibilityLabel,
-    fallbackVariant = 'default',
   }) => {
     const {colors} = useTheme();
     const hasImage = !!image;
-    const hasFallbackGradient = !hasImage && fallbackVariant === 'localFiles';
 
     return (
       <TouchableOpacity
@@ -59,75 +66,52 @@ export const CategoryCard: React.FC<CategoryCardProps> = React.memo(
         onPress={onPress}
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel ?? name}
-        style={[
-          styles.card,
-          {
-            backgroundColor:
-              hasImage || hasFallbackGradient
-                ? 'transparent'
-                : colors.background.elevated,
-          },
-        ]}>
-        {hasImage ? (
-          <>
-            <Image
-              source={image}
-              style={StyleSheet.absoluteFill}
-              resizeMode="cover"
-            />
-            <LinearGradient
-              colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.35)', 'rgba(0,0,0,0.78)']}
-              locations={[0, 0.45, 1]}
-              style={StyleSheet.absoluteFill}
-            />
-          </>
-        ) : hasFallbackGradient ? (
-          <LinearGradient
-            colors={[
-              colors.accent.goldDim,
-              colors.background.elevated,
-              colors.accent.goldSoft,
-            ]}
-            start={{x: 0, y: 0}}
-            end={{x: 1, y: 1}}
-            style={StyleSheet.absoluteFill}
-          />
-        ) : null}
-
-        <View
-          style={[
-            styles.iconCircle,
-            hasImage
-              ? {backgroundColor: 'rgba(0,0,0,0.45)'}
-              : {backgroundColor: colors.accent.goldSoft},
-          ]}>
-          <SvgIcon
-            name={icon as never}
-            size={22}
-            color={colors.accent.gold}
-          />
+        style={styles.card}>
+        <View style={styles.posterArea}>
+          {hasImage ? (
+            <>
+              <Image
+                source={image}
+                style={StyleSheet.absoluteFill}
+                resizeMode="cover"
+              />
+              {/* The icon disc, on the poster's top-left corner. */}
+              <View style={styles.iconCircle}>
+                <SvgIcon
+                  name={icon as never}
+                  size={22}
+                  color={colors.accent.gold}
+                />
+              </View>
+            </>
+          ) : (
+            /* No cover — the app falls back to a gold-tinted poster with
+               the glyph in the middle. */
+            <View
+              style={[styles.posterFallback, {backgroundColor: colors.accent.goldSoft}]}>
+              <SvgIcon
+                name={icon as never}
+                size={44}
+                color={colors.accent.gold}
+              />
+            </View>
+          )}
         </View>
 
-        <AppText
-          variant="bodySmall"
-          numberOfLines={1}
-          style={[
-            styles.title,
-            {color: hasImage ? '#ffffff' : colors.text.primary},
-          ]}>
-          {name}
-        </AppText>
-        <AppText
-          variant="caption"
-          numberOfLines={2}
-          style={[
-            styles.description,
-            {
-              color: hasImage ? 'rgba(255,255,255,0.78)' : colors.text.tertiary,
-            },
-          ]}>
-          {description}
-        </AppText>
+        {/* The text is UNDER the poster, on the page's own background —
+            always legible, and the poster is never covered. */}
+        <View style={styles.textArea}>
+          <AppText variant="bodySmall" numberOfLines={1} style={styles.title}>
+            {name}
+          </AppText>
+          <AppText
+            variant="caption"
+            color="secondary"
+            numberOfLines={2}
+            style={styles.description}>
+            {description}
+          </AppText>
+        </View>
       </TouchableOpacity>
     );
   },
@@ -135,13 +119,19 @@ export const CategoryCard: React.FC<CategoryCardProps> = React.memo(
 
 const styles = StyleSheet.create({
   card: {
-    width: 140,
-    height: 160, // fixed so the image has a consistent 7:8 portrait aspect
+    width: CARD_WIDTH,
+  },
+  posterArea: {
+    width: '100%',
+    height: POSTER_HEIGHT,
     borderRadius: radius.md,
-    padding: spacing.md,
-    gap: spacing.sm,
-    overflow: 'hidden', // clip the image + gradient to the rounded card
-    justifyContent: 'flex-end', // text + icon sit at the bottom of the image
+    overflow: 'hidden', // clip the image to the rounded poster
+  },
+  posterFallback: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   iconCircle: {
     position: 'absolute',
@@ -152,13 +142,18 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.45)',
+  },
+  textArea: {
+    marginTop: 10,
   },
   title: {
-    fontWeight: '700',
-    lineHeight: 18,
+    // Inter SemiBold 14/20 — the `bodySmall` metrics with the semibold
+    // family. The weight lives in the FAMILY key (the app's
+    // weight-intent rule), so there is no `fontWeight` here.
+    fontFamily: FONT_FAMILY.inter.semibold,
   },
   description: {
-    lineHeight: 14,
-    opacity: 0.9,
+    marginTop: 2,
   },
 });

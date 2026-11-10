@@ -12,32 +12,33 @@ export interface WeatherGreetingProps {
    * small Cormorant Italic label above the user name.
    */
   text: string;
-  /** First name shown as the visual hero of the card, e.g. "Paval". */
+  /** First name shown as the visual hero of the page, e.g. "Paval". */
   firstName: string;
   /**
    * Weather condition for the Lottie icon. Drives the chip's
-   * background scene + foreground glyph. The chip always renders
-   * (even before the snapshot lands) so the page has a visual
-   * anchor while the network call is in flight.
+   * background scene + foreground glyph.
+   *
+   * The chip is drawn ONLY when there is a snapshot behind it (see
+   * `weather`) — a tinted placeholder for weather that does not exist
+   * is a lie the screen tells on every fresh install.
    */
   condition: WeatherCondition;
   /**
-   * Structured weather detail for the right column of the card.
-   * v9g: passes temperature + description + city as separate
-   * fields so the right column can render them in two stacked
-   * lines (large temperature, small description) rather than
-   * a single caption string sitting under the name. Pass
-   * `null` to show the loading state ("Fetching…") in the
-   * right column.
+   * Structured weather detail for the ONE weather line under the name.
+   *
+   * Pass `null` when there is no snapshot yet — and then the page
+   * draws NO line and NO chip. There is no "Fetching…" row: the
+   * greeting says the salutation and the name, and the weather
+   * arrives when it arrives.
    */
   weather?: WeatherDetail | null;
   /**
-   * True while the very first fetch is in flight and we have no
-   * cached snapshot to show. When true AND weather is null, the
-   * right column renders a muted "Fetching…" line.
+   * True while the very first fetch is in flight and there is no
+   * cached snapshot to show.
    *
-   * When false, the weather (if any) renders normally.
+   * V2: the component reads the SNAPSHOT, not this flag, so this
+   * prop is accepted for call compatibility and draws nothing. It
+   * exists so a caller does not have to know that.
    */
   isFetching?: boolean;
 }
-

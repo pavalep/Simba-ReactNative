@@ -12,16 +12,20 @@
  * **The pinned state is SPOKEN.** The tile's own accessibility label says
  * ", pinned", because a glyph is not a label (spec §4.13).
  *
- * **The rail collapses when it has nothing to show — unless the
- * caller gives it an empty message.** An empty rail under a title is
- * a lie of a different kind, so the title goes with it (spec §4.11).
- * But a rail that is the feature's front door has to stay on the
- * page: when the caller passes an `emptyMessage`, the rail keeps its
- * title and says what would fill it.
+ * **The rail is not drawn when it has nothing to show.** Not "drawn with
+ * a line of text saying what would fill it" — that was the 2026-11-05
+ * rule, and V2 reverses it: the page has ONE rule, a rail with nothing
+ * in it is not drawn, and the playlist rail is no longer the exception
+ * that makes the rule a lie.
+ *
+ * **The tile carries the app's own action menu.** The Home tile used to
+ * have no way to unpin at all — the only door was All Playlists. A
+ * long-press opens the SAME sheet the All Playlists grid opens, so
+ * there is one menu, not two.
  */
 
 import React from 'react';
-import {render, screen} from '@testing-library/react-native';
+import {fireEvent, render, screen} from '@testing-library/react-native';
 
 jest.mock('../../../src/components/utility/SvgIcon', () => {
   const ReactActual = jest.requireActual('react') as typeof import('react');
@@ -68,22 +72,20 @@ function makePlaylist(over: Partial<Playlist> = {}): Playlist {
   };
 }
 
-async function renderShelf(
-  playlists: Playlist[],
-  title = 'Playlists',
-  emptyMessage?: string,
-) {
-  return await render(
+async function renderShelf(playlists: Playlist[], title = 'Playlists') {
+  const onTogglePin = jest.fn();
+  const view = await render(
     <ThemeProvider>
       <QuickAccessShelf
         title={title}
         playlists={playlists}
         onPlaylistPress={jest.fn()}
+        onTogglePin={onTogglePin}
         onSeeAll={jest.fn()}
-        emptyMessage={emptyMessage}
       />
     </ThemeProvider>,
   );
+  return {...view, onTogglePin};
 }
 
 describe('QuickAccessShelf — the playlist tile', () => {
@@ -118,38 +120,37 @@ describe('QuickAccessShelf — the playlist tile', () => {
     expect(screen.getByLabelText('Open playlist Road Trip')).toBeOnTheScreen();
     expect(screen.queryByLabelText('Open playlist Road Trip, pinned')).toBeNull();
   });
-});
 
-describe('QuickAccessShelf — the rail with an empty message', () => {
-  it('stays on the page and says what would fill it', async () => {
-    await renderShelf(
-      [],
-      'Pinned Playlists',
-      'Nothing pinned yet — pin a playlist to keep it here.',
-    );
+  it('shows how many items the playlist holds', async () => {
+    await renderShelf([makePlaylist({items: [makeItem(), makeItem({id: 'item-2'})]})]);
 
-    expect(screen.getByText('Pinned Playlists')).toBeOnTheScreen();
-    expect(
-      screen.getByText('Nothing pinned yet — pin a playlist to keep it here.'),
-    ).toBeOnTheScreen();
-    expect(screen.queryByTestId('playlist-cover')).toBeNull();
-  });
-
-  it('does not say the empty message when it HAS something to show', async () => {
-    await renderShelf(
-      [makePlaylist()],
-      'Pinned Playlists',
-      'Nothing pinned yet — pin a playlist to keep it here.',
-    );
-
-    expect(
-      screen.queryByText('Nothing pinned yet — pin a playlist to keep it here.'),
-    ).toBeNull();
-    expect(screen.getByText('Pinned Playlists')).toBeOnTheScreen();
+    expect(screen.getByText('2 ITEMS')).toBeOnTheScreen();
   });
 });
 
-describe('QuickAccessShelf — the rail collapses when it is empty', () => {
+describe('QuickAccessShelf — the long-press menu', () => {
+  it('opens the app\'s own action menu on a long press', async () => {
+    // The Home tile used to have no way to unpin at all — the only door
+    // was All Playlists. The menu is the SAME sheet that grid opens, so
+    // there is one menu, not two.
+    await renderShelf([makePlaylist({pinned: true})]);
+
+    await fireEvent(screen.getByLabelText('Open playlist Road Trip, pinned'), 'longPress');
+
+    expect(screen.getByText('Unpin from top')).toBeOnTheScreen();
+  });
+
+  it('unpins from the menu and says which state the playlist should end in', async () => {
+    const {onTogglePin} = await renderShelf([makePlaylist({pinned: true})]);
+
+    await fireEvent(screen.getByLabelText('Open playlist Road Trip, pinned'), 'longPress');
+    await fireEvent.press(screen.getByText('Unpin from top'));
+
+    expect(onTogglePin).toHaveBeenCalledWith('pl_1', false);
+  });
+});
+
+describe('QuickAccessShelf — the rail with nothing to show', () => {
   it('renders NOTHING at all — the title goes with it', async () => {
     await renderShelf([]);
 

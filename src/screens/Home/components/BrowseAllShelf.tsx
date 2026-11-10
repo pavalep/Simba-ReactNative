@@ -1,12 +1,26 @@
 // ─── Browse All Shelf ────────────────────────────────────────────────────
+//
 // v10.2: Home "Discover" collapses the catalog category rails into ONE
 // horizontal shelf and keeps Local Files visible alongside the API-backed
 // areas so the user's linked media is discoverable from the same surface.
-// horizontal shelf — one CategoryCard per top-level section, in the same
-// "previous" 140×160 portrait + image + gradient + icon-disc + title/
-// description pattern that was used by MovieCategoriesShelf / MusicCateg
-// oriesShelf / etc. before the collapse. Tapping a card opens that
-// section's browse screen.
+//
+// V2: ONE CARD GRAMMAR, AND ONE OWNER FOR THE COPY.
+//
+// The card is the app's own `CategoryCard`: the poster WHOLE, the name and
+// the description UNDERNEATH it. V1 laid the type over the poster on a
+// scrim and the description was one long line that ran past the card and
+// was cut off by the next card.
+//
+// The rail sits on the page's ONE gutter (16 dp), and its cards are on the
+// page's ONE pitch (160 dp + a 12 dp gap) — the same pitch every other
+// rail on the page uses, so the page scrolls as one column.
+//
+// THE DESCRIPTIONS HAVE ONE OWNER.
+//
+// The nine two-line descriptions live in
+// `../related/categoryDescriptions.json`, because the Penpot board draws
+// the same nine cards with the same words. Two copies of the copy is how
+// a design and an app drift apart: the JSON is the single file both read.
 
 import React from 'react';
 import {View, FlatList, StyleSheet} from 'react-native';
@@ -14,13 +28,23 @@ import {CategoryCard} from '../../../components/utility/CategoryCard/CategoryCar
 import {SectionHeader} from '../../../components/utility/SectionHeader/SectionHeader';
 import {spacing} from '../../../theme/tokens';
 import {CATEGORY_COVERS} from '../../../assets/images/categories';
+import {RAIL_CARD_PITCH} from '../../../components/media/railMetrics';
+import categoryDescriptions from '../related/categoryDescriptions.json';
 
 import type {SectionRouteKey} from './browseAllRouteKey';
 
+/**
+ * The name of a catalogue section — and the key its description lives
+ * under.
+ *
+ * Typing it as a key of the JSON means the compiler refuses a card whose
+ * description nobody wrote, which is the whole point of having ONE owner.
+ */
+export type CategoryName = keyof typeof categoryDescriptions;
+
 export interface BrowseAllEntry {
   route: SectionRouteKey;
-  name: string;
-  description: string;
+  name: CategoryName;
   icon: string;
   image?: ReturnType<typeof require>;
 }
@@ -30,63 +54,54 @@ export const BROWSE_ALL_SECTIONS: BrowseAllEntry[] = [
   {
     route: 'MoviesScreen',
     name: 'Movies',
-    description: 'Classic, sci-fi, noir & more',
     icon: 'clapperboard',
     image: CATEGORY_COVERS.movies.all,
   },
   {
     route: 'PodcastsScreen',
     name: 'Podcasts',
-    description: 'Arts, news, science & more',
     icon: 'podcastRings',
     image: CATEGORY_COVERS.podcasts.all,
   },
   {
     route: 'MusicScreen',
     name: 'Music',
-    description: 'Rock, jazz, classical & more',
     icon: 'disc3',
     image: CATEGORY_COVERS.music.all,
   },
   {
     route: 'RadioScreen',
     name: 'Radio',
-    description: 'Live stations worldwide',
     icon: 'radioTower',
     image: CATEGORY_COVERS.radio.all,
   },
   {
     route: 'LiveTVScreen',
     name: 'Live TV',
-    description: 'News, sports & entertainment',
     icon: 'tv',
     image: CATEGORY_COVERS.liveTv.all,
   },
   {
     route: 'AudiobooksScreen',
     name: 'Audiobooks',
-    description: 'Fiction, mystery, history & more',
     icon: 'bookOpen',
     image: CATEGORY_COVERS.audiobooks.all,
   },
   {
     route: 'ShowsScreen',
     name: 'Shows',
-    description: 'Drama, comedy, sci-fi & more',
     icon: 'videoCamera',
     image: CATEGORY_COVERS.shows.all,
   },
   {
     route: 'ArchiveScreen',
     name: 'Archive',
-    description: 'Audio, video & old-time radio',
     icon: 'archive',
     image: CATEGORY_COVERS.archive.all,
   },
   {
     route: 'LocalFiles',
     name: 'Local Files',
-    description: 'Linked folders and offline media',
     icon: 'folder',
   },
 ];
@@ -99,16 +114,11 @@ export const BrowseAllShelf: React.FC<BrowseAllShelfProps> = React.memo(
   ({onSectionPress}) => {
     return (
       <View style={styles.container}>
-        {/* Section title row — matches the rail pattern used everywhere
-            else on Home (Recently Played, Bookmarks, Followed Podcasts,
-            etc.). "Explore Contents" reads as one short, editorial
-            pair — signals that this rail is the discovery front door
-            for every catalog section. The compass leading icon ties
-            the rail to that discovery metaphor. */}
-        <SectionHeader
-          label="Explore Contents"
-          leadingIcon="compass"
-        />
+        {/* The rail's title, in the page's plain skin: the title and
+            nothing else. No badge circle and no action — the nine cards
+            below ARE the section, and a "See All" would point at a page
+            that has no single list to show. */}
+        <SectionHeader label="Explore Contents" variant="plain" />
         <FlatList
           horizontal
           data={BROWSE_ALL_SECTIONS}
@@ -118,16 +128,17 @@ export const BrowseAllShelf: React.FC<BrowseAllShelfProps> = React.memo(
           renderItem={({item}) => (
             <CategoryCard
               name={item.name}
-              description={item.description}
+              description={categoryDescriptions[item.name]}
               icon={item.icon}
               image={item.image}
-              fallbackVariant={item.route === 'LocalFiles' ? 'localFiles' : 'default'}
               onPress={() => onSectionPress(item.route)}
             />
           )}
           initialNumToRender={BROWSE_ALL_SECTIONS.length}
           windowSize={5}
           maxToRenderPerBatch={8}
+          snapToInterval={RAIL_CARD_PITCH}
+          decelerationRate="fast"
         />
       </View>
     );
@@ -136,17 +147,14 @@ export const BrowseAllShelf: React.FC<BrowseAllShelfProps> = React.memo(
 
 const styles = StyleSheet.create({
   container: {
-    // Match the vertical rhythm of every other Home rail
-    // (FollowedPodcastsShelf, GenreChipsShelf, etc.) — bottom
-    // gutter for separation from the next section.
-    marginBottom: spacing.lg,
-    // The "Discover" SubsectionTitle already supplies
-    // `paddingVertical: spacing.md` (12 px) plus
-    // `marginTop: spacing.sm` (8 px) above it. Add an extra
-    // top margin here so the cards breathe against the rule
-    // line below the title — same gap the rail above (Recently
-    // Played) sits under "Your Library".
-    marginTop: spacing.sm,
+    // The same rhythm as every other Home rail (`MediaRail`): 32 dp
+    // between one shelf and the next.
+    marginBottom: spacing.xxl,
   },
-  scroll: {paddingHorizontal: spacing.md, gap: spacing.sm},
+  scroll: {
+    // The ONE gutter: 16 dp, like every left-aligned thing on the page.
+    paddingHorizontal: spacing.lg,
+    // The ONE gap: 12 dp — the page's card pitch.
+    gap: spacing.md,
+  },
 });

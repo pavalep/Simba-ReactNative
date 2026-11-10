@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useMemo, useState} from 'react';
+import {useCallback, useMemo} from 'react';
 import {useTheme} from '../../../theme';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {CommonActions} from '@react-navigation/native';
@@ -9,11 +9,10 @@ import {useBookmarks} from '../../../features/bookmarks';
 import {pinnedAtMs, usePlaylists} from '../../../features/playlists';
 import {logger} from '../../../lib/logger';
 
-
 import {useFollowedPodcasts} from '../../../features/followedPodcasts';
 
-import {useRecentHistory, type RecentHistoryEntry} from '../../../features/recentHistory';
-import { resolveStreamType, useResumeAwareLaunch } from '../../../infrastructure/player';
+import {useRecentHistory} from '../../../features/recentHistory';
+import {resolveStreamType, useResumeAwareLaunch} from '../../../infrastructure/player';
 import {MAX_RECENT_HISTORY_ENTRIES} from '../../../state/recentHistoryStore';
 import {useConfirmDialog} from '../../../components/core/Dialog';
 import {useToast} from '../../../components/feedback/Toast';
@@ -24,33 +23,28 @@ import {useWeather} from '../../../hooks/useWeather';
 import type {WeatherCondition} from '../../../components/utility/WeatherIcon';
 import type {WeatherSnapshot} from '../../../infrastructure/api/weather/adapter';
 import type {HomeSection} from '../types';
+import type {WeatherDetail} from '../components/WeatherGreeting/WeatherGreeting.types';
 import {useMediaStore} from '../../../state';
 
 // ── Helpers ──
-
-interface WeatherDetail {
-  description: string;
-  cityName: string;
-  temperatureC: number;
-}
 
 interface GreetingInfo {
   text: string;
   /** Weather condition for the Lottie icon — driven by the live snapshot. */
   condition: WeatherCondition;
   /**
-   * Structured weather detail for the right column of the card
-   * (v9g: temperature + description/city, separated from the
-   * greeting so nothing sits directly under the name). Null when
-   * we don't yet have a snapshot — the card renders a loading
-   * state in that column.
+   * Structured weather detail for the ONE weather line under the name.
+   * Null when we don't have a snapshot — and then there is no line at
+   * all and no chip (V2: a footnote can never compete with the name,
+   * and a placeholder for weather that does not exist is a lie).
    */
   weather: WeatherDetail | null;
   /**
    * True only while the very first cold-start fetch is in flight AND
-   * we have no cached snapshot to fall back on. P66: the card always
-   * renders, and the right column becomes a "Fetching weather…"
-   * placeholder when this is true.
+   * we have no cached snapshot to fall back on.
+   *
+   * V2: it draws NOTHING. The greeting shows the salutation and the
+   * name, and the weather arrives when it arrives.
    */
   isFirstLoad: boolean;
 }
@@ -75,12 +69,6 @@ function buildGreeting(snapshot: WeatherSnapshot | null, isFirstLoad: boolean): 
   const hour = new Date().getHours();
   const text = greetingTextFromHour(hour);
   const condition: WeatherCondition = snapshot?.condition ?? 'partlyCloudy';
-  // P66: don't blank the weather during the first load — the card
-  // handles the loading state itself with a "Fetching weather…"
-  // placeholder. We still pass the snapshot's weather if we have
-  // one (e.g. a persisted cache from a previous run) so the user
-  // sees real data instead of "Fetching" while the fresh fetch
-  // runs in the background.
   const weather = buildWeather(snapshot);
   return {text, condition, weather, isFirstLoad};
 }
@@ -116,43 +104,19 @@ const HOME_PLAYLIST_SHELF_LIMIT = 3;
 export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
-  const [refreshing, setRefreshing] = useState(false);
-  const [isSettled, setIsSettled] = useState(false);
-  const [hasError, setHasError] = useState(false);
   const {openPlayer} = useResumeAwareLaunch();
   const {user} = useAuth();
   const {snapshot: weatherSnapshot, isFirstLoad: weatherFirstLoad} = useWeather();
 
-  useEffect(() => {
-    const t = setTimeout(() => setIsSettled(true), 300);
-    return () => clearTimeout(t);
-  }, []);
-
-  // ── Data from Redux ──
+  // ── Data from the stores ──
   const {list: recentFiles, removeRecent} = useRecentHistory();
   const {allBookmarks: bookmarks, remove: removeBookmark} = useBookmarks();
   const {confirm} = useConfirmDialog();
   const toast = useToast();
-  
-  const {list: playlists} = usePlaylists();
-  const allTracks = useMediaStore(s => s.tracks);
+
+  const {list: playlists, setPinned: setPlaylistPinned} = usePlaylists();
   const {list: followedPodcasts} = useFollowedPodcasts();
   const isScanning = useMediaStore(s => s.isScanning);
-
-  // ── Derived Data ──
-  const genres = useMemo(() => {
-    const genreMap = new Map<string, number>();
-    allTracks.forEach(t => {
-      const g = t.genre?.trim();
-      if (g && g !== 'Unknown Genre' && g !== '') {
-        genreMap.set(g, (genreMap.get(g) ?? 0) + 1);
-      }
-    });
-    return Array.from(genreMap.entries())
-      .map(([name, count]) => ({name, count}))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 12);
-  }, [allTracks]);
 
   // ── Navigation Handlers ──
   const handleOpenMedia = useCallback(async () => {
@@ -221,8 +185,8 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
       // W9.5 — this handler feeds BOTH library shelves, and it used to
       // pass `startPositionMs: item.startPosition ?? item.position`.
       // `position` is SECONDS and the field is MILLISECONDS, so every
-      // shelf tap asked for a ~1000x-too-early seek, and it bypassed
-      // the resume policy outright — a user who bookmarked a moment got
+      // shelf tap asked for a ~1000x-too-early seek, and it bypassed the
+      // resume policy outright — a user who bookmarked a moment got
       // the raw history position instead. Resume is decided at the
       // seam; a shelf only says WHAT it is.
       const streamType = resolveStreamType(item.type ?? item.mediaType ?? 'video');
@@ -317,17 +281,21 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
     [navigation],
   );
 
-  const handleGenrePress = useCallback(
-    (genre: string) => {
-      navigation.navigate('GenreScreen', {genre});
+  /**
+   * Pin or unpin a playlist from the Home tile.
+   *
+   * The tile is a BROWSING surface, so it carries no permanent pin
+   * button (D-P8) — the long-press menu is the shortcut, and All
+   * Playlists keeps the visible 32 px toggle, so the pin is never
+   * reachable by gesture alone.
+   */
+  const handleTogglePin = useCallback(
+    (playlistId: string, pinned: boolean) => {
+      setPlaylistPinned(playlistId, pinned);
     },
-    [navigation],
+    [setPlaylistPinned],
   );
 
-  const handleSettingsPress = useCallback(
-    () => navigation.navigate('Settings'),
-    [navigation],
-  );
   const handleSearchPress = useCallback(
     () => navigation.navigate('Search'),
     [navigation],
@@ -349,14 +317,15 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
     navigation.navigate('Profile');
   }, [navigation]);
 
-  const handleBookmarksPress = useCallback(() => {
+  // P58: "See All" on the Bookmarks rail navigates to the Bookmarks
+  // screen. It used to be a second handler (`handleBookmarksPress`)
+  // returned alongside this one, because the header once had a
+  // bookmark shortcut of its own. The header has not had one since the
+  // Bookmarks became a rail, so the second name was a second answer
+  // to a question only the rail asks.
+  const handleBookmarksSeeAll = useCallback(() => {
     navigation.navigate('Bookmarks');
   }, [navigation]);
-
-  // P58: "See All" on the Bookmarks rail navigates to the same
-  // Bookmarks screen. Kept as a separate hook return so the rail
-  // can use it as `onSeeAll` without coupling to the avatar icon.
-  const handleBookmarksSeeAll = handleBookmarksPress;
 
   // ── Compute Sections ──
   const sections = useMemo((): HomeSection[] => {
@@ -370,23 +339,7 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
       .sort((a, b) => pinnedAtMs(b) - pinnedAtMs(a))
       .slice(0, HOME_PLAYLIST_SHELF_LIMIT);
 
-    const realSections: HomeSection[] = [
-      {type: 'GREETING'},
-
-      // P54 + P56: per-user "Your Library" group at the top, separated
-      // from the API-backed discover shelves below by a centered rule
-      // title. Order is now:
-      //     1. Recently Played (always expanded)
-      //     2. Bookmarks       (collapsible, auto-expanded when data)
-      //     3. Followed Podcasts (collapsible, auto-expanded when data)
-      // All three always render — empty-state hints cover the no-data
-      // case so the group never disappears.
-      // v9f: Cormorant Garamond Italic 18 px at 0.9 gold — readable
-      // editorial accent, not a competing heading. v9 (full gold)
-      // was attention-seeking; v9b (goldGlow 0.25) was invisible;
-      // v9c (0.6) was close; v9d (0.7), v9e (0.8) needed more;
-      // v9f (0.9) is approaching full but stays slightly soft.
-      {type: 'SUBSECTION_TITLE', label: 'Your Library', variant: 'displaySerif'},
+    const libraryRails: HomeSection[] = [
       {
         type: 'SHELF',
         title: 'Recently Played',
@@ -405,40 +358,54 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
       {type: 'PINNED_PLAYLISTS', items: pinnedPlaylists},
       {type: 'BOOKMARKS', items: bookmarks},
       {type: 'FOLLOWED_PODCASTS', items: followedPodcasts},
-
-      // Discover / API-backed catalog browse — grouped under a "Discover"
-      // sub-section title. v10.2: the 8 separate category rails collapse
-      // into ONE "Browse All" rail (one 16:9 hero card per top-level
-      // section) so the page stays scannable.
-      // v9f: same treatment as "Your Library" — Cormorant Italic
-      // 18 px at 0.9 gold so both parent-block titles share a
-      // single visual voice.
-      {type: 'SUBSECTION_TITLE', label: 'Discover', variant: 'displaySerif'},
-      {type: 'BROWSE_ALL'},
-      
     ];
 
-    // Genre chips
-    if (genres.length > 0) {
-      realSections.push({type: 'GENRE', genres});
+    // A RAIL WITH NOTHING IN IT IS NOT DRAWN.
+    //
+    // `'items' in rail` narrows the union to the four arms that carry
+    // items — GREETING, SUBSECTION_TITLE and BROWSE_ALL have none.
+    //
+    // Netflix's Continue Watching, Plex's Continue Watching, YouTube's
+    // History and Spotify's "Jump back in" all lead with the personal,
+    // and none of them draws an empty row to get there. A fresh install
+    // has no library, so the page starts with Discover — not because
+    // Discover moved up, but because there is no library to show.
+    const populated = libraryRails.filter(rail => 'items' in rail && rail.items.length > 0);
+
+    const realSections: HomeSection[] = [{type: 'GREETING'}];
+
+    // "Your Library" is a GROUP, and a group with nothing in it is not
+    // drawn either — the divider would be a heading over no rails.
+    //
+    // v9f: Cormorant Garamond Italic 18 px at 0.9 gold — readable
+    // editorial accent, not a competing heading. v9 (full gold)
+    // was attention-seeking; v9b (goldGlow 0.25) was invisible;
+    // v9c (0.6) was close; v9d (0.7), v9e (0.8) needed more;
+    // v9f (0.9) is approaching full but stays slightly soft.
+    if (populated.length > 0) {
+      realSections.push({
+        type: 'SUBSECTION_TITLE',
+        label: 'Your Library',
+        variant: 'displaySerif',
+      });
+      realSections.push(...populated);
     }
 
-    return realSections;
-  }, [recentFiles, playlists, bookmarks, genres, followedPodcasts]);
+    // Discover / API-backed catalog browse — grouped under a "Discover"
+    // sub-section title. v10.2: the 8 separate category rails collapse
+    // into ONE "Browse All" rail (one card per top-level section) so
+    // the page stays scannable.
+    realSections.push(
+      {type: 'SUBSECTION_TITLE', label: 'Discover', variant: 'displaySerif'},
+      {type: 'BROWSE_ALL'},
+    );
 
-  // ── Pull-to-refresh ──
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await new Promise<void>(resolve => setTimeout(resolve, 600));
-    setRefreshing(false);
-  }, []);
+    return realSections;
+  }, [recentFiles, playlists, bookmarks, followedPodcasts]);
 
   return {
     colors,
     insets,
-    refreshing,
-    isSettled,
-    hasError,
     isScanning,
     sections,
     greeting: buildGreeting(weatherSnapshot, weatherFirstLoad),
@@ -449,22 +416,16 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
      * either way ("Good afternoon, there").
      */
     userFirstName: deriveFirstName(user),
-    removeBookmark,
     handleRemoveRecent,
     handleRemoveBookmark,
     user: user ? user : null,
-    genres,
     handleOpenMedia,
     handleItemPress,
     handlePlaylistPress,
-    handleGenrePress,
+    handleTogglePin,
     handleSeeAll,
-    handleSettingsPress,
     handleSearchPress,
     handleAvatarPress,
-    handleBookmarksPress,
     handleBookmarksSeeAll,
-    onRefresh,
-    setHasError,
   };
 }

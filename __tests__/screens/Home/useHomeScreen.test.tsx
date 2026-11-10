@@ -57,7 +57,7 @@ jest.mock('../../../src/features/bookmarks', () => ({
   useBookmarks: () => ({allBookmarks: [], remove: jest.fn()}),
 }));
 jest.mock('../../../src/features/playlists', () => ({
-  usePlaylists: () => ({list: []}),
+  usePlaylists: () => ({list: [], setPinned: jest.fn()}),
 }));
 jest.mock('../../../src/features/followedPodcasts', () => ({
   useFollowedPodcasts: () => ({list: []}),

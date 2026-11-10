@@ -1,7 +1,26 @@
 /**
- * MediaRailCard — one 16:9 card in a horizontal library rail.
+ * MediaRailCard — one 16:9 artwork card in a horizontal library rail.
  *
- * ## Why this exists
+ * ## THE GRAMMAR (V2)
+ *
+ * The artwork is WHOLE and the text is UNDERNEATH it.
+ *
+ * V1 laid the title and the position line over the picture on a scrim.
+ * That covered the bottom half of the artwork and made the type fight
+ * the image — the picture was the least readable thing on the card.
+ * V2 gives the picture its full frame and puts the type on the page's
+ * background, where it is always legible and the picture is always the
+ * picture.
+ *
+ * Apple Music, Spotify, Plex, Jellyfin and the Apple TV app all draw
+ * their rails this way, and it is the reason the page reads as one
+ * screen instead of four widgets.
+ *
+ * The progress bar rides the artwork's bottom edge — the app's own
+ * place for it — inset by the corner radius so it does not poke out
+ * past the rounded corners.
+ *
+ * ## Why this component exists
  *
  * Home had three shelves ("Recently Played", "Bookmarks", "Followed
  * Podcasts") and the first two each carried their OWN copy of the same
@@ -29,22 +48,37 @@
 import React from 'react';
 import {StyleSheet, TouchableOpacity, View} from 'react-native';
 import {MediaImage} from '../utility/MediaImage';
-import LinearGradient from 'react-native-linear-gradient';
 import {useTheme} from '../../theme';
 import {spacing} from '../../theme/tokens';
 import {toRenderableImageUri} from '../../utils/mediaUri';
 import {AppText} from '../core/AppText/AppText';
 import {SvgIcon} from '../utility/SvgIcon';
+import {FONT_FAMILY} from '../../constants/fontFamily';
+import {
+  RAIL_CARD_WIDTH,
+  RAIL_MEDIA_ARTWORK_HEIGHT,
+  RAIL_MEDIA_CARD_HEIGHT,
+} from './railMetrics';
 import type {MediaLane} from '../../types/media';
 
-/** Card geometry. Shared so every rail in the app scrolls identically. */
-export const MEDIA_RAIL_CARD_WIDTH = 160;
-const THUMB_HEIGHT = 90; // 16:9 at the width above.
+/**
+ * Card geometry.
+ *
+ * The numbers live in `railMetrics.ts` — the ONE owner of the page's card
+ * pitch. They used to be written out here, in `CategoryCard`, in the
+ * playlist tile, in the podcast tile and in the rail's snap interval: five
+ * copies of "160", and a change to one of them would have left the page
+ * with two different pitches.
+ */
+const CARD_WIDTH = RAIL_CARD_WIDTH;
+const THUMB_HEIGHT = RAIL_MEDIA_ARTWORK_HEIGHT;
+/** The corner radius — also the progress bar's inset from each side. */
+const CARD_RADIUS = 12;
 
 export interface MediaRailCardProps {
-  /** Readable name of the item. Overlaid on the thumbnail. */
+  /** Readable name of the item. Under the artwork. */
   title: string;
-  /** Drives the placeholder glyph and the corner type badge. */
+  /** Drives the placeholder glyph. */
   lane: MediaLane;
   /**
    * The image to draw.
@@ -98,9 +132,8 @@ export const MediaRailCard: React.FC<MediaRailCardProps> = ({
       }
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
-      style={[styles.card, {shadowColor: colors.shadow}]}>
-      <View
-        style={[styles.thumbnailContainer, {backgroundColor: colors.background.elevated}]}>
+      style={styles.card}>
+      <View style={[styles.thumbnailContainer, {backgroundColor: colors.background.elevated}]}>
         {imageUri ? (
           <MediaImage
             // A captured resume frame is a LOCAL path, and a local path
@@ -118,40 +151,8 @@ export const MediaRailCard: React.FC<MediaRailCardProps> = ({
           </View>
         )}
 
-        <View style={[styles.typeBadge, {backgroundColor: colors.background.scrim}]}>
-          <SvgIcon name={glyph} size={12} color={colors.text.bright} />
-        </View>
-
-        <LinearGradient
-          colors={['transparent', colors.background.scrimSoft, colors.background.scrim]}
-          style={styles.overlayGradient}
-        />
-
-        <View style={styles.bottomStrip}>
-          <View style={[StyleSheet.absoluteFill, {backgroundColor: colors.background.scrim}]} />
-          <View style={styles.overlayContent}>
-            <AppText
-              variant="bodySmall"
-              numberOfLines={1}
-              style={[
-                styles.cardTitleOverlay,
-                {color: colors.text.bright, textShadowColor: colors.background.scrimMid},
-              ]}>
-              {title}
-            </AppText>
-            {subtitle ? (
-              <AppText
-                variant="caption"
-                style={[
-                  styles.cardSubtitleOverlay,
-                  {color: colors.text.onMediaSoft, textShadowColor: colors.background.scrim},
-                ]}>
-                {subtitle}
-              </AppText>
-            ) : null}
-          </View>
-        </View>
-
+        {/* The progress bar rides the artwork's bottom edge, inset by the
+            corner radius so it never pokes past the rounded corners. */}
         {progress > 0 ? (
           <View
             style={[
@@ -161,29 +162,42 @@ export const MediaRailCard: React.FC<MediaRailCardProps> = ({
             <View
               style={[
                 styles.progressBarFill,
-                {width: `${Math.min(100, progress * 100)}%`, backgroundColor: colors.accent.gold},
+                {
+                  width: `${Math.min(100, progress * 100)}%`,
+                  backgroundColor: colors.accent.gold,
+                },
               ]}
             />
           </View>
         ) : null}
       </View>
+
+      <AppText variant="bodySmall" numberOfLines={1} style={styles.cardTitle}>
+        {title}
+      </AppText>
+      {subtitle ? (
+        <AppText
+          variant="caption"
+          color="secondary"
+          numberOfLines={1}
+          style={styles.cardMeta}>
+          {subtitle}
+        </AppText>
+      ) : null}
     </TouchableOpacity>
   );
 };
 
 const styles = StyleSheet.create({
   card: {
-    width: MEDIA_RAIL_CARD_WIDTH,
+    width: CARD_WIDTH,
+    height: RAIL_MEDIA_CARD_HEIGHT,
     marginRight: spacing.md,
-    elevation: 4,
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
   },
   thumbnailContainer: {
     width: '100%',
     height: THUMB_HEIGHT,
-    borderRadius: 12,
+    borderRadius: CARD_RADIUS,
     overflow: 'hidden',
     position: 'relative',
   },
@@ -193,51 +207,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     opacity: 0.5,
   },
-  overlayGradient: {
-    ...StyleSheet.absoluteFill,
-    zIndex: 1,
+  cardTitle: {
+    // The card's title is Inter SemiBold 14/20 — the `bodySmall`
+    // metrics with the semibold family. The weight lives in the FAMILY
+    // key (the app's weight-intent rule): no `fontWeight` here, because
+    // on Android the family string is what selects the file.
+    marginTop: 8,
+    fontFamily: FONT_FAMILY.inter.semibold,
   },
-  bottomStrip: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    zIndex: 2,
-  },
-  overlayContent: {
-    padding: spacing.sm,
-    paddingBottom: spacing.xs + 4,
-  },
-  cardTitleOverlay: {
-    fontSize: 12,
-    fontWeight: '700',
-    lineHeight: 15,
-    textShadowOffset: {width: -1, height: 1},
-    textShadowRadius: 10,
-    marginBottom: 2,
-  },
-  cardSubtitleOverlay: {
-    fontSize: 10,
-    fontWeight: '600',
-    textShadowOffset: {width: 0, height: 1},
-    textShadowRadius: 4,
-  },
-  typeBadge: {
-    position: 'absolute',
-    top: 6,
-    right: 6,
-    zIndex: 5,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
+  cardMeta: {
+    marginTop: 2,
   },
   progressBarTrack: {
     position: 'absolute',
     bottom: 0,
-    left: 0,
-    right: 0,
+    left: CARD_RADIUS,
+    right: CARD_RADIUS,
     height: 3,
     zIndex: 3,
   },

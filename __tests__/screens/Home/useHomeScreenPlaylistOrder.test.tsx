@@ -77,7 +77,7 @@ jest.mock('../../../src/features/playlists', () => {
     // implementation of the rule to read instead.
     ...jest.requireActual('../../../src/features/playlists'),
     __mockPlaylistState: mockPlaylistState,
-    usePlaylists: () => ({list: mockPlaylistState.list}),
+    usePlaylists: () => ({list: mockPlaylistState.list, setPinned: jest.fn()}),
   };
 });
 
@@ -111,11 +111,26 @@ function fakeNavigation() {
 
 /** The names on Home's playlist rail, in the order the rail shows them. */
 async function railNames(playlists: Playlist[]): Promise<string[]> {
+  const names = await playlistRailNames(playlists);
+  if (names === null) {
+    throw new Error('Home rendered no PINNED_PLAYLISTS section');
+  }
+  return names;
+}
+
+/**
+ * The names on Home's playlist rail, or `null` when there is NO rail.
+ *
+ * `null` is a real answer, not an error: V2 does not draw a rail with
+ * nothing in it, so "nothing is pinned" means "there is no playlist rail
+ * on the page" — not "the rail is there and it is empty".
+ */
+async function playlistRailNames(playlists: Playlist[]): Promise<string[] | null> {
   __mockPlaylistState.list = playlists;
   const {result} = await renderHook(() => useHomeScreen(fakeNavigation()));
   const section = result.current.sections.find(s => s.type === 'PINNED_PLAYLISTS');
   if (!section || section.type !== 'PINNED_PLAYLISTS') {
-    throw new Error('Home rendered no PINNED_PLAYLISTS section');
+    return null;
   }
   return (section.items as Playlist[]).map(p => p.name);
 }
@@ -169,13 +184,17 @@ describe('useHomeScreen — the pinned playlist rail', () => {
     expect(names).toEqual(['Pinned Last', 'Pinned First']);
   });
 
-  it('is empty when nothing is pinned', async () => {
-    const names = await railNames([
+  it('draws no playlist rail at all when nothing is pinned', async () => {
+    // V2: a rail with nothing in it is not drawn — not even its title.
+    // The section builder leaves it out of the page entirely, and the
+    // "Your Library" divider goes with it when every rail under it is
+    // empty.
+    const names = await playlistRailNames([
       makePlaylist({id: 'pl_a', name: 'Unpinned Recent', pinned: false, updatedAt: '2026-10-29T00:00:00.000Z'}),
       makePlaylist({id: 'pl_b', name: 'Unpinned Older', pinned: false, updatedAt: '2026-10-28T00:00:00.000Z'}),
     ]);
 
-    expect(names).toEqual([]);
+    expect(names).toBeNull();
   });
 
   it('shows at most three pinned playlists', async () => {

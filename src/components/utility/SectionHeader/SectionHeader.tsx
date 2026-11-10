@@ -10,6 +10,14 @@ interface SectionHeaderProps {
   actionLabel?: string;
   onAction?: () => void;
   /**
+   * The action's accessibility label.
+   *
+   * "See All" on its own tells a screen-reader user which "See All" it
+   * is — there are usually several on a page. The visible label stays
+   * short; this carries the rail's name ("See all Recently Played").
+   */
+  actionAccessibilityLabel?: string;
+  /**
    * Visual size of the section title.
    *   • 'large' (default) — used for Home rails; prominent h2-style title
    *   • 'small'           — used for sub-sections; smaller, lighter
@@ -30,28 +38,53 @@ interface SectionHeaderProps {
    * small sub-section headers don't get a leading icon.
    */
   leadingIcon?: import('../SvgIcon').IconName;
+  /**
+   * The two skins of the ONE header.
+   *
+   *   'default' — the v7/v8 header: a 32 dp gold-soft badge with a
+   *              glyph in it, the title, the action, the collapse
+   *              chevron. Used by Settings, Audio Settings and Search.
+   *
+   *   'plain'   — the V2 header: the title (h3, Inter SemiBold 20/28)
+   *              and at most one gold action. NO badge and NO chevron.
+   *
+   * Why the plain skin exists: four identical gold discs on one screen
+   * pull the eye away from the artwork, which is the thing the user
+   * came for; and a collapse chevron is a control that hides content
+   * the user came for. V2 has one reading order — top to bottom — and
+   * one action per row.
+   *
+   * This is a second skin on ONE component, not a second component:
+   * the default render is byte-identical to what every other caller
+   * has always got.
+   */
+  variant?: 'default' | 'plain';
 }
 
 export const SectionHeader: React.FC<SectionHeaderProps> = ({
   label,
   actionLabel,
   onAction,
+  actionAccessibilityLabel,
   size = 'large',
   collapsible = false,
   collapsed = false,
   onToggleCollapsed,
   leadingIcon,
+  variant = 'default',
 }) => {
   const {colors} = useTheme();
+  const isPlain = variant === 'plain';
   return (
     <View style={[styles.root, size === 'small' && styles.rootSmall]}>
       <View style={styles.titleRow}>
-        {leadingIcon && size === 'large' ? (
+        {!isPlain && leadingIcon && size === 'large' ? (
           <View
             style={[
               styles.iconBadge,
               {backgroundColor: colors.accent.goldSoft},
             ]}
+            testID="section-header-badge"
             accessibilityElementsHidden
             importantForAccessibility="no">
             <SvgIcon
@@ -62,11 +95,15 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
           </View>
         ) : null}
         <AppText
-          variant={size === 'large' ? 'displaySans' : 'overline'}
-          color={size === 'large' ? 'primary' : 'secondary'}
+          variant={isPlain ? 'h3' : size === 'large' ? 'displaySans' : 'overline'}
+          color={isPlain ? 'primary' : size === 'large' ? 'primary' : 'secondary'}
           style={[
-            size === 'large' ? styles.titleLarge : {letterSpacing: 0.5},
-            leadingIcon ? styles.titleLargeWithIcon : null,
+            isPlain
+              ? styles.titlePlain
+              : size === 'large'
+                ? styles.titleLarge
+                : {letterSpacing: 0.5},
+            !isPlain && leadingIcon ? styles.titleLargeWithIcon : null,
           ]}>
           {label}
         </AppText>
@@ -77,14 +114,14 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
             onPress={onAction}
             activeOpacity={0.7}
             accessibilityRole="button"
-            accessibilityLabel={actionLabel}
+            accessibilityLabel={actionAccessibilityLabel ?? actionLabel}
             style={styles.actionBtn}>
             <AppText variant="caption" color="accent">
               {actionLabel}
             </AppText>
           </TouchableOpacity>
         ) : null}
-        {collapsible && onToggleCollapsed ? (
+        {!isPlain && collapsible && onToggleCollapsed ? (
           <TouchableOpacity
             onPress={onToggleCollapsed}
             activeOpacity={0.7}
@@ -146,6 +183,10 @@ const styles = StyleSheet.create({
   // pick Manrope-Bold.ttf (chunky). v8 makes the inline
   // weight override structurally impossible.
   titleLarge: {},
+  // V2: the plain title is the `h3` token — Inter SemiBold 20/28 —
+  // and nothing else. No override, for the same reason the
+  // `titleLarge` above has none: the weight lives in the family key.
+  titlePlain: {},
   // P56: right-side cluster for action + chevron.
   actions: {
     flexDirection: 'row',
@@ -165,4 +206,3 @@ const styles = StyleSheet.create({
     transform: [{rotate: '180deg'}],
   },
 });
-

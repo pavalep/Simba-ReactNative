@@ -36,25 +36,6 @@ import {screen, fireEvent} from '@testing-library/react-native';
 
 import {renderChrome} from '../../helpers/renderChrome';
 
-jest.mock('@lodev09/react-native-true-sheet', () => {
-  const ReactLocal = require('react');
-  const {View: RNView} = require('react-native');
-
-  const mockPresent = jest.fn(() => Promise.resolve());
-  const mockDismiss = jest.fn(() => Promise.resolve());
-  const mockResize = jest.fn(() => Promise.resolve());
-
-  return {
-    TrueSheet: ReactLocal.forwardRef((props: {children?: unknown}, ref: unknown) => {
-      ReactLocal.useImperativeHandle(ref, () => ({
-        present: mockPresent,
-        dismiss: mockDismiss,
-        resize: mockResize,
-      }));
-      return ReactLocal.createElement(RNView, {testID: 'true-sheet'}, props.children);
-    }),
-  };
-});
 
 jest.mock('../../../src/features/playlists', () => ({
   usePlaylists: jest.fn(),

@@ -30,25 +30,6 @@ import {renderChrome} from '../../helpers/renderChrome';
 // The page's long-press menu is a `BottomSheet`, and `BottomSheet`
 // drives a true-sheet imperatively. A mock without `present` / `dismiss`
 // / `resize` is a crash, not a sheet.
-jest.mock('@lodev09/react-native-true-sheet', () => {
-  const ReactLocal = require('react');
-  const {View: RNView} = require('react-native');
-
-  const mockPresent = jest.fn(() => Promise.resolve());
-  const mockDismiss = jest.fn(() => Promise.resolve());
-  const mockResize = jest.fn(() => Promise.resolve());
-
-  return {
-    TrueSheet: ReactLocal.forwardRef((props: {children?: unknown}, ref: unknown) => {
-      ReactLocal.useImperativeHandle(ref, () => ({
-        present: mockPresent,
-        dismiss: mockDismiss,
-        resize: mockResize,
-      }));
-      return ReactLocal.createElement(RNView, {testID: 'true-sheet'}, props.children);
-    }),
-  };
-});
 
 jest.mock('../../../src/screens/AllPlaylists/hooks/useAllPlaylistsScreen', () => ({
   useAllPlaylistsScreen: jest.fn(),

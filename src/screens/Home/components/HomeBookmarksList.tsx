@@ -49,14 +49,10 @@ export const HomeBookmarksList: React.FC<Props> = ({
 }) => (
   <MediaRail
     title="Bookmarks"
-    icon="bookmark"
     items={items}
     keyExtractor={item => item.id}
     maxItems={MAX_BOOKMARK_ENTRIES}
     onSeeAll={onSeeAll}
-    emptyTitle="No Bookmarks Yet"
-    emptyDescription="Tap the bookmark icon while playing to save a moment — it'll show up here for one-tap access."
-    emptyIcon="bookmark"
     renderItem={item => {
       const hasDuration = typeof item.duration === 'number' && item.duration > 0;
       return (

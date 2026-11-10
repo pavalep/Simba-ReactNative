@@ -1,5 +1,5 @@
 import React, {useCallback, useEffect} from 'react';
-import {View, FlatList, RefreshControl} from 'react-native';
+import {View, FlatList} from 'react-native';
 import {homeScreenStyles as styles} from './styles/HomeScreen.styles';
 import {spacing} from '../../theme/tokens';
 import {type HomeScreenProps} from '../../navigation/types';
@@ -11,16 +11,11 @@ import {getHomeSectionKey} from './related/homeSectionKey';
 import {SimbaStatusBar} from '../../components/StatusBar';
 import {HomeHeader} from '../../components/layout/HomeHeader/HomeHeader';
 import {HomeMediaShelf} from './components/HomeMediaShelf';
-import {QuickAccessShelf} from './components/QuickAccessShelf';
-import {HomeLoadingSkeleton} from './components/HomeLoadingSkeleton';
-import {HomeErrorState} from './components/HomeErrorState';
-
-import {AppText} from '../../components/core/AppText/AppText';
 import {SubsectionTitle} from '../../components/utility/SubsectionTitle/SubsectionTitle';
 import {WeatherGreeting} from './components/WeatherGreeting';
 import {HomeBookmarksList} from './components/HomeBookmarksList';
 import {FollowedPodcastsShelf} from './components/FollowedPodcastsShelf';
-import {GenreChipsShelf} from './components/GenreChipsShelf';
+import {QuickAccessShelf} from './components/QuickAccessShelf';
 // v10.2: Discover is one "Browse All" rail — the 8 per-category shelves
 // (MovieCategoriesShelf, PodcastCategoriesShelf, MusicCategoriesShelf,
 // RadioCategoriesShelf, LiveTVCategoriesShelf, AudiobooksShelf,
@@ -39,9 +34,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
   const {
     colors,
     insets,
-    refreshing,
-    isSettled,
-    hasError,
     isScanning,
     sections,
     greeting,
@@ -52,14 +44,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
     handleOpenMedia,
     handleItemPress,
     handlePlaylistPress,
-    handleGenrePress,
+    handleTogglePin,
     handleSeeAll,
-    handleSettingsPress,
     handleSearchPress,
     handleAvatarPress,
     handleBookmarksSeeAll,
-    onRefresh,
-    setHasError,
   } = useHomeScreen(navigation);
 
   // 59.3: cold-start milestone — initial screen mounted → log the summary
@@ -67,10 +56,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
     mark('first-screen');
     logStartupSummary();
   }, []);
-
-  // v10.2: the per-category press handlers for Movies / Podcasts / Music /
-  // Radio / Live TV / Audiobooks / Archive / Shows were removed together
-  // with their shelves — Discover now navigates via handleSeeAll.
 
   // 35.5: followed podcast card → podcast detail
   const handleFollowedPodcastPress = useCallback(
@@ -110,6 +95,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
             // (WeatherGreeting). Owns its styles and the Lottie
             // container — easier to iterate on without touching
             // the rest of the page.
+            //
+            // V2: it is NOT in a box. The salutation, the name and one
+            // quiet weather line sit directly on the page, and the
+            // weather chip moves to the top right.
             return (
               <WeatherGreeting
                 text={greeting.text}
@@ -119,62 +108,59 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
                 isFetching={greeting.isFirstLoad}
               />
             );
-        case 'SUBSECTION_TITLE':
-          return <SubsectionTitle label={item.label} variant={item.variant} />;
-        case 'SHELF':
-          // P56: per the user's spec, only Recently Played, Bookmarks,
-          // and Followed Podcasts get the chevron — and only the latter
-          // two can actually collapse. Recently Played is the SHELF
-          // we render here and it's `forceExpanded`; no chevron. The
-          // other two are handled in their dedicated cases below.
-          return (
-            <HomeMediaShelf
-              title={item.title}
-              items={item.items}
-              onItemPress={handleItemPress}
-              onItemLongPress={handleRemoveRecent}
-              onSeeAll={item.seeAllRoute ? () => handleSeeAll(item.seeAllRoute!) : undefined}
-            />
-          );
-        case 'GENRE':
-          return <GenreChipsShelf genres={item.genres} onGenrePress={handleGenrePress} />;
-        case 'PINNED_PLAYLISTS':
-          // Spec §4.6 + the decision of 2026-11-05: the rail is titled
-          // "Pinned Playlists" and holds ONLY the pinned playlists, so
-          // the title is true of every tile in it. The unpinned ones live
-          // behind "See All" → All Playlists, the page that owns them.
-          // The rail stays on the page even with nothing pinned — it is
-          // the feature's front door, and a Home page that never
-          // mentions it is how the feature went missing unnoticed.
-          return (
-            <QuickAccessShelf
-              title="Pinned Playlists"
-              playlists={item.items}
-              onPlaylistPress={handlePlaylistPress}
-              onSeeAll={handlePlaylistsSeeAll}
-              emptyMessage="Nothing pinned yet — pin a playlist to keep it here."
-            />
-          );
-        case 'BROWSE_ALL':
-          // v10.2: one rail, one card per top-level section.
-          return <BrowseAllShelf onSectionPress={handleSeeAll} />;
-        case 'FOLLOWED_PODCASTS':
-          return (
-            <FollowedPodcastsShelf
-              items={item.items}
-              onPodcastPress={handleFollowedPodcastPress}
-              onSeeAll={handleFollowedPodcastsSeeAll}
-            />
-          );
-        case 'BOOKMARKS':
-          return (
-            <HomeBookmarksList
-              items={item.items}
-              onPress={handleItemPress}
-              onRemove={handleRemoveBookmark}
-              onSeeAll={handleBookmarksSeeAll}
-            />
-          );
+          case 'SUBSECTION_TITLE':
+            return <SubsectionTitle label={item.label} variant={item.variant} />;
+          case 'SHELF':
+            // P56: the Recently Played rail is always expanded and
+            // carries no chevron. Bookmarks and Followed Podcasts live
+            // in their own cases below.
+            return (
+              <HomeMediaShelf
+                title={item.title}
+                items={item.items}
+                onItemPress={handleItemPress}
+                onItemLongPress={handleRemoveRecent}
+                onSeeAll={item.seeAllRoute ? () => handleSeeAll(item.seeAllRoute!) : undefined}
+              />
+            );
+          case 'PINNED_PLAYLISTS':
+            // Spec §4.6 + the decision of 2026-11-05: the rail is titled
+            // "Pinned Playlists" and holds ONLY the pinned playlists, so
+            // the title is true of every tile in it. The unpinned ones live
+            // behind "See All" → All Playlists, the page that owns them.
+            //
+            // The rail is NOT drawn when nothing is pinned: a rail with
+            // nothing in it is not drawn at all, and the divider above it
+            // goes with it.
+            return (
+              <QuickAccessShelf
+                title="Pinned Playlists"
+                playlists={item.items}
+                onPlaylistPress={handlePlaylistPress}
+                onTogglePin={handleTogglePin}
+                onSeeAll={handlePlaylistsSeeAll}
+              />
+            );
+          case 'BROWSE_ALL':
+            // v10.2: one rail, one card per top-level section.
+            return <BrowseAllShelf onSectionPress={handleSeeAll} />;
+          case 'FOLLOWED_PODCASTS':
+            return (
+              <FollowedPodcastsShelf
+                items={item.items}
+                onPodcastPress={handleFollowedPodcastPress}
+                onSeeAll={handleFollowedPodcastsSeeAll}
+              />
+            );
+          case 'BOOKMARKS':
+            return (
+              <HomeBookmarksList
+                items={item.items}
+                onPress={handleItemPress}
+                onRemove={handleRemoveBookmark}
+                onSeeAll={handleBookmarksSeeAll}
+              />
+            );
           default:
             return null;
         }
@@ -195,58 +181,32 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
     // check a malformed array, so nothing flagged it and every handler
     // added since would have closed over a stale reference. Rebuilt
     // from the identifiers the body actually reads.
+    //
+    // V2: the list now also names `greeting`, `userFirstName` and
+    // `handleBookmarksSeeAll` — the three the body reads and the array
+    // did NOT name. A stale greeting is a wrong time-of-day on screen.
     [
       sections,
+      greeting,
+      userFirstName,
       handleItemPress,
       handleRemoveRecent,
       handleRemoveBookmark,
       handlePlaylistPress,
-      handleGenrePress,
+      handleTogglePin,
       handleSeeAll,
       handleFollowedPodcastPress,
       handleFollowedPodcastsSeeAll,
       handlePlaylistsSeeAll,
+      handleBookmarksSeeAll,
     ],
   );
-
-  if (hasError) {
-    return (
-      <View style={[styles.root, {backgroundColor: colors.background.primary, paddingTop: insets.top}]}>
-        <SimbaStatusBar variant="home" />
-        <HomeHeader
-          isScanning={isScanning}
-          onSettingsPress={handleSettingsPress}
-          onSearchPress={handleSearchPress}
-          onAvatarPress={handleAvatarPress}
-          avatarUrl={user?.photo ?? null}
-        />
-        <HomeErrorState onRetry={() => setHasError(false)} colors={colors} />
-      </View>
-    );
-  }
-
-  if (!isSettled && sections.length <= 2) {
-    return (
-      <View style={[styles.root, {backgroundColor: colors.background.primary, paddingTop: insets.top}]}>
-        <SimbaStatusBar variant="home" />
-        <HomeHeader
-          isScanning={isScanning}
-          onSettingsPress={handleSettingsPress}
-          onSearchPress={handleSearchPress}
-          onAvatarPress={handleAvatarPress}
-          avatarUrl={user?.photo ?? null}
-        />
-        <HomeLoadingSkeleton colors={colors} />
-      </View>
-    );
-  }
 
   return (
     <View style={[styles.root, {backgroundColor: colors.background.primary, paddingTop: insets.top}]}>
       <SimbaStatusBar variant="home" />
       <HomeHeader
         isScanning={isScanning}
-        onSettingsPress={handleSettingsPress}
         onSearchPress={handleSearchPress}
         onAvatarPress={handleAvatarPress}
         avatarUrl={user?.photo ?? null}
@@ -277,14 +237,20 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
         maxToRenderPerBatch={4}
         updateCellsBatchingPeriod={50}
         windowSize={5}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={colors.accent.gold}
-            colors={[colors.accent.gold]}
-          />
-        }
+        // NO pull-to-refresh.
+        //
+        // There used to be one, and it waited 600 ms and did nothing:
+        // the spinner resolved to an identical page.
+        //
+        // It cannot be anything else now. Every rail on this page is
+        // fed by a persisted store that is live and updates on its own,
+        // and the ONE remote datum — the weather — has its own hour-
+        // long TTL. The media SCAN used to be the thing a refresh could
+        // re-read, but since the genre shelf was deleted nothing on
+        // this page is fed by the scan at all.
+        //
+        // The scan's own door is the Library, where the scan's results
+        // are what you can see.
       />
 
       <Fab
@@ -297,5 +263,3 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
 };
 
 export default HomeScreen;
-
-
