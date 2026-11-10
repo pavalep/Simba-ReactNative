@@ -397,6 +397,8 @@ const COLORS = {
     textPrimary: '#1A1A1C', // colors.text.primary
     textTertiary: 'rgba(26,26,28,0.30)', // colors.text.tertiary
     gold: '#B8922E', // colors.accent.gold
+    logoInk: '#5C3A1E', // colors.accent.brandInk
+    taglineInk: '#6B4226', // colors.accent.brandInkSoft
   },
   dark: {
     bg: '#0A0A0C',
@@ -405,13 +407,18 @@ const COLORS = {
     textPrimary: '#EDEDED',
     textTertiary: 'rgba(237,237,237,0.30)',
     gold: '#C9A84C',
+    logoInk: '#B27340', // colors.accent.brandInk
+    taglineInk: '#A1733A', // colors.accent.brandInkSoft
   },
 }[THEME];
 if (!COLORS) throw new Error('unknown THEME ' + THEME);
 
-// the hard-coded brand inks in LoginScreen.tsx (same in both themes)
-const LOGO_INK = '#5C3A1E';
-const TAGLINE_INK = '#6B4226';
+// The lockup's inks follow the theme — the mark sits on the page, and the
+// page follows the theme. The light value is the shipped brown; the dark
+// one is the same hue and saturation with the lightness set for a
+// near-black surface (5.1:1 instead of 1.96:1).
+const LOGO_INK = COLORS.logoInk;
+const TAGLINE_INK = COLORS.taglineInk;
 
 // ── the device frame ────────────────────────────────────────────────────────
 const W = 411;

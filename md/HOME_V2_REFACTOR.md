@@ -1579,4 +1579,192 @@ populated library and live weather. The dark theme, an empty library
 long-press menu are all un-measured — they are the remaining device
 proofs.
 
+---
+
+## §11 — The dark-mode lion (2026-11-10)
+
+> "in dark mode lion logo is gold, i think visibility is not good there,
+> fix based on visibility in home page, and any pending decide for me"
+
+### The bug, measured
+
+The mark was drawn in `#5C3A1E` in **both** themes, and the token's own
+comment said why:
+
+> *"Stays fixed across light/dark so the mark always reads as 'engraved'
+> on the brand surface."*
+
+The assumption was wrong. The surface is theme-aware — parchment
+(`#F5F0E8`) in light, near-black (`#0A0A0C`) in dark — so a fixed ink
+only reads on one of them.
+
+Measured off the device's own pixels (emulator-5554, 1080 × 2400 px):
+
+| | Light | Dark |
+|---|---|---|
+| The page | `#f5f0e8` | `#0a0a0c` |
+| The lion's pixels | `#5c3a1e` (2356 px) | `#5c3a1e` (2356 px) |
+| **Contrast** | **8.90 : 1** ✓ | **1.96 : 1** ✗ |
+
+1.96:1 is below WCAG AA for a graphic (3:1). The lion was drawn, and it
+was invisible — the thing the user reported as "the logo is gold, the
+visibility is not good there" was the gold *wordmark* beside a mark that
+had no contrast at all.
+
+> A correction to an earlier reading of mine: the first pass sampled the
+> wrong box and reported 1.08:1. The real figure is 1.96:1 — the same
+> conclusion, a truer number.
+
+### Three owners of one colour
+
+The mark is drawn in three places, and the token was used in only one of
+them:
+
+| Where | Before | Now |
+|---|---|---|
+| `HomeHeader.tsx:130` | `colors.accent.brandInk` (the token) | unchanged — it now carries the right value |
+| `SplashScreen.tsx:378,388` | the literal `#5C3A1E` | `colors.accent.brandInk` |
+| `LoginScreen.tsx:144,147` | the literal `#5C3A1E` | `colors.accent.brandInk` |
+
+On the Login screen the **whole lockup** was brown — lion, wordmark and
+tagline (`#6B4226`) — so in dark mode the brand block vanished entirely:
+brown on near-black, 1.96:1 for the mark and 2.28:1 for the tagline.
+
+### The rule the token now carries
+
+> The mark is engraved ink on the page it sits on. **Same hue and
+> saturation, lightness set for that surface.** It clears WCAG AA where
+> it is drawn (4.5:1 — the same ink draws the wordmark, which is text),
+> and it never outranks the gold wordmark beside it.
+
+| Token | Light | Dark |
+|---|---|---|
+| `accent.brandInk` (the mark, the wordmark) | `#5C3A1E` — 8.90:1 on parchment | `#B27340` — 5.10:1 on `#0A0A0C` |
+| `accent.brandInkSoft` (the tagline) | `#6B4226` — 7.64:1 | `#A1733A` — 4.74:1 |
+| `accent.gold` (the Home wordmark) | `#B8922E` — 2.57:1 | `#C9A84C` — 8.66:1 |
+
+`#B27340` is `#5C3A1E` with the lightness moved from 24% to 47.5% and
+**the hue (27°) and saturation (47%) untouched** — the same ink, lit for
+the surface it lands on. It was picked by rendering all three
+candidates over the real screenshot and looking at them:
+
+| Candidate | Contrast | Why not |
+|---|---|---|
+| `#B27340` sepia | 5.10:1 | **chosen** — brand hue, under the gold |
+| `#B3854D` bronze | 6.01:1 | greyer; the brand reads less warm |
+| `#D9C3A0` ivory | 11.55:1 | brighter than the gold wordmark; the mark outranks the name |
+| `#C9A84C` gold | 8.66:1 | the mark disappears into the wordmark |
+
+### The Android side — the splash was coming up in light mode
+
+The native splash is a separate surface with its own copy of the
+brand, and it had the same defect in a different shape:
+
+- `values-night/colors.xml` forced the **parchment** in night mode,
+  with the comment *"the splash is always on-brand parchment regardless
+  of system theme"* — so a dark-mode launch came up on a **light**
+  screen, and the brown lion sat on parchment while the app behind it
+  was dark;
+- `activity_splash.xml` hard-coded `android:background="#F5F0E8"` and
+  `android:textColor="#B8922E"`;
+- the ring, the icon and the logo each carried their own `#5C3A1E`.
+
+The native splash now follows the **phone's** setting, like the rest of
+the app: `@color/splash_background` and `@color/splash_ink` are
+qualified in `values/` and `values-night/`, and every drawable
+references them. One owner for the ink, in both themes, in both the
+JS and the native splash.
+
+Five native files went with it — four duplicates and one dead file:
+
+| Deleted | Why |
+|---|---|
+| `values-night/styles.xml` | byte-identical to `values/styles.xml` — a second owner of the same splash theme, which is how the parchment got pinned to night mode in the first place |
+| `drawable-night/splash_bg_color.xml` | the colour is qualified now, so the night drawable was a second owner |
+| `drawable-night/ic_launcher_background.xml` | identical to the day one (`#D4B47A`) |
+| `drawable/splash_gradient.xml` | zero references, app or lib |
+| `drawable-night/splash_gradient.xml` | zero references |
+
+The launcher icon keeps its own brown `#5C3A1E` on the gold orb
+(`#D4B47A`, 5.06:1) — that mark lives on the icon's disc, not on the
+page, so it does not follow the theme.
+
+### The device proofs
+
+Every number below is measured off the device's pixels, not read off
+the source.
+
+| State | Measured | Verdict |
+|---|---|---|
+| Home, dark | lion `#b27340`, 2356 px — the **same 2356 px** as before, the same artwork in a different ink; page `#0a0a0c` | **5.10:1** ✓ |
+| Home, light | lion `#5c3a1e`, 2356 px, page `#f5f0e8` | **8.90:1** ✓ — and byte-identical to the pre-fix light theme |
+| Login, dark | page `#0a0a0c`, lion `#b27340` | ✓ |
+| Login, light | page `#f5f0e8`, lion `#5c3a1e` | ✓ |
+| The NATIVE splash, dark | page `#0a0a0c`, lion `#b27340` (23369 px), "Simba Player" in the dark gold | ✓ — was a LIGHT screen with a brown lion |
+| The NATIVE splash, light | page `#f5f0e8`, lion `#5c3a1e` (23371 px) | ✓ byte-identical to the shipped light splash |
+| The mark vs the name (dark) | mark 5.10:1, gold wordmark 8.66:1 | the name still leads ✓ |
+
+### The light-mode gold wordmark — measured, and left alone
+
+The light gold `#B8922E` on parchment is **2.57:1**. That looks like a
+failure until you ask what it is: a *logotype*. WCAG 1.4.3 exempts text
+that is part of a logo or brand name from the contrast minimum, and
+this pairing — a dark mark, a light gold name on parchment — is the
+approved light design. Changing `accent.gold` in light mode would move
+every divider, every FAB and every gold button in the app, so it is
+recorded here rather than changed. The dark theme's gold is 8.66:1 and
+needs nothing.
+
+### Two things I found while verifying, and did not change
+
+1. **Signing out resets the app's settings store** —
+   `src/hooks/useAuth.ts:146` calls `useSettingsStore.getState().reset()`,
+   which resets `themeMode` to `'system'`. So a user who picked *Dark*
+   in the app loses that choice the moment they sign out. **Not changed
+   here**: the app's appearance is the phone's business, and the native
+   splash now follows the phone too. Recorded so the decision is
+   explicit rather than accidental.
+2. **The Penpot canvas still draws the old invisible lion** —
+   `designs/penpot/icons.js` now carries the new dark ink, so the
+   *generator* is right, but the boards on the Penpot canvas have not
+   been rebuilt. Carried forward below.
+
+   The same pass also gave the design the **dark Login boards** it never
+   had: `designs/build-penpot-design.js` now runs the FigCraft generator
+   for both themes and emits two Penpot calls, one per theme —
+   `Login / light — orb peak|rest` and `Login / dark — orb peak|rest`,
+   each with the pulse wired in its own theme. The dark pair is drawn
+   from the same generator as the light pair, with the same lockup and
+   the same geometry, only the ink different (`#B27340` lion and
+   wordmark, `#A1733A` tagline, on `#0A0A0C`).
+
+   Two Penpot facts cost time and are worth keeping:
+
+   - the MCP call has a **120-second ceiling**, and an unbounded
+     `penpot.waitForLayoutUpdate()` never returns on a canvas that is not
+     laying out — the call died with one board drawn and the rest
+     missing. The wait is now bounded and polled, and the texts are
+     checked for a measured width before the positions are resolved;
+   - the plugin's renderer is **suspended when the machine's session is
+     locked** (the whole desktop is covered by the lock screen, so the
+     app is occluded). Every call then answers *"the Penpot plugin tab
+     appears to be suspended by the browser"*. Focusing the window is not
+     enough — the session has to be unlocked.
+
+### Carried forward
+
+| # | Item |
+|---|---|
+| F-11 | Rebuild the Penpot canvas: the `Home_V2_Dark` board's lion (`#B27340`) and the two new `Login / dark — orb peak|rest` boards. The generators are ready; the canvas is half-drawn (the light Login pair is at x 11288/11799 and the flow is gone) because the session locked mid-batch. **Needs an unlocked desktop.** |
+| F-13 | The app's in-settings theme toggle cycles Dark → Light → System; the user has decided the **phone's** setting is the source of truth, so the toggle's "System" position is the one that matters |
+| — | The 75-site weight-intent sweep (`600` → `FONT_FAMILY.inter.semibold`, `500` → `FONT_FAMILY.inter.medium`) |
+| — | The `HomeSection` `SHELF` arm's `items: any[]` type hole (F-10) |
+| — | The device proofs still un-measured: the empty library / "first run" board, a pinned playlist, a bookmark, the long-press menu |
+| — | The Penpot Play hand walk (still API-verified only) |
+| — | B-050 (the lib's PiP chrome) · B-019 (the Argent update — **consent outstanding, do it LAST**) |
+| — | The seeded-data device proofs (F-065 ×2, F-066) · the 2026-11-03 native crash · `graphify-out/` · the API 24–30 PiP path · NO-JANK · B-018 |
+| — | The v7 doc rename banners · iOS verification · the dark-theme variants for the remaining screens · the optional `Allura.ttf` upload to Penpot |
+| — | The page-by-page loop for the remaining ~48 screens (one at a time, not all at once) |
+
+
 

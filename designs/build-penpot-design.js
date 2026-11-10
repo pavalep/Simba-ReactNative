@@ -59,27 +59,58 @@ const cp = require('child_process');
 
 const APP = path.resolve(__dirname, '..');
 const OUT = path.join(__dirname, '.build');
-const FIGCRAFT_JSON = path.join(OUT, 'login-intended-light.json');
+
+/**
+ * The themes the login boards are drawn in.
+ *
+ * The app's lockup follows the theme — the mark sits on the page, and the
+ * page follows the theme — so the design carries a board per theme. Both
+ * come out of the SAME generator, with that theme's own colours, so the
+ * two cannot drift apart.
+ */
+const THEMES = ['light', 'dark'];
+
+const figcraftJson = (theme) => path.join(OUT, 'login-intended-' + theme + '.json');
 
 // ── 1. the app's values, via the FigCraft generator ─────────────────────────
+// The generator writes the artwork it imports (the lion) to ONE path,
+// and each theme's run overwrites it — so the artwork is READ as each
+// theme is generated, not after the loop, or both boards would get the
+// last theme's lion.
+const themePlans = [];
+for (const theme of THEMES) {
+  cp.execFileSync(
+    process.execPath,
+    [path.join(__dirname, 'build-login-design.js'), 'intended', theme],
+    {stdio: 'inherit', cwd: APP},
+  );
+  const commands = JSON.parse(fs.readFileSync(figcraftJson(theme), 'utf8'));
+  const lionSvg = fs.readFileSync(path.join(OUT, 'assets', 'lion.svg'), 'utf8');
+  themePlans.push({theme, screens: parseScreens(commands), lionSvg});
+}
+
+// The FigCraft document itself is the LIGHT one (designs/README.md) and it
+// imports the lion from that path — so the light run goes last, and the
+// file on disk is the light artwork.
 cp.execFileSync(
   process.execPath,
   [path.join(__dirname, 'build-login-design.js'), 'intended', 'light'],
   {stdio: 'inherit', cwd: APP},
 );
-const commands = JSON.parse(fs.readFileSync(FIGCRAFT_JSON, 'utf8'));
 
 // ── 2. the command list as a tree ──────────────────────────────────────────
 //
 // Commands are resolved against the same reference names the FigCraft
 // document uses, so a shape in Penpot can be traced back to a shape in the
 // FigCraft file by name.
-const screens = [];
-const byRef = new Map();
-
 function refOf(v) {
   return v && typeof v === 'object' && v.$ref ? v.$ref : null;
 }
+
+/** The FigCraft command list as a tree of screens. */
+function parseScreens(commands) {
+const screens = [];
+const byRef = new Map();
 
 for (const cmd of commands) {
   if (cmd.command === 'page.rename' || cmd.command === 'page.add') {
@@ -151,6 +182,9 @@ for (const cmd of commands) {
     continue;
   }
   throw new Error('unknown FigCraft command: ' + cmd.command);
+}
+
+return screens;
 }
 
 // ── 3. the React Native layout ─────────────────────────────────────────────
@@ -301,7 +335,7 @@ function svgSize(file) {
   return svgSizes.get(file);
 }
 
-function planOf(screen) {
+function planOf(screen, lionSvg) {
   const L = layoutOf(screen);
   const N = L.nodes;
 
@@ -320,8 +354,9 @@ function planOf(screen) {
   });
 
   // the lion emblem
-  const lionFile = N.lion.path;
-  const lionArt = svgWidthHeight(lionFile);
+  // The lion emblem — the ARTWORK of this board's theme. The
+  // generator writes one artwork file for both themes, so each theme's
+  // is read as that theme is generated.
   shapes.push({
     kind: 'svg',
     name: 'Lion',
@@ -329,7 +364,7 @@ function planOf(screen) {
     y: L.lion.y,
     w: L.lion.w,
     h: L.lion.h,
-    svg: lionArt.svg,
+    svg: lionSvg,
   });
 
   // the wordmark — the hero of the lockup
@@ -472,13 +507,26 @@ function planOf(screen) {
 const BOARD_GAP = 100;
 const PULSE_MS = 3000; // the app's own pulse half-cycle (useLoginScreen.ts)
 
-const plans = screens.map(planOf);
+// The login boards sit in the free column to the RIGHT of the app's own
+// grid (8 columns of 411 + 1000 gap, so the grid ends at 10288). The
+// login pass owns these boards, so it places them itself.
+const LOGIN_X0 = 11288;
+
+const plans = [];
+for (const tp of themePlans) {
+  for (const screen of tp.screens) {
+    const p = planOf(screen, tp.lionSvg);
+    // The theme travels ON the board, because the board is what the
+    // payload carries (and what the per-theme calls are split by).
+    p.board.theme = tp.theme;
+    plans.push(p);
+  }
+}
 plans.forEach((p, i) => {
-  p.board.x = i * (p.board.w + BOARD_GAP);
+  p.board.x = LOGIN_X0 + i * (p.board.w + BOARD_GAP);
 });
 
-const restBoard = plans.find((p) => p.board.name.includes('orb rest'));
-const peakBoard = plans.find((p) => p.board.name.includes('orb peak'));
+const restBoard = plans.find((p) => p.board.theme === 'light' && p.board.name.includes('orb rest'));
 
 const PROTOTYPE = {
   page: 'SIMBA',
@@ -487,31 +535,36 @@ const PROTOTYPE = {
   links: [],
 };
 
-if (restBoard && peakBoard) {
+// The pulse is wired for EACH theme: the two ends of the orb's
+// animation in the light theme, and the same two ends in the dark one.
+for (const theme of THEMES) {
+  const rest = plans.find((p) => p.board.theme === theme && p.board.name.includes('orb rest'));
+  const peak = plans.find((p) => p.board.theme === theme && p.board.name.includes('orb peak'));
+  if (!rest || !peak) continue;
   PROTOTYPE.links.push(
     {
-      from: restBoard.board.name,
-      to: peakBoard.board.name,
+      from: rest.board.name,
+      to: peak.board.name,
       trigger: 'after-delay',
       delay: PULSE_MS,
       label: 'the orb pulses up',
     },
     {
-      from: peakBoard.board.name,
-      to: restBoard.board.name,
+      from: peak.board.name,
+      to: rest.board.name,
       trigger: 'after-delay',
       delay: PULSE_MS,
       label: 'the orb pulses down',
     },
     {
-      from: restBoard.board.name,
-      to: peakBoard.board.name,
+      from: rest.board.name,
+      to: peak.board.name,
       trigger: 'click',
       label: 'click the screen (at rest)',
     },
     {
-      from: peakBoard.board.name,
-      to: restBoard.board.name,
+      from: peak.board.name,
+      to: rest.board.name,
       trigger: 'click',
       label: 'click the screen (at peak)',
     },
@@ -708,7 +761,26 @@ for (const plan of PLAN.boards) {
     order.push(s);
   }
 
-  await penpot.waitForLayoutUpdate();
+  // Wait for the canvas to lay the texts out. The horizontal
+  // positions are resolved from the widths PENPOT measures, so those
+  // widths have to exist.
+  //
+  // The wait is BOUNDED and POLLED. An unbounded waitForLayoutUpdate()
+  // never returns on a canvas that is not laying out, and the MCP call
+  // then dies at its 120-second ceiling with half the boards drawn and
+  // the rest missing.
+  const deadline = Date.now() + 25000;
+  let measured = false;
+  while (Date.now() < deadline) {
+    try {
+      await penpot.waitForLayoutUpdate(1000);
+    } catch (e) {
+      // the canvas is not laying out — keep polling until the deadline
+    }
+    measured = order.every((s) => s.kind !== 'text' || (shapes[s.name] && shapes[s.name].width > 0));
+    if (measured) break;
+  }
+  if (!measured) report.errors.push('the texts were not measured on ' + plan.name);
 
   // pass 3 — the horizontal positions
   //  a) the centred rows
@@ -818,11 +890,31 @@ report.pages.push({page: page.name, id: page.id, children: page.root.children.le
 return report;
 `;
 
-const code = PLUGIN_SOURCE.replace('__PLAN__', JSON.stringify(PROTOTYPE));
-const outFile = path.join(OUT, 'penpot-prototype.json');
-fs.writeFileSync(outFile, JSON.stringify({code}, null, 2));
+// ONE CALL PER THEME.
+//
+// The MCP endpoint gives a call 120 seconds, and four boards of text to
+// measure and lay out do not fit in that — the call was killed half way
+// through, with one board drawn and the rest missing. Two boards do.
+//
+// Each call owns its own theme's boards, so the light call never touches
+// the dark boards and the dark call never touches the light ones.
+for (const theme of THEMES) {
+  const subset = {
+    page: PROTOTYPE.page,
+    flow: PROTOTYPE.flow,
+    boards: PROTOTYPE.boards.filter((b) => b.theme === theme),
+    links: PROTOTYPE.links.filter((l) => l.from.indexOf(' / ' + theme + ' ') >= 0),
+  };
+  const code = PLUGIN_SOURCE.replace('__PLAN__', JSON.stringify(subset));
+  const outFile = path.join(OUT, 'penpot-login-' + theme + '.json');
+  fs.writeFileSync(outFile, JSON.stringify({code}, null, 2));
+  console.log('wrote ' + outFile + '  (' + subset.boards.length + ' boards, ' + subset.links.length + ' links)');
+}
 
-console.log('wrote ' + outFile);
+const outFile = path.join(OUT, 'penpot-prototype.json');
+fs.writeFileSync(outFile, JSON.stringify({code: PLUGIN_SOURCE.replace('__PLAN__', JSON.stringify(PROTOTYPE))}, null, 2));
+
+console.log('wrote ' + outFile + '  (the whole plan, for the record)');
 console.log('  page: ' + PROTOTYPE.page + '   flow: ' + PROTOTYPE.flow.name + '  (starts at ' + PROTOTYPE.flow.start + ')');
 for (const b of PROTOTYPE.boards) {
   console.log('  board: ' + b.name + '  ' + b.w + 'x' + b.h + '  at ' + b.x + ',' + b.y);

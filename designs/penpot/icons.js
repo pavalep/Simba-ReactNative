@@ -100,7 +100,11 @@ const PALETTE = {
  * (src/components/utility/SvgIcon/SvgIcon.tsx).
  */
 const ICONS = [
-  { name: 'lion', file: 'ui_lion.svg', size: 44, light: '#5C3A1E', dark: '#5C3A1E' },
+  // The lion mark: the app's own `accent.brandInk`, which flips with the
+  // theme because the mark sits on the theme's page. Dark #B27340 on
+  // #0A0A0C = 5.1:1; the old fixed #5C3A1E measured 1.96:1 — drawn, and
+  // invisible.
+  { name: 'lion', file: 'ui_lion.svg', size: 44, light: '#5C3A1E', dark: '#B27340' },
   { name: 'search', file: 'ic_search.svg', size: 20, light: 'ink', dark: 'ink' },
   { name: 'clock', file: 'ic_clock.svg', size: 18, light: 'gold', dark: 'gold' },
   { name: 'listMusic', file: 'ic_list_music.svg', size: 18, light: 'gold', dark: 'gold' },

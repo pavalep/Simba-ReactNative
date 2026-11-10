@@ -649,7 +649,7 @@ These could not be found in the source and are **not** guessed here:
 | 5 | The **weight actually rendered** for `Sign in with Google` and `Try Again` on Android | `fontFamily: 'Inter'` + `fontWeight: '600'` resolves to Inter-Bold on Android and Inter-SemiBold on iOS (§4.1). The source's own doc comments call this axis a bug source (`src/constants/fontFamily.ts:24-43`). |
 | 6 | The **duplicate `OfflineBanner` mount** | Mounted at `src/app/AppContent.tsx:139` and `src/navigation/RootNavigator.tsx:292`. |
 | 7 | The **`splashTagline` token is unused by this screen** | `src/theme/typographyStyles.ts:116-122` describes a 16 px Cormorant Italic "Splash / Login tagline"; the screen actually uses the 48 px `displaySerif` token (`LoginScreen.tsx:154-158`). Which one is intended needs a human decision. |
-| 8 | Whether the **`#5C3A1E` / `#6B4226` browns** are intended in the **dark** theme | Both are hard-coded literals (`LoginScreen.tsx:143`, `:146`, `:156`) and are very low contrast on `#0A0A0C`. |
+| 8 | Whether the **`#5C3A1E` / `#6B4226` browns** are intended in the **dark** theme | **RESOLVED (2026-11-10).** No — they were hard-coded literals (`LoginScreen.tsx:143`, `:146`, `:156`) and the whole lockup was invisible on `#0A0A0C` (the mark 1.96:1, the tagline 2.28:1). They are now the theme-aware tokens `accent.brandInk` (`#5C3A1E` light / `#B27340` dark) and `accent.brandInkSoft` (`#6B4226` light / `#A1733A` dark) — same hue and saturation, lightness set for the surface. Dark: mark 5.10:1, tagline 4.74:1. See `md/HOME_V2_REFACTOR.md` §11. |
 
 ---
 
