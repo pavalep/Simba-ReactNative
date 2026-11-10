@@ -141,10 +141,10 @@ export const LoginScreen: React.FC<Props> = ({navigation}) => {
                 styles.logoWrap,
                 {opacity: logoOpacity, transform: [{scale: logoscale}]},
               ]}>
-              <SvgIcon name="lion" size={108} color="#5C3A1E" />
+              <SvgIcon name="lion" size={108} color={colors.accent.brandInk} />
               <AppText
                 variant="brandScript"
-                style={[styles.logoText, {color: '#5C3A1E'}]}>
+                style={[styles.logoText, {color: colors.accent.brandInk}]}>
                 {BRAND.name}
               </AppText>
               <Animated.View
@@ -154,7 +154,7 @@ export const LoginScreen: React.FC<Props> = ({navigation}) => {
                 ]}>
                 <AppText
                   variant="displaySerif"
-                  style={[styles.tagline, {color: '#6B4226'}]}>
+                  style={[styles.tagline, {color: colors.accent.brandInkSoft}]}>
                     {BRAND.tagline}
                   </AppText>
               </Animated.View>

@@ -70,7 +70,7 @@ const MIN_SPLASH_MS_REDUCE = 1800;
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export const SplashScreen: React.FC = () => {
-  const {colors} = useTheme();
+  const {colors, isDark} = useTheme();
   const navigation = useNavigation<NavigationProp>();
   // V17 Phase 78: auth selectors moved to the `useAuthStore`
   // Zustand store.
@@ -106,15 +106,18 @@ export const SplashScreen: React.FC = () => {
   reduceMotionRef.current = reduceMotion;
 
   const goldColor = colors.accent.gold;
-  const parchmentColor = colors.background.primary;
-  const isDark = colors.background.primary !== '#F5F0E8'; // heuristic: not parchment
+  // The lockup sits on the page, and the page follows the theme —
+  // parchment in light, near-black in dark. The ink under it has to
+  // follow the page too, which is why the mark takes its colour from
+  // the token instead of a literal.
+  const pageColor = colors.background.primary;
 
   const styles = useMemo(
     () =>
       StyleSheet.create({
         container: {
           flex: 1,
-          backgroundColor: parchmentColor,
+          backgroundColor: pageColor,
           justifyContent: 'center',
           alignItems: 'center',
         },
@@ -161,7 +164,7 @@ export const SplashScreen: React.FC = () => {
           textAlign: 'center',
         },
       }),
-    [parchmentColor],
+    [pageColor],
   );
 
   /* eslint-disable react-hooks/exhaustive-deps */
@@ -375,7 +378,7 @@ export const SplashScreen: React.FC = () => {
                   styles.lionWrap,
                   {opacity: lionOpacity, transform: [{scale: lionScale}]},
                 ]}>
-                <SvgIcon name="lion" size={96} color="#5C3A1E" />
+                <SvgIcon name="lion" size={96} color={colors.accent.brandInk} />
               </Animated.View>
 
               <Animated.View
@@ -385,7 +388,7 @@ export const SplashScreen: React.FC = () => {
                 }}>
                 <AppText
                   variant="brandScript"
-                  style={[styles.wordmark, {color: '#5C3A1E'}]}>
+                  style={[styles.wordmark, {color: colors.accent.brandInk}]}>
                   {BRAND.name}
                 </AppText>
               </Animated.View>
@@ -394,7 +397,7 @@ export const SplashScreen: React.FC = () => {
                 style={[styles.taglineWrap, {opacity: taglineOpacity}]}>
                 <AppText
                   variant="displaySerif"
-                  style={[styles.tagline, {color: '#6B4226'}]}>
+                  style={[styles.tagline, {color: colors.accent.brandInkSoft}]}>
                   {BRAND.tagline}
                 </AppText>
               </Animated.View>

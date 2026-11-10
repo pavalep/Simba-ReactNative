@@ -163,12 +163,27 @@ export interface ColorTokens {
     goldWash: string;
     /** 55.2b: sky blue — video-type indicators */
     sky: string;
-    /** v8: dark sepia / brand ink — for the lion mark and any
-     *  monogram engraved on the parchment background. Same hue
-     *  family as the splash + login screens (`#5C3A1E`). Stays
-     *  fixed across light/dark so the mark always reads as
-     *  "engraved" on the brand surface. */
+    /** v8: the brand ink — the lion mark and the ink wordmark on
+     *  the splash + login lockups.
+     *
+     *  The surface the mark sits on is theme-aware (parchment in
+     *  light, near-black in dark), so the INK has to flip with it.
+     *  It used to stay fixed at `#5C3A1E` in both themes, which on
+     *  `#0A0A0C` measured 1.96:1 — the mark was drawn, and it was
+     *  invisible.
+     *
+     *  The rule: same hue and saturation, lightness set for the
+     *  surface it lands on. Light `#5C3A1E` on `#F5F0E8` = 8.9:1.
+     *  Dark `#B27340` on `#0A0A0C` = 5.1:1. Both clear WCAG AA for
+     *  a graphic (3:1) with margin, and both stay under the gold
+     *  wordmark beside them (8.7:1) so the mark never outranks the
+     *  name. */
     brandInk: string;
+    /** The dimmer sibling of `brandInk` — the brand tagline under
+     *  the splash + login lockup. Same rule, one step dimmer:
+     *  light `#6B4226` on parchment = 7.6:1, dark `#A1733A` on
+     *  `#0A0A0C` = 4.7:1 (AA for text). */
+    brandInkSoft: string;
     /** W5.7: dark forest green used as the central primary-CTA
      *  fill (the centre play/pause button in the video control
      *  layer). Stays fixed across light/dark — it is the player's
@@ -250,7 +265,8 @@ export const darkColors: ColorTokens = {
     goldSoft: 'rgba(201,168,76,0.10)',
     goldWash: 'rgba(201,168,76,0.18)',
     sky: 'rgba(100,181,246,0.15)',
-    brandInk: '#5C3A1E',
+    brandInk: '#B27340',
+    brandInkSoft: '#A1733A',
     primaryCTA: '#14532D',
   },
   semantic: {
@@ -327,6 +343,7 @@ export const lightColors: ColorTokens = {
     goldWash: 'rgba(184,146,46,0.12)',
     sky: 'rgba(66,133,244,0.12)',
     brandInk: '#5C3A1E',
+    brandInkSoft: '#6B4226',
     primaryCTA: '#14532D',
   },
   semantic: {
