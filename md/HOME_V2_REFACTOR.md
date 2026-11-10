@@ -1700,7 +1700,7 @@ the source.
 | Home, light | lion `#5c3a1e`, 2356 px, page `#f5f0e8` | **8.90:1** ✓ — and byte-identical to the pre-fix light theme |
 | Login, dark | page `#0a0a0c`, lion `#b27340` | ✓ |
 | Login, light | page `#f5f0e8`, lion `#5c3a1e` | ✓ |
-| The NATIVE splash, dark | page `#0a0a0c`, lion `#b27340` (23369 px), "Simba Player" in the dark gold | ✓ — was a LIGHT screen with a brown lion |
+| The NATIVE splash, dark | page `#0a0a0c`, lion `#b27340` (23369 px), the "Simba" wordmark in the dark gold `#C9A84C` | ✓ — was a LIGHT screen with a brown lion |
 | The NATIVE splash, light | page `#f5f0e8`, lion `#5c3a1e` (23371 px) | ✓ byte-identical to the shipped light splash |
 | The mark vs the name (dark) | mark 5.10:1, gold wordmark 8.66:1 | the name still leads ✓ |
 
@@ -1873,8 +1873,8 @@ appears on a first run). Recorded as F-14 below.
 
 | # | Item |
 |---|---|
-| F-11 | The Penpot canvas: the **boards** (12 calls) and the **connectors** (15 calls, 149 links) were rebuilt on 2026-11-10; the `Home_V2_Dark` board now carries the new lion (`…ecc3b6d0fadb` = the `#B27340` picture). **Still to do:** the flow pass (it was the call that died), the export-and-measure proof of the dark board's pixels, and the real `Splash / light|dark` boards in place of the placeholder. **Needs an unlocked desktop and a running plugin.** |
-| F-14 | The Splash screen's tagline: 48/56 Cormorant Bold against 347 dp of usable width — it overflows. The fix is the Login's own tagline style (22/28 italic), which is the same lockup and the same string. Needs a device check on a first run. |
+| F-11 | **DONE.** The Penpot canvas was rebuilt on 2026-11-10 and the whole pipeline passes: the **boards** (12 calls), the **connectors** (15 calls, 149 links) and the **flow** (1 call — `SIMBA app` starting at `Splash / light`). The `Home_V2_Dark` board carries the new lion (`…ecc3b6d0fadb` = the `#B27340` picture), the real `Splash / light|dark` boards replace the placeholder, and the export-and-measure proof is in §13. |
+| F-14 | **DONE.** The Splash's tagline was 48/56 Cormorant Bold against 347 dp of usable width — it overflowed onto two lines. `LOCKUP_TAGLINE` (Cormorant Garamond Italic 22/28, 0.4 tracking) is now the one owner, used by both the Splash and the Login, and it measures **178.1 dp on one line** on the device. See §13. |
 | F-15 | The Penpot plugin's recovery: the MCP button in the toolbar starts the plugin tab, and a closed tab needs the app restarted and the file reopened by hand. A note in `designs/README.md` would save the next person the search. |
 | — | The 75-site weight-intent sweep (`600` → `FONT_FAMILY.inter.semibold`, `500` → `FONT_FAMILY.inter.medium`) |
 | — | The `HomeSection` `SHELF` arm's `items: any[]` type hole (F-10) |
@@ -1947,8 +1947,9 @@ own 1.5 s hold:
 | the wordmark's box | 0 | 4 761 |
 | the tagline's box | 0 | 3 151 |
 
-Both themes, and the frames are on the device under `/sdcard/jsfD` and
-`/sdcard/jsfL`.
+Both themes. The frames are no longer on the device — §14 explains
+where the light theme's JS Splash actually was, and why the earlier captures
+never showed it.
 
 The reduce-motion branch was never affected — it has no JS-driven child.
 
@@ -1989,6 +1990,122 @@ measured **104.3, 240.5, 202.5 × 202.5 dp**, and the board draws 104, 240.5,
 visible band). The progress ring's centre measured 634.75 dp on the device
 and the board puts it at 633.
 
+## §14 — The emulator was put back, and the Splash was measured again (2026-11-10)
 
+This wave closed the loop on the §13 verification: the emulator was put back
+the way it was found, and §13's numbers were re-measured from a clean first
+run instead of being left as a claim.
 
+### What the verification actually cost — measured, not assumed
 
+The Splash verification moved the MMKV store and the legacy AsyncStorage
+database aside. Both were compared afterwards, against the copies that were
+kept:
+
+| what | before the verification | after |
+|---|---|---|
+| `settings` (MMKV) | `themeMode: "system"`, `hasLaunched: true`, and forty-odd other keys | **byte-identical** |
+| `auth` | signed in as `pavalep@gmail.com` | signed in as `pavalep@gmail.com`, a newer `lastSignedInAt` |
+| `bookmark` / `playlists` / `followedPodcasts` / `recentHistory` / `liveFavorites` | **no such key in the store at all** | no such key |
+| the downloads manifest (`simba-downloads-v1`, AsyncStorage) | `[]` | `[]` |
+
+So the library was **already empty** on this emulator before the verification,
+and **nothing was lost**. The bookmark, playlist, followed-podcast, history and
+live-favourite stores are all MMKV-backed — `src/state/bookmarksStore.ts`,
+`playlistsStore.ts`, `followedPodcastsStore.ts`, `recentHistoryStore.ts` and
+`liveFavoritesStore.ts` each persist with `storage: createJSONStorage(() =>
+sharedMMKVStorage)` — and no key for any of them was ever written, because
+there was nothing in them to write. The only two real changes are a fresh
+Google session and a re-fetched weather snapshot.
+
+Forty-one scratch files (the renamed backups of the MMKV store, its `.crc`
+and the AsyncStorage trio) were left inside the app's private storage. They
+were copied to the host first and then removed; the app's data directory now
+holds only the live `simba`/`simba.crc` and the AsyncStorage trio.
+
+### The native splash, measured on a cold start
+
+A cold start with the session restored (`am start` on a force-stopped app)
+was captured over 227 frames. The **native** splash came up, and it is right
+in the dark theme:
+
+| what | measured |
+|---|---|
+| the page | `#0a0a0c` |
+| the lion | `#b27340` — 15 814 bright pixels in the mark's box |
+| the "Simba" wordmark | `#c9a84c` |
+
+The app then went straight to **Home, signed in** — it did not show the
+Login, which is what a restored session should do.
+
+### The JS Splash, re-measured from a clean first run
+
+§13's numbers were re-measured on a fresh first run (both stores moved aside,
+the process killed, the app started) and they reproduce **exactly**:
+
+| what | §13 said | re-measured |
+|---|---|---|
+| the lion's box (warm pixels) | 16 442 | **16 442** |
+| the wordmark's box | 4 761 | **4 761** |
+| the tagline's box | 3 151 | **3 151** |
+| the tagline's ink | 178.1 dp, one line | **178.1 dp, one line** (ink rows 417.1–438.8 dp) |
+| the progress ring's visible box | 202.5 × 202.5 dp | **202.4 × 202.4 dp** (x 104.3–306.7, y 531.3–733.7) |
+
+The lockup renders as it should: the Allura script wordmark, the italic
+Cormorant tagline on one line, the pulse ring behind the lion, the progress
+ring below the stack.
+
+**Why the older captures never showed it — a note for the next person.** The
+JS Splash only exists **after** the JS bundle has loaded. Metro was running
+with `--reset-cache`, so a cold start took **45–90 s** to reach the RN side; a
+capture that starts at launch and stops after 60 frames ends *before* the
+Splash is ever drawn. And the frames that look like "the Splash" in the older
+captures (`/sdcard/jsfD`, `/sdcard/jsfL`) are the **native** splash — its lion
+sits at y 391–475 dp, not at the JS Splash's 244–340 dp. The JS Splash's own
+frames are only in the later captures.
+
+### A finding: the two splash surfaces do not agree on the wordmark
+
+The native splash draws the name as a plain `TextView`
+(`android/app/src/main/res/layout/activity_splash.xml:67`): `android:text="Simba"`,
+`textSize="14sp"`, `letterSpacing="0.15"`, **no `fontFamily`** — so the
+system's default face. Measured: **46.5 dp wide**.
+
+The JS Splash draws the same name in the **Allura script** (`brandScript`,
+48/56). Measured: **107.3 dp wide**.
+
+So on a first run the user sees the two of them about a second and a half
+apart — a plain letterspaced "Simba" inside a gold loading ring, then a script
+"Simba" with a tagline and a progress ring. Two faces for one name, on the
+app's first impression. The native one is a deliberate v7 choice (the layout
+says so), so this is a decision to take, not a bug to patch blind. Recorded
+as **F-17**.
+
+### Carried forward
+
+| # | Item |
+|---|---|
+| F-10 | The `HomeSection` `SHELF` arm's `items: any[]` type hole |
+| F-13 | The app's in-settings theme toggle cycles Dark → Light → System; the phone's setting is the source of truth, so the toggle's "System" position is the one that matters |
+| F-15 | The Penpot plugin's recovery: the MCP button in the toolbar starts the plugin tab, and a closed tab needs the app restarted and the file reopened by hand. A note in `designs/README.md` would save the next person the search. |
+| F-17 | **NEW (§14).** The native splash and the JS Splash draw the name in two different faces (the system default vs the Allura script). It needs a decision — the native splash's plain wordmark is a deliberate v7 choice, so the JS one may have to give way, or the native one has to become script too. |
+| — | The 75-site weight-intent sweep (`600` → `FONT_FAMILY.inter.semibold`, `500` → `FONT_FAMILY.inter.medium`) |
+| — | The device proofs still un-measured: the empty library / "first run" board |
+| — | The device proofs still un-measured: a pinned playlist |
+| — | The device proofs still un-measured: a bookmark |
+| — | The device proofs still un-measured: the long-press menu |
+| — | The Penpot Play hand walk (still API-verified only) |
+| — | B-050 (the lib's PiP chrome) |
+| — | B-019 (the Argent update — **consent outstanding, do it LAST**) |
+| — | The seeded-data device proofs (F-065 ×2) |
+| — | The seeded-data device proofs (F-066) |
+| — | The 2026-11-03 native crash |
+| — | `graphify-out/` |
+| — | The API 24–30 PiP path |
+| — | NO-JANK |
+| — | B-018 |
+| — | The v7 doc rename banners |
+| — | iOS verification |
+| — | The dark-theme variants for the remaining screens |
+| — | The optional `Allura.ttf` upload to Penpot |
+| — | The page-by-page loop for the remaining ~48 screens (one at a time, not all at once) |
