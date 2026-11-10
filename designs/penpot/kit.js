@@ -200,16 +200,23 @@ function kit(themeName) {
 
   /** An ellipse. */
   function ellipse(name, o = {}) {
-    return {
+    const shape = {
       kind: 'ellipse',
       name,
       x: o.x,
       y: o.y,
       w: o.w,
       h: o.h,
-      fill: o.fill || c.background.elevated,
+      // `fill: null` means NO fill — the app's own rings are strokes on an
+      // empty circle, and a filled disc would be a different thing.
+      fill: o.fill === null ? null : o.fill || c.background.elevated,
       opacity: o.opacity,
     };
+    if (o.stroke) {
+      shape.stroke = o.stroke;
+      shape.strokeWidth = o.strokeWidth || 1;
+    }
+    return shape;
   }
 
   /**

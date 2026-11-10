@@ -1884,6 +1884,111 @@ appears on a first run). Recorded as F-14 below.
 | — | The seeded-data device proofs (F-065 ×2, F-066) · the 2026-11-03 native crash · `graphify-out/` · the API 24–30 PiP path · NO-JANK · B-018 |
 | — | The v7 doc rename banners · iOS verification · the dark-theme variants for the remaining screens · the optional `Allura.ttf` upload to Penpot |
 | — | The page-by-page loop for the remaining ~48 screens (one at a time, not all at once) |
+| F-16 | **NEW (§13).** The JS Splash's lockup never rendered — the mixed-driver `Animated.parallel` left the three opacities at 0. **Fixed** (the two sequences are split) and measured on the device in both themes. |
+
+## §13 — The JS Splash showed an empty page (2026-11-10)
+
+The Splash is the app's first screen. It was carrying a tagline that did not
+fit, and — underneath that — a lockup that was **never drawn at all**. Both
+were measured on the device, and both are fixed.
+
+### The tagline had two owners, and the Splash's copy did not fit
+
+The Splash set the tagline in the `displaySerif` token — Cormorant Garamond
+**Bold 48/56** — while the Login set the same string in its own style,
+Cormorant Garamond **Italic 22/28**. Two owners for one line of type.
+
+Measured on the shipped font file's advance widths (the numbers Android lays
+a line out from — `__tests__/brand/lockup.test.ts` reads them out of the TTF):
+
+| face | size | width of "Your media, your way" |
+|---|---|---|
+| Cormorant Garamond Bold | 48 | **414.6 dp** |
+| Cormorant Garamond Italic | 22 + 0.4 tracking | **182.8 dp** |
+| usable width on a 411 dp screen | | 347 dp (411 − 2 × 32 padding) |
+
+So the Splash's tagline wrapped onto **two lines** inside a 280 dp logo stack.
+
+**The fix — one owner.** `LOCKUP_TAGLINE` in `src/constants/brand.ts` is the
+single owner of the lockup tagline: Cormorant Garamond Italic 22/28, 0.4
+letter spacing, centred. Both screens use that object, and neither declares
+its own tagline type any more.
+
+**Measured on the device after the fix:** the tagline's ink is **178.1 dp
+wide, on one line** — the same number in the light and the dark theme.
+
+The test pins three things: the type itself, that the face it asks for is a
+font file that actually ships, and that the line still fits on a **360 dp**
+phone (296 dp of usable width). A fourth check scans `src/` for any lockup
+screen that declares a tagline type of its own.
+
+### The lockup was never drawn at all
+
+The Splash's animation was ONE `Animated.parallel` holding:
+
+* three **native-driven** fades — the lion (0–600 ms), the wordmark
+  (400–900 ms) and the tagline (800–1200 ms); and
+* one **JS-driven** timing — the progress ring, whose stroke offset is
+  interpolated on the JS thread (`useNativeDriver: false`).
+
+On the device, the three opacities never left their starting value of 0.
+The lion's 96 × 96 box measured **0 warm pixels**, and the brightest pixel in
+it was the page background itself (`#0A0A0C`). The Splash showed an empty
+page with two rings on it — and it kept showing it: the hold was stretched
+to 15 s for the test and the lockup still never appeared.
+
+**The fix — two sequences.** The native-driven fades and the JS-driven
+progress ring are separate now. Measured again on the device with the app's
+own 1.5 s hold:
+
+| what | before | after |
+|---|---|---|
+| the lion's box (warm pixels) | 0 | 16 442 |
+| the wordmark's box | 0 | 4 761 |
+| the tagline's box | 0 | 3 151 |
+
+Both themes, and the frames are on the device under `/sdcard/jsfD` and
+`/sdcard/jsfL`.
+
+The reduce-motion branch was never affected — it has no JS-driven child.
+
+### Getting to the first run at all (a note for the next person)
+
+The JS Splash is the initial route only while `hasLaunched` is false
+(`RootNavigator.tsx:174-178`), and reaching it takes three things:
+
+1. **Kill the process.** A running app holds `hasLaunched: true` in memory,
+   and `am start` on a live process just brings it to the front — the Splash
+   is then skipped, and the app goes straight to the Login.
+2. **Move the MMKV file aside** (`files/mmkv/simba` and its `.crc`) — the
+   settings live there.
+3. **Move `databases/AsyncStorage` aside too** (and its `-shm` / `-wal`).
+   The MMKV adapter does a *just-in-time migration from AsyncStorage on the
+   first read*, so clearing the MMKV alone is not enough: the settings come
+   straight back from the legacy database, `hasLaunched` and all.
+
+`pm clear` does all three at once, but it also drops the Google session.
+
+### The Penpot Splash boards are drawn now
+
+`Splash / light` was a placeholder, and it is the board the flow starts on —
+so the walk opened on a page that said "not designed yet". It is drawn now,
+and `Splash / dark` joins it.
+
+The drawing comes from the app's own source (`designs/penpot/splash.js`): the
+280 dp logo stack, the 100 dp gold pulse ring, the 96 dp lion, the Allura
+wordmark, the shared tagline, and the progress ring 48 dp below the stack.
+The brand STRINGS are read from their owner — `BRAND` in
+`src/constants/brand.ts`, read through the TypeScript AST by
+`designs/penpot/app-spec.js` — so a board can never disagree with the app
+about what the brand says.
+
+The geometry was checked against the device: the pulse ring's visible box
+measured **104.3, 240.5, 202.5 × 202.5 dp**, and the board draws 104, 240.5,
+203 × 203 (Penpot strokes *inside* a shape's box, so the box carries the
+visible band). The progress ring's centre measured 634.75 dp on the device
+and the board puts it at 633.
+
 
 
 

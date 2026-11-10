@@ -54,6 +54,7 @@ const media = require('./penpot/media');
 const {ROUTES, EDGES, V2_EDGES, placeholderBoard} = require('./penpot/app-boards');
 const {homeBoard} = require('./penpot/home');
 const {homeV2Board} = require('./penpot/home-v2');
+const {splashBoard} = require('./penpot/splash');
 const {SCREEN_W, SCREEN_H} = require('./penpot/kit');
 
 const OUT = path.join(__dirname, '.build');
@@ -201,11 +202,28 @@ for (const theme of ['light', 'dark']) {
 for (const route of ROUTES) {
   if (route.route === 'Home') continue;
   if (route.route === 'Login') continue;
+  if (route.route === 'Splash') continue;
   addPlaceholder(route.route, 'light');
 }
-// Splash is the app's entry point and the flow starts there.
-if (!boards.some(b => b.name === boardName('Splash', 'light'))) {
-  addPlaceholder('Splash', 'light');
+
+// Splash — the app's entry point, and the board the flow starts on.
+//
+// It is DRAWN, not a placeholder. The animated JS splash is the app's
+// first screen, so a placeholder there means the walk opens on a page
+// that says "not designed yet" — the opposite of what the app shows.
+//
+// Both themes: the dark one is the same drawing in the other palette.
+// The geometry comes from `designs/penpot/splash.js`, which reads the
+// app's own source.
+for (const theme of ['light', 'dark']) {
+  const splash = splashBoard(theme);
+  boards.push({
+    name: boardName('Splash', theme),
+    w: SCREEN_W,
+    h: SCREEN_H,
+    fill: (theme === 'dark' ? spec.darkColors : spec.colors).background.primary,
+    shapes: splash.shapes,
+  });
 }
 
 // ── the connectors ─────────────────────────────────────────────────────────

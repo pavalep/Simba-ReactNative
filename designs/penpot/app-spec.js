@@ -19,6 +19,10 @@
  * src/screens/Login/components/LoginScreen.tsx and are read by
  * build-login-design.js, which this prototype reuses.
  *
+ * The brand STRINGS are here (`BRAND`): the wordmark and the tagline are
+ * one fact with one owner (`src/constants/brand.ts`), so a board that
+ * draws the lockup reads them from there and never types them out.
+ *
  * USAGE
  *   const spec = require('./app-spec');
  *   spec.colors.background.primary     // '#F5F0E8'
@@ -167,6 +171,7 @@ function evalExport(absPath, exportName, env) {
 
 const TOKENS = path.join(APP, 'src/theme/tokens.ts');
 const FONT_FAMILY_FILE = path.join(APP, 'src/constants/fontFamily.ts');
+const BRAND_FILE = path.join(APP, 'src/constants/brand.ts');
 
 /** FONT_FAMILY first — the typography tokens reference it. */
 const families = evalExport(FONT_FAMILY_FILE, 'FONT_FAMILY', {});
@@ -175,6 +180,9 @@ const env = { FONT_FAMILY: families };
 const colors = evalExport(TOKENS, 'lightColors', env);
 const darkColors = evalExport(TOKENS, 'darkColors', env);
 const typography = evalExport(TOKENS, 'typography', env);
+
+/** The brand strings — the wordmark and the tagline (`src/constants/brand.ts`). */
+const brand = evalExport(BRAND_FILE, 'BRAND', env);
 
 /** The flat family map (dotted keys -> the family string RN resolves). */
 function flattenFamilies(node, prefix, out) {
@@ -228,6 +236,7 @@ module.exports = {
   darkColors,
   typography,
   families,
+  brand,
   familyMap,
   family,
   variant,
