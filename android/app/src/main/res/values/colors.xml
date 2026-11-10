@@ -8,4 +8,17 @@
            • statusBarColor / navigationBarColor -->
     <color name="splash_background">#F5F0E8</color>
     <color name="splash_navbar">#F5F0E8</color>
+
+    <!-- The lion's ink — the native twin of the JS theme's
+         `accent.brandInk` (src/theme/tokens.ts). The native splash
+         follows the PHONE's night mode, so the ink follows the
+         surface it is drawn on: #5C3A1E on parchment (8.9:1), and
+         #B27340 on the dark page (5.1:1) in values-night/colors.xml.
+         One owner per theme — the drawables reference this colour,
+         so the ink cannot drift between the two splash paths. -->
+    <color name="splash_ink">#5C3A1E</color>
+
+    <!-- The splash wordmark's gold — the native twin of the JS
+         theme's `accent.gold`: #B8922E in light, #C9A84C at night. -->
+    <color name="splash_wordmark">#B8922E</color>
 </resources>

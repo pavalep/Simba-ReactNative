@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Ring shape for the indeterminate loading spinner around the logo (warm brown) -->
+<!-- Ring shape for the indeterminate loading spinner around the logo.
+     The ink is the theme's brand ink (see @color/splash_ink), so the
+     ring is legible on both the parchment and the dark page. -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="ring"
     android:useLevel="false"
@@ -7,7 +9,7 @@
     android:thicknessRatio="28">
     <gradient
         android:startColor="@android:color/transparent"
-        android:endColor="#5C3A1E"
+        android:endColor="@color/splash_ink"
         android:type="sweep"
         android:useLevel="false" />
 </shape>

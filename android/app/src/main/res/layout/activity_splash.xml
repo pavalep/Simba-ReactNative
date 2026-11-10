@@ -1,8 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  v7 native splash layout — parchment background with the brown
-  lion logo, gold glow, gold indeterminate loading ring, and
-  "Simba" subtitle in SIMBA gold.
+  v7 native splash layout — the page surface with the lion logo, gold
+  glow, the brand-ink loading ring, and the "Simba" wordmark in gold.
+
+  The surface and the mark follow the PHONE's night mode through
+  @color/splash_background and @color/splash_ink (qualified in
+  values/ and values-night/), so the native splash and the JS splash
+  after it are the same picture in both themes.
 
   This is the SplashActivity layout (the rich animation path
   the user sees on cold start). For Android 12+ the system
@@ -14,7 +18,7 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F5F0E8">
+    android:background="@color/splash_background">
 
     <LinearLayout
         android:layout_width="wrap_content"
@@ -37,7 +41,7 @@
                 android:src="@drawable/splash_glow_radial"
                 android:alpha="0.4" />
 
-            <!-- Brown lion logo — starts scaled down, animated in activity -->
+            <!-- Lion logo — the brand ink, qualified for night -->
             <ImageView
                 android:id="@+id/splash_logo"
                 android:layout_width="96dp"
@@ -65,7 +69,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Simba"
-            android:textColor="#B8922E"
+            android:textColor="@color/splash_wordmark"
             android:textSize="14sp"
             android:alpha="0"
             android:letterSpacing="0.15"
