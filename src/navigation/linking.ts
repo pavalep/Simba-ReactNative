@@ -11,7 +11,7 @@ import type {RootStackParamList} from './types';
  *   simbaplayer://album/Recovery/Eminem
  *   simbaplayer://song?uri=...
  *   simbaplayer://genre/Hip-Hop
- *   simbaplayer://genre/Hip-Hop?initialTab=moods
+ *   simbaplayer://genre/Hip-Hop?initialTab=streaming
  *   simbaplayer://queue
  *   simbaplayer://bookmarks
  *   simbaplayer://videos
@@ -21,6 +21,28 @@ import type {RootStackParamList} from './types';
  *   simbaplayer://library/artist/<name>
  *   simbaplayer://settings/equalizer
  */
+
+/**
+ * The Genre screen's `initialTab` query param.
+ *
+ * The screen offers TWO sources — "My Library" and "Streaming" — since
+ * v18.11.4 replaced the old four-tab chip row with a two-way toggle. The
+ * `moods` and `radio` tabs of that older row are GONE: Moods was deferred
+ * to a future entry point and Radio duplicates `RadioScreen`.
+ *
+ * The nav types and this file's parser used to promise all four values
+ * while the screen honoured only `streaming`, so
+ * `simbaplayer://genre/Hip-Hop?initialTab=moods` landed on "My Library"
+ * and said nothing about why. An unknown value is now DROPPED, so the
+ * screen falls back to its own default and the promise in
+ * `navigation/types.ts` is the truth.
+ */
+function parseGenreInitialTab(value: string): 'local' | 'streaming' | undefined {
+  if (value === 'streaming') return 'streaming';
+  if (value === 'local') return 'local';
+  return undefined;
+}
+
 export const linking: LinkingOptions<RootStackParamList> = {
   prefixes: ['simbaplayer://', 'https://simbaplayer.app'],
   config: {
@@ -100,8 +122,19 @@ export const linking: LinkingOptions<RootStackParamList> = {
         path: 'genre/:genre',
         parse: {
           genre: decodeURIComponent,
-          // P41.7: optional tab query param (local/streaming/moods/radio)
-          initialTab: decodeURIComponent,
+          // P41.7: optional tab query param.
+          //
+          // The screen has TWO sources — "My Library" and "Streaming" —
+          // since v18.11.4 replaced the old four-tab row with a two-way
+          // toggle. This parser used to accept any string, and the nav
+          // types promised four values (`local`/`streaming`/`moods`/
+          // `radio`), but the screen honoured only `streaming`: a deep
+          // link with `?initialTab=moods` landed on "My Library" and
+          // said nothing about why.
+          //
+          // The promise is now narrowed to what the screen can do, and
+          // anything else is DROPPED rather than silently redirected.
+          initialTab: parseGenreInitialTab,
         },
       },
       AllVideosScreen: 'videos',

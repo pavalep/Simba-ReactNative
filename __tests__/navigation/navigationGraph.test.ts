@@ -346,3 +346,50 @@ describe('every root route is registered and reachable', () => {
     expect(withoutPath).toEqual(['FollowedPodcasts', 'AddToPlaylist']);
   });
 });
+
+describe('the Genre deep link says only what the screen can do', () => {
+  /**
+   * The Genre screen's `initialTab`.
+   *
+   * It has TWO sources — "My Library" and "Streaming" — since v18.11.4
+   * replaced the old four-tab chip row with a two-way toggle. The nav
+   * types and the linking parser used to promise FOUR values
+   * (`local`/`streaming`/`moods`/`radio`) while the screen honoured only
+   * `streaming`, so `?initialTab=moods` landed on "My Library" and said
+   * nothing about why.
+   */
+  function initialTabOf(pathname: string): string | undefined {
+    const resolved = resolve(pathname);
+    expect(resolved).not.toBeNull();
+    expect(resolved!.last.name).toBe('GenreScreen');
+    return (resolved!.last.params as {initialTab?: string}).initialTab;
+  }
+
+  it('honours "streaming"', () => {
+    expect(initialTabOf('/genre/Hip-Hop?initialTab=streaming')).toBe('streaming');
+  });
+
+  it('honours "local"', () => {
+    expect(initialTabOf('/genre/Hip-Hop?initialTab=local')).toBe('local');
+  });
+
+  it('DROPS a tab the screen does not have, instead of silently redirecting', () => {
+    // "moods" and "radio" were tabs of the OLD four-tab row. Moods was
+    // deferred to a future entry point and Radio duplicates
+    // `RadioScreen`. Neither is a tab any more, and a link that asks for
+    // one must not land on "My Library" as though it had.
+    expect(initialTabOf('/genre/Hip-Hop?initialTab=moods')).toBeUndefined();
+    expect(initialTabOf('/genre/Hip-Hop?initialTab=radio')).toBeUndefined();
+  });
+
+  it('drops an unknown value too', () => {
+    expect(initialTabOf('/genre/Hip-Hop?initialTab=nonsense')).toBeUndefined();
+  });
+
+  it('promises only the two tabs it has, in the nav types', () => {
+    const types = codeOf(path.join(NAV, 'types.ts'));
+    expect(types).toContain("initialTab?: 'local' | 'streaming'");
+    expect(types).not.toContain("'moods'");
+    expect(types).not.toContain("'radio'");
+  });
+});

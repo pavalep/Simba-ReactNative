@@ -6,9 +6,15 @@
 // Renders as:   ──────── Your Library ────────
 //
 // v9f: bumped the label alpha from 0.8 → 0.9 per user feedback
-// ("more"). Lines stay at goldGlow (0.25 alpha) — those were
-// right. The label is the visual anchor of the divider; the
-// rules are quiet support.
+// ("more"). Lines stay at the theme's own `goldGlow` — those were
+// right. The label is the visual anchor of the divider; the rules
+// are quiet support.
+//
+// v9g (2026-11-10): the label's gold is READ from the theme and the
+// alpha is applied to it (`withAlpha`). It used to be a hard-coded
+// `rgba(...)` pair — one per theme — and the pair was swapped, so
+// light mode drew the dark theme's gold and dark mode drew the
+// light one's. See the note at the colour below.
 //
 // The design literature for "── Title ──" dividers converges on
 // one principle: a good divider is a "quiet seam in fabric, a
@@ -46,6 +52,7 @@
 import React from 'react';
 import {View, StyleSheet, type TextStyle} from 'react-native';
 import {useTheme} from '../../../theme';
+import {withAlpha} from '../../../theme/color';
 import {spacing} from '../../../theme/tokens';
 import {AppText} from '../../core/AppText/AppText';
 import {FONT_FAMILY} from '../../../constants/fontFamily';
@@ -62,7 +69,7 @@ interface SubsectionTitleProps {
 
 export const SubsectionTitle: React.FC<SubsectionTitleProps> = React.memo(
   ({label, variant = 'overline'}) => {
-    const {colors, isDark} = useTheme();
+    const {colors} = useTheme();
     const isDisplaySans = variant === 'displaySans';
     const isDisplaySerif = variant === 'displaySerif';
 
@@ -73,13 +80,20 @@ export const SubsectionTitle: React.FC<SubsectionTitleProps> = React.memo(
       ? colors.accent.goldGlow
       : colors.border.subtle;
 
-    // v9f: 0.9 alpha on the brand gold. Light-mode gold is
-    // #C9A84C (201,168,76); dark-mode gold is #B8922E
-    // (184,146,46). Picking the rgba by `isDark` keeps the
-    // divider in sync with the theme.
-    const labelGold = isDark
-      ? 'rgba(184, 146, 46, 0.9)'
-      : 'rgba(201, 168, 76, 0.9)';
+    // v9f: 0.9 alpha on the brand gold.
+    //
+    // THE GOLD IS THE THEME'S GOLD. It used to be a hard-coded pair of
+    // `rgba(...)` literals — one per theme — and the pair was SWAPPED:
+    // light mode drew the dark theme's gold (#C9A84C) and dark mode
+    // drew the light one's (#B8922E), while `theme/tokens.ts` has it the
+    // other way round (dark #C9A84C, light #B8922E). The component's own
+    // comment stated the mapping correctly and the code did the opposite,
+    // which is how it survived: a hard-coded colour is indistinguishable
+    // from a correct one at the call site.
+    //
+    // Now the colour is READ from the theme and only the alpha is
+    // applied, so the two cannot drift apart.
+    const labelGold = withAlpha(colors.accent.gold, 0.9);
 
     const labelColor = isDisplaySerif
       ? labelGold

@@ -40,11 +40,17 @@ export type RootStackParamList = {
   ArtistScreen: {artistName: string};
   AlbumScreen: {albumName: string; artistName: string};
   SongScreen: {fileUri: string; title?: string; artist?: string; album?: string};
-  // P41.7: initialTab enables genre/mood deep links
-  // (simbaplayer://genre/<genre>?initialTab=moods)
+  // P41.7: initialTab enables the deep link
+  // (simbaplayer://genre/<genre>?initialTab=streaming).
+  //
+  // The screen has TWO sources — "My Library" and "Streaming" (v18.11.4
+  // replaced the old four-tab row). It used to promise four values
+  // (`local`/`streaming`/`moods`/`radio`) while honouring only
+  // `streaming`, so a deep link asking for `moods` landed on `local`
+  // and said nothing about why. The promise is now the truth.
   GenreScreen: {
     genre: string;
-    initialTab?: 'local' | 'streaming' | 'moods' | 'radio';
+    initialTab?: 'local' | 'streaming';
   };
   AllVideosScreen: {filter?: string; sort?: string} | undefined;
   AllAudioScreen: {filter?: string; sort?: string} | undefined;
