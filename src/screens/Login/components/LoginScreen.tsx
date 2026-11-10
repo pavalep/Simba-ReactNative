@@ -17,7 +17,7 @@ import {useLoginScreen} from '../hooks/useLoginScreen';
 import type {AuthErrorKind} from '../../../state';
 import type {LoginScreenProps} from '../types';
 import {navigationRef} from '../../../navigation/navigationHelper';
-import {BRAND} from '../../../constants/brand';
+import {BRAND, LOCKUP_TAGLINE} from '../../../constants/brand';
 import {FONT_FAMILY} from '../../../constants/fontFamily';
 
 type Props = LoginScreenProps;
@@ -153,7 +153,6 @@ export const LoginScreen: React.FC<Props> = ({navigation}) => {
                   {opacity: taglineOpacity, transform: [{translateY: taglineTranslateY}]},
                 ]}>
                 <AppText
-                  variant="displaySerif"
                   style={[styles.tagline, {color: colors.accent.brandInkSoft}]}>
                     {BRAND.tagline}
                   </AppText>
@@ -279,20 +278,9 @@ const styles = StyleSheet.create({
     marginTop: 4,
     alignItems: 'center',
   },
-  tagline: {
-    // Cormorant Garamond ITALIC — the `displaySerif` token is the Bold face,
-    // and a bold serif at this size would outweigh the wordmark above it.
-    // `fontWeight: '400'` is required: the token asks for 700, and 700 +
-    // italic resolves to `Cormorant Garamond_bold_italic.ttf`, which does
-    // not ship — RN would fall back to the system font silently.
-    fontFamily: FONT_FAMILY.cormorant.italic,
-    fontStyle: 'italic',
-    fontWeight: '400',
-    fontSize: 22,
-    lineHeight: 28,
-    letterSpacing: 0.4,
-    textAlign: 'center',
-  },
+  // The tagline's type is the shared lockup line — `LOCKUP_TAGLINE`
+  // is its one owner (see `src/constants/brand.ts`).
+  tagline: LOCKUP_TAGLINE,
   bottomSection: {
     alignItems: 'center',
   },

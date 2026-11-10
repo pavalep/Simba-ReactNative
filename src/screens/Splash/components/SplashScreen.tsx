@@ -44,7 +44,7 @@ import {SvgIcon} from '../../../components/utility/SvgIcon/SvgIcon';
 import {useTheme} from '../../../theme';
 import {useAccessibility} from '../../../hooks/useAccessibility';
 import {AppText} from '../../../components/core/AppText/AppText';
-import {BRAND} from '../../../constants/brand';
+import {BRAND, LOCKUP_TAGLINE} from '../../../constants/brand';
 import {useSettingsStore} from '../../../state';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
@@ -155,14 +155,16 @@ export const SplashScreen: React.FC = () => {
         wordmark: {
           marginTop: 14,
         },
-        // v7: tagline in Cormorant (displaySerif).
+        // The tagline's type is the shared lockup line — `LOCKUP_TAGLINE`
+        // is its one owner (see `src/constants/brand.ts`). The Splash
+        // used to set it in the `displaySerif` token (Cormorant Bold
+        // 48/56), which measured 414.6 dp wide against 347 dp of
+        // usable width and wrapped onto two lines.
         taglineWrap: {
           marginTop: 2,
           alignItems: 'center',
         },
-        tagline: {
-          textAlign: 'center',
-        },
+        tagline: LOCKUP_TAGLINE,
       }),
     [pageColor],
   );
@@ -201,6 +203,14 @@ export const SplashScreen: React.FC = () => {
     }
 
     // ── Full animation sequence ──
+    //
+    // The native-driven fades and the JS-driven progress ring are TWO
+    // sequences, not one. Measured on the device (2026-11-10): with the
+    // JS-driven progress ring inside the same `Animated.parallel` as the
+    // native-driven opacities, the three opacities never left their
+    // starting value of 0 — the lion, the wordmark and the tagline were
+    // never drawn at all, and the splash showed an empty page with two
+    // rings for its whole life.
     Animated.parallel([
       // Lion: fade-in + scale-up (0-600ms)
       Animated.parallel([
@@ -244,18 +254,21 @@ export const SplashScreen: React.FC = () => {
         easing: Easing.out(Easing.quad),
         useNativeDriver: true,
       }),
-
-      // Progress ring fills as auth rehydrates. The duration
-      // is a soft cap — if rehydration finishes before this,
-      // we cap at 1.5s; if it takes longer, the ring stays
-      // at the in-progress value and the splash waits.
-      Animated.timing(progress, {
-        toValue: 1,
-        duration: 1500,
-        easing: Easing.inOut(Easing.cubic),
-        useNativeDriver: false,
-      }),
     ]).start();
+
+    // Progress ring fills as auth rehydrates. The duration
+    // is a soft cap — if rehydration finishes before this,
+    // we cap at 1.5s; if it takes longer, the ring stays
+    // at the in-progress value and the splash waits.
+    //
+    // It runs on its own, because the stroke offset is interpolated on
+    // the JS thread (`useNativeDriver: false`).
+    Animated.timing(progress, {
+      toValue: 1,
+      duration: 1500,
+      easing: Easing.inOut(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
 
     // Gold pulse loop — runs forever until the splash unmounts
     // on handoff. Each pulse is 1.5s. The opacity oscillates
@@ -396,7 +409,6 @@ export const SplashScreen: React.FC = () => {
               <Animated.View
                 style={[styles.taglineWrap, {opacity: taglineOpacity}]}>
                 <AppText
-                  variant="displaySerif"
                   style={[styles.tagline, {color: colors.accent.brandInkSoft}]}>
                   {BRAND.tagline}
                 </AppText>
