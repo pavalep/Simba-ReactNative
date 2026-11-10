@@ -1506,8 +1506,7 @@ that. It was never wired, so there is no behaviour to preserve.
 
 ### Still open
 
-- **T14** — re-measure Home on the emulator against the V2 board, and
-  re-draw the board if the measurement disagrees with it.
+- **T14 — the device re-measure.** **DONE — see §10.**
 - `designs/assets/README.md` — **written**; the weather chip's
   provenance is now recorded, with the measured gradient compared
   against `WEATHER_PALETTE.partlyCloudy`.
@@ -1523,5 +1522,61 @@ that. It was never wired, so there is no behaviour to preserve.
 - The other ~48 screens.
 - `designs/.build/` is generated output and is NOT committed; only the
   generator sources and the assets they read are.
-- The branch is **not pushed** — the five commits above are local.
+- The branch is **not pushed** — the six commits above are local.
+
+---
+
+## §10 — The device re-measure (T14)
+
+The board is a drawing. This is the app, on a device, measured.
+
+**Device:** emulator-5554, AVD `Medium_Phone`, 411 × 914 dp, screen
+1080 × 2400 px → **2.628 px per dp**. The debug build was reloaded from
+Metro, so this is the code in the commits above.
+
+### What the page shows
+
+| The rule | On the device |
+|---|---|
+| The greeting is not in a box | "Good evening," (Cormorant italic) → **Paval** (Inter Bold gold) → "Overcast in London · 9°", with the chip top-right. No card, no box. |
+| The chip only with a real snapshot | Drawn — there IS a live snapshot. |
+| Plain shelf headers | "Recently Played", "Followed Podcasts", "Explore Contents" — h3, no badge circle, no chevron. |
+| One card grammar | The media card, the podcast tile and the catalogue tile all put the artwork WHOLE and the text UNDERNEATH it. |
+| No empty rails | Nothing is pinned and nothing is bookmarked, so there is **no** Pinned Playlists rail and **no** Bookmarks rail — and no "Your Library" heading over an empty group, because Recently Played and Followed Podcasts are populated. |
+| "Discover at the top" is a consequence | Discover is at the bottom because the library above it has something in it. |
+| The catalogue copy | "Classic, sci-fi,\nnoir & more" — the two-line break from `categoryDescriptions.json`, the same file the board reads. |
+
+### The numbers, measured off the pixels
+
+| What | Measured | The board |
+|---|---|---|
+| The rail pitch | **172.0 dp** (Movies card → Podcasts card) | 160 + 12 = 172 ✓ |
+| The gutter | "Movies" 17.1 dp · "Explore Contents" 17.5 dp · "Recently Played" 17.5 dp — all within 1–2 px of each other, the rest being the glyph's left side bearing | 16 dp, one gutter ✓ |
+
+### The divider's gold — the bug, proved fixed
+
+The theme's light gold is `#B8922E` (`theme/tokens.ts:321`). The FAB
+draws it at full alpha, so the FAB is the ground truth on the same
+screen:
+
+| What | Measured |
+|---|---|
+| The FAB's gold (full alpha) | `#b8922e` — **exactly** the token |
+| The page's parchment | `#f5f0e8` |
+| The "Your Library" divider label | `#be9c40` |
+| The "Discover" divider label | `#be9c40` |
+
+`0.9 × #B8922E` over `#f5f0e8` = **#be9b40** — the label, to the
+count. And the gold the OLD code drew (the dark theme's `#C9A84C` at
+0.9) would have measured `#cdaf5b`. The divider now paints the theme's
+own gold in both themes, and it is the same colour on both dividers.
+
+### What it does not prove
+
+The measurement is of **one** state: a light-theme device with a
+populated library and live weather. The dark theme, an empty library
+(the "first run" board), a pinned playlist, a bookmark and the
+long-press menu are all un-measured — they are the remaining device
+proofs.
+
 
