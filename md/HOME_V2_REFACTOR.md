@@ -1766,5 +1766,124 @@ needs nothing.
 | — | The v7 doc rename banners · iOS verification · the dark-theme variants for the remaining screens · the optional `Allura.ttf` upload to Penpot |
 | — | The page-by-page loop for the remaining ~48 screens (one at a time, not all at once) |
 
+## §12 — The Penpot pipeline, and two bugs in it (2026-11-10)
+
+The dark lion had to reach the Penpot canvas, and the canvas fought back.
+Underneath the renderer trouble there were two **real bugs** in the build
+pipeline — both of them able to leave the design showing the OLD picture with
+nothing complaining.
+
+### Bug 1 — two owners of the media ids
+
+`designs/.build/` held the media ids in two places:
+
+| file | what it is |
+|---|---|
+| `penpot-media-ids.json` | **the owner** — one file, merged by the media runner |
+| `penpot-media-result-N.json` | a per-call file — the runner rewrites one per upload batch |
+
+`readMediaIds()` read the store first and then let the per-call files
+**override** it, in directory order. A stale batch therefore won over the
+store: the 2026-11-10 upload of the dark lion reported the id
+`…ecc3b6d0fadb`, and a per-call file from an EARLIER run still held
+`…ec7c189e4c34`. The build drew that one, so `Home_V2_Dark` kept the old
+`#5C3A1E` lion and the board looked correct to every check that did not
+measure pixels.
+
+**The fix** (`designs/build-penpot-app.js`): the store is the owner. A legacy
+per-call file may only **fill** a key the store does not have — never
+override one — and the files are read in numeric order.
+
+### Bug 2 — the fingerprint blessed a picture that was never uploaded
+
+The fingerprint (`media-fingerprints.json`) says *which picture* a media id
+refers to. The build wrote the fingerprint of the file **on disk** for every
+picture it referred to — including the ones it was asking the media pass to
+upload, which had not gone up yet. So the file on disk changed → the id was
+dropped and the picture was scheduled for upload → the fingerprint file was
+written with the NEW hash → the next run compared the new hash with the new
+hash, found them equal, and **never uploaded it**. The board kept the old
+picture for ever.
+
+**The fix**: the fingerprint is written at **upload time**, by the media
+runner, for the bytes it actually sent (`designs/run-media.js`, new). The
+build writes it only for the pictures that are already in the file, and it
+merges — a picture that is still waiting for its upload keeps the
+fingerprint it had, so the change stays visible.
+
+Both are proved, not asserted (`designs/.build/` after the fix):
+
+| check | result |
+|---|---|
+| the store's id reaches the build payload | `…ecc3b6d0fadb` — the 2026-11-10 upload |
+| a picture whose file changed is asked for again | 1 media payload, carrying the picture on disk |
+| that picture is **not** blessed meanwhile | the fingerprint on disk is still the old one |
+
+### What else the pipeline needed
+
+| change | why |
+|---|---|
+| `designs/run-media.js` (new, in the repo) | the upload runner, and the only writer of the upload-time fingerprint. It was in scratch, so nothing in the repository owned that step. |
+| `designs/run-mcp.js` (new, in the repo) | the board/link/flow runner. It was in scratch too, and the README now documents commands that exist. |
+| one retry per call | a call that times out on the 120-second ceiling leaves the renderer in a state where the next call hangs too. Measured: one call of the build pass timed out and **every** call after it failed. |
+| a cap of 240 shapes per build call | the cost is the shapes, not the boards: one board of 166 shapes took 28.3 s, so a shape costs ~0.13 s. |
+| `designs/README.md` — the Penpot section | the pipeline, the two owners, and the three limits (85 KB per body, 120 s per call, the flow is last) |
+
+### The renderer is fragile, and the desktop session is the cause
+
+Three things kill the plugin, and only one of them is a bug:
+
+1. **The session is locked.** The foreground window becomes *Windows Default
+   Lock Screen*; the renderer is suspended and every call answers *"the
+   Penpot plugin tab appears to be suspended by the browser"*. Focusing the
+   window does not help — the session has to be unlocked. (Synthetic clicks
+   do not land either: the cursor moves, the app does not see the click.)
+2. **A call that runs past 120 s.** The task is killed, the renderer dies,
+   and the plugin tab has to be reopened (the MCP button in Penpot's
+   toolbar) before anything answers again.
+3. **The plugin tab was closed.** The Penpot Desktop app then has to be
+   restarted, the file reopened by hand, and the MCP plugin started again —
+   after which the server answers *"No Penpot instance connected for user
+   token"* until the plugin is running.
+
+### The Splash screen's tagline overflows the screen (a new finding)
+
+The Splash's tagline is `variant="displaySerif"`, and that token is **48/56
+Cormorant Garamond Bold** (`src/theme/tokens.ts:431`). The Login draws the
+same lockup with its own tagline style — **22/28 italic**
+(`LoginScreen.tsx:282-295`).
+
+The Splash's tagline is therefore ~2.2× the Login's, and the Login's own
+measured ink box is 177.9 dp wide for that string (`designs/README.md`,
+the lockup table). At 48 px it is ~390 dp, and Bold adds a few per cent more —
+against **347 dp** of usable width on a 411 dp screen (32 dp of padding each
+side). The tagline does not fit, and it leaves the 280 dp logo stack as
+well.
+
+It is only seen on the **first launch after install**: the Splash is the
+initial route only while `hasLaunched` is false (`RootNavigator.tsx:174-178`),
+and the Splash itself sets that flag on handoff. So the app's very first
+impression carries a tagline that runs off both edges.
+
+**Not fixed in this wave** — it is a change to the app's first screen, not to
+the dark-mode ink, and it needs the device to be checked (the Splash only
+appears on a first run). Recorded as F-14 below.
+
+### Carried forward
+
+| # | Item |
+|---|---|
+| F-11 | The Penpot canvas: the **boards** (12 calls) and the **connectors** (15 calls, 149 links) were rebuilt on 2026-11-10; the `Home_V2_Dark` board now carries the new lion (`…ecc3b6d0fadb` = the `#B27340` picture). **Still to do:** the flow pass (it was the call that died), the export-and-measure proof of the dark board's pixels, and the real `Splash / light|dark` boards in place of the placeholder. **Needs an unlocked desktop and a running plugin.** |
+| F-14 | The Splash screen's tagline: 48/56 Cormorant Bold against 347 dp of usable width — it overflows. The fix is the Login's own tagline style (22/28 italic), which is the same lockup and the same string. Needs a device check on a first run. |
+| F-15 | The Penpot plugin's recovery: the MCP button in the toolbar starts the plugin tab, and a closed tab needs the app restarted and the file reopened by hand. A note in `designs/README.md` would save the next person the search. |
+| — | The 75-site weight-intent sweep (`600` → `FONT_FAMILY.inter.semibold`, `500` → `FONT_FAMILY.inter.medium`) |
+| — | The `HomeSection` `SHELF` arm's `items: any[]` type hole (F-10) |
+| — | The device proofs still un-measured: the empty library / "first run" board, a pinned playlist, a bookmark, the long-press menu |
+| — | The Penpot Play hand walk (still API-verified only) |
+| — | B-050 (the lib's PiP chrome) · B-019 (the Argent update — **consent outstanding, do it LAST**) |
+| — | The seeded-data device proofs (F-065 ×2, F-066) · the 2026-11-03 native crash · `graphify-out/` · the API 24–30 PiP path · NO-JANK · B-018 |
+| — | The v7 doc rename banners · iOS verification · the dark-theme variants for the remaining screens · the optional `Allura.ttf` upload to Penpot |
+| — | The page-by-page loop for the remaining ~48 screens (one at a time, not all at once) |
+
 
 

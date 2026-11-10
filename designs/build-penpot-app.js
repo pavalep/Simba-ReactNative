@@ -363,6 +363,12 @@ const mediaPayload = media.payloadFor([...usedMedia]);
  * the same key and a different fingerprint, and without this check the build
  * would reuse the OLD upload and the board would keep showing the old
  * picture. (It did exactly that once: three black playlist covers.)
+ *
+ * The fingerprint must be written at UPLOAD time — by the media runner, for
+ * the bytes it actually sent — and by the build only for the pictures that
+ * are already in the file. A picture that changed on disk and has not been
+ * uploaded yet must keep the fingerprint it had, or the build would believe
+ * the new picture is already in Penpot and never upload it.
  */
 const FINGERPRINT_FILE = path.join(media.BUILD, 'media-fingerprints.json');
 
@@ -385,9 +391,18 @@ function readMediaIds() {
     }
   }
 
-  // The per-call result files the runner also writes.
+  // The per-call result files the runner also writes. These are LEGACY: the
+  // store above is the owner, and a per-call file can be OLDER than the
+  // store's entry for the same key — the runner rewrites one file per upload
+  // batch, so a stale batch still carries the previous id. A legacy file may
+  // only FILL a key the store does not have; it may never override one.
+  // (It did exactly that once: the dark lion's fresh id was replaced by the
+  // id from an older batch, and the board kept the old ink.)
   if (!fs.existsSync(dir)) return out;
-  const files = fs.readdirSync(dir).filter(f => /^penpot-media-result-\d+\.json$/.test(f));
+  const files = fs
+    .readdirSync(dir)
+    .filter(f => /^penpot-media-result-\d+\.json$/.test(f))
+    .sort((a, b) => parseInt(a.match(/(\d+)\.json$/)[1], 10) - parseInt(b.match(/(\d+)\.json$/)[1], 10));
   for (const f of files) {
     let parsed;
     try {
@@ -398,7 +413,7 @@ function readMediaIds() {
     const map = parsed && parsed.result ? parsed.result : parsed;
     if (!map || typeof map !== 'object') continue;
     for (const [key, v] of Object.entries(map)) {
-      if (v && v.id) out[key] = {id: v.id, width: v.width, height: v.height, mtype: v.mtype};
+      if (v && v.id && !out[key]) out[key] = {id: v.id, width: v.width, height: v.height, mtype: v.mtype};
     }
   }
 
@@ -462,6 +477,21 @@ const BUILD_BATCH_BYTES = 26 * 1024;
 const BUILD_MAX_BOARDS = 8;
 
 /**
+ * How many SHAPES one build call may draw.
+ *
+ * The board count is not the cost — the shapes are. Measured on 2026-11-10:
+ * one board of 166 shapes took 28.3 s, so a shape costs ~0.13 s. The second
+ * call of the build carried ~700 shapes and died on the 120-second ceiling
+ * (the task timed out, and the renderer suspended itself afterwards, which
+ * took the rest of the run with it).
+ *
+ * So the batches are capped by shape COUNT as well: 240 shapes is ~31 s of
+ * drawing, which with the page setup and the layout settle leaves the call
+ * well inside the ceiling.
+ */
+const BUILD_MAX_SHAPES = 240;
+
+/**
  * The boards, split into batches that each stay inside the endpoint's
  * body limit. The last batch also carries the flow and the connectors —
  * by then every board exists, so a connector can point at a board that
@@ -471,15 +501,24 @@ const buildBatches = [];
 {
   let batch = [];
   let bytes = 0;
+  let shapes = 0;
   for (const b of boards) {
     const size = JSON.stringify(b).length;
-    if (batch.length && (bytes + size > BUILD_BATCH_BYTES || batch.length >= BUILD_MAX_BOARDS)) {
+    const count = (b.shapes || []).length;
+    if (
+      batch.length &&
+      (bytes + size > BUILD_BATCH_BYTES ||
+        batch.length >= BUILD_MAX_BOARDS ||
+        shapes + count > BUILD_MAX_SHAPES)
+    ) {
       buildBatches.push(batch);
       batch = [];
       bytes = 0;
+      shapes = 0;
     }
     batch.push(b);
     bytes += size;
+    shapes += count;
   }
   if (batch.length) buildBatches.push(batch);
 }
@@ -1154,7 +1193,20 @@ if (current.length) batches.push(current);
 // from `mediaIds` above and is in one of the batches now.
 {
   const fingerprints = {};
-  for (const key of Object.keys(mediaPayload)) {
+  // Start from what is already there. A picture that is still waiting for its
+  // upload keeps the fingerprint it was uploaded with, so the next run still
+  // sees that the file on disk has changed.
+  try {
+    Object.assign(fingerprints, JSON.parse(fs.readFileSync(FINGERPRINT_FILE, 'utf8')));
+  } catch (e) {
+    // No fingerprints yet.
+  }
+  // Only the pictures that ARE in the Penpot file, and whose picture on disk
+  // is the one that was uploaded, are (re)written here. A picture that is
+  // still to be uploaded must NOT be given the fingerprint of the file on
+  // disk — that is how a changed picture silently kept its old upload once,
+  // and the board never caught up.
+  for (const key of Object.keys(mediaIds)) {
     try {
       fingerprints[key] = media.fingerprintOf(key);
     } catch (e) {

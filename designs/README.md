@@ -105,6 +105,63 @@ node designs/build-login-design.js intended light --only=peak \
 
 `--only=peak|rest|both` picks which page(s) to generate.
 
+## The Penpot canvas
+
+The same app lives in Penpot as a **page** (`SIMBA`) of one file. The generator
+is `build-penpot-app.js`; it reads the app's own sources the way
+`build-login-design.js` does, so the boards cannot drift from the code.
+
+The pipeline is four passes, and **the order is the pipeline**:
+
+| pass | what it does | why it cannot move |
+|---|---|---|
+| 1. media | uploads the pictures, records their ids | a board refers to a picture by id, so the picture has to be in the file first |
+| 2. boards | draws the boards | a board build **removes and recreates** the boards it owns |
+| 3. links | draws the connectors | the connectors refer to boards by id — they need the boards |
+| 4. flow | creates the app flow | every pass before it removes the flows, so the flow is always last |
+
+```sh
+node designs/build-penpot-app.js          # generate the payloads
+node designs/run-media.js <probe>          # pass 1 — upload the pictures
+node designs/build-penpot-app.js          # again, now with the ids
+node designs/run-mcp.js build <probe>      # pass 2 — the boards
+node designs/run-mcp.js links <probe>      # pass 3 — the connectors
+node designs/run-mcp.js flow <probe>       # pass 4 — the app flow
+```
+
+The **probe** is the transport that talks to the Penpot MCP endpoint. It is not
+in this repository because the endpoint's URL and its key live in the agent's
+own MCP settings; pass its path as an argument, or set `$PENPOT_PROBE`.
+
+### Two owners, and what they own
+
+The media ids are the part that bites, because there are two places they can
+live and they used to disagree:
+
+- `designs/.build/penpot-media-ids.json` — **the owner**. One file, so a later
+  upload cannot overwrite the ids an earlier one reported.
+- `designs/.build/penpot-media-result-N.json` — a legacy per-call file. It is
+  read only to *fill* a key the store does not have; it may never override one.
+  (It did exactly that once: the dark lion's fresh id was replaced by an
+  older batch's id, and the board kept the old ink.)
+
+The **fingerprint** — the sha1 of the bytes that were uploaded — says which
+picture an id refers to. It has to be written at **upload time**, by
+`run-media.js`, for the bytes it actually sent. A picture that changed on
+disk and has not been uploaded yet must keep the fingerprint it had, or the
+build would believe the new picture is already in Penpot, keep the old id and
+never upload it again.
+
+### The limits
+
+- The endpoint rejects a body over ~85 KB (measured: HTTP 413), and the body
+  is bigger than the base64 it carries — so one media call carries 60 KB.
+- Every call has a **120 s ceiling**. Four boards in one call does not fit;
+  the build splits them, and the login boards are one call per theme.
+- The layout wait must be **bounded and polled**. An unbounded
+  `waitForLayoutUpdate()` hangs past the ceiling and takes the whole run
+  with it.
+
 ## Three FigCraft quirks worth knowing
 
 All three cost time while this document was built; they are recorded so the
