@@ -42,6 +42,7 @@ import {ArtistDetailScreen} from '../features/library/presentation/screens/Libra
 import {AlbumDetailScreen} from '../features/library/presentation/screens/Library';
 import {ScreenErrorBoundary} from '../components/feedback/ScreenErrorBoundary';
 import {PodcastsScreen} from '../screens/PodcastsScreen';
+import {FollowedPodcastsScreen} from '../screens/FollowedPodcasts';
 import {PodcastDetailScreen} from '../screens/PodcastDetailScreen';
 import {MusicScreen} from '../screens/MusicScreen';
 import {MusicDetailScreen} from '../screens/MusicDetailScreen';
@@ -373,6 +374,11 @@ export const RootNavigator: React.FC = () => {
       <Stack.Screen
         name="PodcastsScreen"
         component={PodcastsScreen}
+        options={{animation: 'slide_from_right'}}
+      />
+      <Stack.Screen
+        name="FollowedPodcasts"
+        component={FollowedPodcastsScreen}
         options={{animation: 'slide_from_right'}}
       />
       <Stack.Screen

@@ -83,10 +83,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
     [navigation],
   );
 
-  // 35.5: per-user rail — keep the "View All" link to the Podcasts screen
-  // so the user can see their full followed list.
+  // 35.5: per-user rail — the "See All" link goes to the page that owns
+  // the user's full followed list.
+  //
+  // It used to point at `PodcastsScreen`, which is the CATALOGUE — a
+  // category filter and a search box over the Podcast Index. It does not
+  // list the podcasts the user follows, so the link answered a question
+  // the page could not answer. `FollowedPodcasts` is the page that can.
   const handleFollowedPodcastsSeeAll = useCallback(() => {
-    navigation.navigate('PodcastsScreen', {});
+    navigation.navigate('FollowedPodcasts');
   }, [navigation]);
 
   // P41.5: the Playlists rail's "VIEW ALL" link — kept on the per-user

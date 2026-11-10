@@ -325,7 +325,7 @@ describe('every root route is registered and reachable', () => {
     expect(new Set(registered)).toEqual(new Set(declared));
   });
 
-  it('gives every route a deep-link path, except the one that never had one', () => {
+  it('gives every route a deep-link path, except the personal ones', () => {
     const screens = (linking.config as {screens: Record<string, unknown>}).screens;
     const declared = declaredRoutes(
       path.join(NAV, 'types.ts'),
@@ -334,9 +334,15 @@ describe('every root route is registered and reachable', () => {
     const withoutPath = declared.filter(name => screens[name] === undefined);
 
     // `AddToPlaylist` has never had a deep-link path — it is a screen
-    // that is only ever opened by a picker's result. Pinning the
-    // exception means a route that LOSES its path is a test failure
-    // rather than a silently broken share link.
-    expect(withoutPath).toEqual(['AddToPlaylist']);
+    // that is only ever opened by a picker's result.
+    //
+    // `FollowedPodcasts` ("My Podcasts") is the same class of screen:
+    // the user's OWN followed list. A deep link to it is not a share
+    // link — there is nothing in it to share — so it is opened from
+    // Home, and only from Home.
+    //
+    // Pinning the exceptions means a route that LOSES its path is a
+    // test failure rather than a silently broken share link.
+    expect(withoutPath).toEqual(['FollowedPodcasts', 'AddToPlaylist']);
   });
 });

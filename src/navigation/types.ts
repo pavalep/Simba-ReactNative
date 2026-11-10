@@ -52,6 +52,16 @@ export type RootStackParamList = {
   MoviesScreen: {categoryId?: string} | undefined;
   // ── Screens moved from tab stacks (Phase 14.0 navigation refactoring) ──
   PodcastsScreen: {categoryId?: number} | undefined;
+  /**
+   * "My Podcasts" — the podcasts the user follows.
+   *
+   * It is its OWN page because the Home rail's "See All" pointed at
+   * `PodcastsScreen`, which is the CATALOGUE — a category filter and a
+   * search box over the Podcast Index — and does not list the user's
+   * followed podcasts. Apple Podcasts ("Following"), Pocket Casts and
+   * Spotify all give the followed list a page of its own.
+   */
+  FollowedPodcasts: undefined;
   Search: undefined;
   NowPlaying: {fileUri?: string; fileTitle?: string} | undefined;
   FolderBrowser: {initialPath?: string; targetPlaylistId?: string};
