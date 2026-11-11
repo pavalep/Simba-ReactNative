@@ -21,7 +21,7 @@
  *   • the colours, the spacing scale and the radii are `app-spec.js`, which
  *     reads `src/theme/tokens.ts` through the TypeScript AST.
  *
- * THE THREE THINGS THIS FILE FIXES
+ * THE FOUR THINGS THIS FILE FIXES
  * --------------------------------
  *
  * 1. **The Profile's stats grid is gone.** Seven tiles, three to a row, the
@@ -38,6 +38,16 @@
  * 3. **The legal pages sit on the theme.** Privacy and Terms painted a
  *    hardcoded `#D4B47A` slab over the whole screen; in the dark theme that
  *    is a gold page with brown text.
+ *
+ * 4. **The Profile stopped repeating Home** (2026-11-11,
+ *    `md/CONTENT_OWNERSHIP.md`). The "Your Library" section and its six
+ *    rows went — Home already carries the Recently Played, Pinned
+ *    Playlists, Bookmarks and Followed Podcasts rails, each with a "See
+ *    All", so the Profile was a second index of the same library under the
+ *    same heading. The Profile is now "you": the identity, the one number
+ *    only the account has (playback statistics), the account actions, and
+ *    the app's own pages. Settings lost its "About" section for the same
+ *    reason — it was a second index of the About page's own link list.
  */
 
 'use strict';
@@ -450,43 +460,22 @@ function profileBoard(themeName) {
   );
   y += 72;
 
-  // ── Your Library ──────────────────────────────────────────────────────
-  y += spacing.md; // 12
-  shapes.push(...k.divider('Your Library', 'Your Library', y));
-  y += 48; // the divider's own block: 12 + 24 + 12
-
-  // THE COUNT LINE — decision D-A. One line, one store, no tiles.
-  shapes.push(
-    k.text('Library count', '124 tracks  ·  8 videos  ·  6 playlists', {
-      x: ROW.padX,
-      y: y + 2,
-      family: 'Inter',
-      weight: 400,
-      size: 13,
-      lineHeight: 18,
-      fill: c.text.secondary,
-    }),
-  );
-  y += 18 + spacing.md;
-
-  const LIBRARY_ROWS = [
-    {name: 'Profile Playlists', label: 'Playlists', count: '6'},
-    {name: 'Profile Bookmarks', label: 'Bookmarks', count: '12'},
-    {name: 'Profile History', label: 'History'},
-    {name: 'Profile Downloads', label: 'Downloads', count: '3'},
-    {name: 'Profile Followed Podcasts', label: 'Followed podcasts', count: '4'},
-    {name: 'Profile Local Media', label: 'Local files', count: '2'},
-  ];
-  for (const r of LIBRARY_ROWS) {
-    const out = P.row(r.name, {y, label: r.label, count: r.count});
-    shapes.push(...out);
-    y += out.rowHeight;
-  }
-
   // ── Activity ──────────────────────────────────────────────────────────
-  y += spacing.lg; // 16
+  //
+  // The Profile is "you", not "your library".
+  //
+  // Home owns the library — it carries the Recently Played, Pinned
+  // Playlists, Bookmarks and Followed Podcasts rails, each with a "See
+  // All" — so a second index of the same six things here would be the
+  // app saying the same thing twice, under the same "Your Library"
+  // heading. The "Your Library" section is gone from this page.
+  //
+  // What is left is what Home cannot show: the account, and the numbers
+  // only the account has. `Stats` is reachable from nowhere else in the
+  // app, so this row is its single door.
+  y += spacing.md; // 12
   shapes.push(...k.divider('Activity', 'Activity', y));
-  y += 48;
+  y += 48; // the divider's own block: 12 + 24 + 12
   {
     const out = P.row('Profile Stats', {y, label: 'Playback statistics'});
     shapes.push(...out);
@@ -516,6 +505,32 @@ function profileBoard(themeName) {
   }
   {
     const out = P.row('Profile Clear data', {y, label: 'Clear local data'});
+    shapes.push(...out);
+    y += out.rowHeight;
+  }
+
+  // ── Support ───────────────────────────────────────────────────────────
+  //
+  // The last two rows are the app's own pages. They used to sit in
+  // Settings' "About" section, which was a SECOND INDEX of the About
+  // page's own link list — the same pages, listed twice, in two places.
+  // The About page stays the hub (it owns the version, the credits, the
+  // licences, the privacy policy and the terms); the Profile keeps the
+  // one door to it, and to the FAQ.
+  //
+  // YouTube, Spotify, Tencent Video and Huawei Video all put Help and
+  // the legal pages on the account screen, for the same reason: that is
+  // where a user looks for them.
+  y += spacing.lg; // 16
+  shapes.push(...k.divider('Support', 'Support', y));
+  y += 48;
+  {
+    const out = P.row('Profile Help', {y, label: 'Help'});
+    shapes.push(...out);
+    y += out.rowHeight;
+  }
+  {
+    const out = P.row('Profile About', {y, label: 'About Simba'});
     shapes.push(...out);
     y += out.rowHeight;
   }
@@ -636,30 +651,26 @@ function settingsBoard(themeName) {
     y += out.rowHeight;
   }
 
-  // ── About ─────────────────────────────────────────────────────────────
-  SECTION('Settings About', 'About');
+  // ── Reset preferences ─────────────────────────────────────────────────
+  //
+  // Settings is a PREFERENCES page and nothing else. Its "About"
+  // section — Version, About Simba, Credits, Changelog, Help, Open
+  // source licences — was a second index of the About page's own link
+  // list, and those rows now live on the Profile, which is where
+  // YouTube, Spotify, Tencent Video and Huawei Video put them.
+  //
+  // "Reset preferences" STAYS: it acts on the settings themselves, so
+  // this is the page that owns it. The About page's footer "Reset all
+  // settings" is the duplicate, and it goes.
+  //
+  // It is drawn as its own group because it is the one row that is not a
+  // preference but an ACTION on them.
+  SECTION('Settings Reset', 'Reset');
   {
-    // The version is read from the native build — 1.1.0 (2) — not from
-    // package.json, which is where the old "0.0.1 (1)" came from.
-    const out = P.row('Settings Version', {
+    const out = P.row('Settings Reset preferences', {
       y,
-      label: 'Version',
-      description: '1.1.0 (2)',
+      label: 'Reset preferences',
     });
-    shapes.push(...out);
-    y += out.rowHeight;
-  }
-  for (const [name, label] of [
-    ['Settings About Simba', 'About Simba'],
-    ['Settings Changelog', 'Changelog'],
-    ['Settings Credits', 'Credits'],
-    ['Settings Licenses', 'Open source licences'],
-    ['Settings Help', 'Help'],
-    ['Settings Privacy', 'Privacy policy'],
-    ['Settings Terms', 'Terms of use'],
-    ['Settings Reset preferences', 'Reset preferences'],
-  ]) {
-    const out = P.row(name, {y, label});
     shapes.push(...out);
     y += out.rowHeight;
   }

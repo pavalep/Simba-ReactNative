@@ -207,28 +207,23 @@ const EDGES = [
 
   // ── Profile ──
   //
-  // The RC1 Profile board (md/PROFILE_RC1_REFACTOR.md §9.2). The rows are
-  // the user's own things, and the counts ride on the rows as trailing text.
+  // The Profile is "you", not "your library" (2026-11-11,
+  // `md/CONTENT_OWNERSHIP.md`).
   //
-  // TWO EDGES CHANGED on 2026-11-11, both because the old edge pointed at
-  // the wrong screen:
+  // Its six library rows — Playlists, Bookmarks, History, Downloads,
+  // Followed podcasts, Local files — are GONE. Home already carries the
+  // Recently Played, Pinned Playlists, Bookmarks and Followed Podcasts
+  // rails, each with a "See All", and the Library page owns Downloads
+  // and the local media. A second index of the same library, under the
+  // same "Your Library" heading, is the app saying the same thing twice.
   //
-  //   • "Followed podcasts" went to `PodcastsScreen` — the CATALOGUE, a
-  //     category filter and a search box over the Podcast Index. The app
-  //     has its own page for the feeds the user follows
-  //     (`src/navigation/types.ts:88-96`), and Home's rail already points
-  //     there. The Profile now points there too.
-  //   • "Local files" went to `LinkedFolders` (the manage-folders page).
-  //     Home's Local Files card goes to `Library`, which IS the device
-  //     library; the Profile's row says the same thing, so it goes to the
-  //     same place.
-  {from: 'Profile', to: 'History', trigger: 'click', shape: 'Profile History label', label: 'History'},
+  // What the Profile keeps is what nothing else owns: the account
+  // (Activity → Stats; Account → sign out, revoke, clear) and the app's
+  // own pages (Support → Help, About Simba) — which used to be
+  // re-listed in Settings' "About" section.
   {from: 'Profile', to: 'Stats', trigger: 'click', shape: 'Profile Stats label', label: 'Playback statistics'},
-  {from: 'Profile', to: 'Bookmarks', trigger: 'click', shape: 'Profile Bookmarks label', label: 'Bookmarks'},
-  {from: 'Profile', to: 'AllPlaylistsScreen', trigger: 'click', shape: 'Profile Playlists label', label: 'Playlists'},
-  {from: 'Profile', to: 'FollowedPodcasts', trigger: 'click', shape: 'Profile Followed Podcasts label', label: 'Followed podcasts'},
-  {from: 'Profile', to: 'Downloads', trigger: 'click', shape: 'Profile Downloads label', label: 'Downloads'},
-  {from: 'Profile', to: 'Library', trigger: 'click', shape: 'Profile Local Media label', label: 'Local files'},
+  {from: 'Profile', to: 'Help', trigger: 'click', shape: 'Profile Help label', label: 'Help'},
+  {from: 'Profile', to: 'About', trigger: 'click', shape: 'Profile About label', label: 'About Simba'},
   // The gear in the header — the ONE door to Settings on the account page,
   // the way YouTube, Spotify, Apple Music, Plex and Tencent Video all do it.
   {from: 'Profile', to: 'Settings', trigger: 'click', shape: 'Profile right glyph', label: 'Settings'},
@@ -241,14 +236,13 @@ const EDGES = [
   // rail. The account card is gone too — it drew the Profile's identity
   // block again, and tapping it opened the Profile.
   {from: 'Settings', to: 'AudioSettings', trigger: 'click', shape: 'Settings Audio Settings label', label: 'Audio settings'},
-  {from: 'Settings', to: 'About', trigger: 'click', shape: 'Settings About Simba label', label: 'About Simba'},
-  {from: 'Settings', to: 'Credits', trigger: 'click', shape: 'Settings Credits label', label: 'Credits'},
-  {from: 'Settings', to: 'Changelog', trigger: 'click', shape: 'Settings Changelog label', label: 'Changelog'},
-  {from: 'Settings', to: 'Help', trigger: 'click', shape: 'Settings Help label', label: 'Help'},
-  {from: 'Settings', to: 'Licenses', trigger: 'click', shape: 'Settings Licenses label', label: 'Open source licences'},
   {from: 'Settings', to: 'LinkedFolders', trigger: 'click', shape: 'Settings Linked Folders label', label: 'Linked folders'},
-  {from: 'Settings', to: 'Privacy', trigger: 'click', shape: 'Settings Privacy label', label: 'Privacy policy'},
-  {from: 'Settings', to: 'Terms', trigger: 'click', shape: 'Settings Terms label', label: 'Terms of use'},
+  // Settings' "About" section is GONE (2026-11-11, md/CONTENT_OWNERSHIP.md).
+  // Its seven rows — Version, About Simba, Credits, Changelog, Help, Open
+  // source licences, Privacy policy, Terms of use — were a SECOND INDEX of
+  // the About page's own link list, and they now sit on the Profile, which
+  // is where YouTube, Spotify, Tencent Video and Huawei Video put them.
+  // Each of those pages keeps exactly ONE door: the About page's.
 
   // ── The settings stack's own pages ──
   {from: 'AudioSettings', to: 'Equalizer', trigger: 'click', shape: 'Audio Settings Preset', label: 'Preset'},

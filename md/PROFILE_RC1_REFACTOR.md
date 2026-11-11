@@ -613,6 +613,10 @@ Settings becomes a **preferences page and nothing else**, which is what YouTube,
 
 ## 13. R1 — the Profile rebuild (DONE)
 
+> **Superseded in part.** After R1 shipped, the owner reviewed the Profile against the Home page and found the opposite problem: **the Profile was a second index of the library.** Six of its seven rows and the count line all repeated Home's rails or the Library page's counts — and on an empty library the Profile was a page of zeros under a heading ("Your Library") that Home also uses.
+>
+> The content-ownership model and the redesigned Profile live in **`md/CONTENT_OWNERSHIP.md`**. This section is kept as the record of R1 as it shipped; §14 points at what changed.
+
 The user approved the boards and chose **R1 only** ("start with R1, then I review before the rest"). This section records what was built, what was deleted, and what was measured on the device.
 
 ### 13.1 What the screen is now
@@ -699,6 +703,26 @@ Both themes were checked on the device: the light theme renders the cream backgr
 - `labelColor` — `primary` by default, `error` for the ONE destructive row a list carries. Three red rows in a row read as an error screen.
 
 No existing call site changes behaviour.
+
+---
+
+## 14. R1b — the Profile redesigned for content ownership (DESIGN DONE, CODE NOT STARTED)
+
+The owner reviewed R1 against Home and found the opposite problem to the one R1 fixed:
+
+> "i think your library is a repeat, DRY in UI also, with home page gets more priority then profile then settings … we dont want user to think we fill with same content again and again"
+
+**Six of R1's seven rows and the count line all repeated something Home or the Library already shows.** The whole analysis, the ownership model and the redesigned boards are in **`md/CONTENT_OWNERSHIP.md`**. In one line:
+
+| R1's Profile | Now |
+|---|---|
+| "Your Library" + the count line + six rows (Playlists, Bookmarks, History, Downloads, Followed podcasts, Local files) | **gone** — Home owns the library, the Library page owns Downloads and the local media |
+| "Activity" → Playback statistics | **kept** — `Stats` is reachable from nowhere else in the app |
+| "Account" → Sign out, Revoke, Clear local data | **kept** |
+| — | **new "Support" group** — Help, About Simba (moved out of Settings' About section, which was a second index of the About page's own link list) |
+| the gear → Settings | **kept** — Settings is a preferences page and nothing else |
+
+**No app code has been touched for this.** The Penpot boards are redrawn and read back (`md/CONTENT_OWNERSHIP.md` §5.5); the code waves R1b / R2 / R3 wait for approval.
 
 ---
 
