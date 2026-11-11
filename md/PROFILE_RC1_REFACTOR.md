@@ -611,9 +611,100 @@ Settings becomes a **preferences page and nothing else**, which is what YouTube,
 
 ---
 
+## 13. R1 — the Profile rebuild (DONE)
+
+The user approved the boards and chose **R1 only** ("start with R1, then I review before the rest"). This section records what was built, what was deleted, and what was measured on the device.
+
+### 13.1 What the screen is now
+
+The `Profile / light` and `Profile / dark` boards, implemented on the app's own components:
+
+| The board | The code |
+|---|---|
+| Gear in the header's right circle | `<InternalHeader rightAction={{icon: 'settings', …}} />` — the old "Sign out" TEXT wrapped and was clipped inside that 36 dp circle |
+| Unboxed identity | `<Avatar size={72} />` + `h2` name + `caption` email, in a row with a 16 dp gutter, **no card** |
+| `── Your Library ──` | `<SubsectionTitle variant="displaySerif" />` — the Cormorant italic gold divider |
+| The count line | one `caption`: `N tracks · N videos · N playlists` |
+| Six rows, gold counts, chevrons | `<SettingsRow>` — unboxed, hairline-separated, full-bleed |
+| `── Activity ──` + one row | "Playback statistics" → `Stats` |
+| `── Account ──` + three rows | "Sign out" (the only red row), "Revoke Google access", "Clear local data" |
+
+### 13.2 What was deleted
+
+The 7-cell stats grid · the "Recently Played" chip strip · the 8-row "Shortcuts" block · the "Preferences" block (the Theme toggle it carried — **Settings already owns that**, with a real `ThemePickerDialog`) · the header's "Sign out".
+
+And the dead code the md listed: **P-14** (`ActivityOrb`), **P-15** (`normalizeMediaClassification`), **P-17** (`placeholderAvatar`), **P-18** (`signInBtn` + `signInLabel`), **P-21** (`isLoading`) are gone.
+
+**P-16 and P-19 changed shape rather than being deleted, and that is deliberate:**
+
+- **P-16** — `signIn` was destructured and never called. It is now called: the signed-out Account section offers "Sign in". YouTube, Spotify, Apple Music, Plex, VLC, Tencent Video and Huawei Video all show a sign-in action on the account screen, so this is the existing affordance, not a new one. The screen is therefore reachable and useful **signed out**, which the old one was not.
+- **P-19** — the old screen rendered `{user ? (…) : null}` inside a card, so a signed-out user saw a blank grey box. The identity block now always renders: the avatar, "Not signed in", and "Sign in to sync your library".
+
+**P-20** — the screen no longer declares its own local `Props`; it imports `ProfileScreenProps` from `../types`, the same pattern `SettingsScreen` and `StatsScreen` use. One name, one owner.
+
+### 13.3 P-22 was pulled INTO this wave
+
+**P-22** (the `Avatar` component never renders the user's photo — its `uri` branch drew the initials, with the comment *"The avatar image would go here … For now we render a fallback"*) was **not** in R1's scope. It was pulled in because the Profile's identity block IS the avatar, and shipping the new Profile with initials while the Home header showed the real photo would have shipped the exact inconsistency the user complained about.
+
+`Avatar` now renders the photo through the app's own `MediaImage`, and falls back to the initials if the photo fails to load. The Settings account card changed with it — it now shows the photo too, which is the same fix.
+
+### 13.4 The counts now have ONE owner
+
+The old grid read "Tracks" and "Videos" from `useMediaStore` (the **scan** result), while the Stats page read the same two words from `useSessionStore.mediaLibrary` (the **played** roll-up). Two stores, two numbers, the same labels.
+
+The Profile's count line now reads both from `useSessionStore.mediaLibrary` — the store `StatsScreen.tsx:43,68-74` reads. The Profile and the Stats page cannot disagree.
+
+The board's mock numbers (124 / 8 / 6 / 12 / 3 / 4 / 2) are sample data. On the test device every one of them is **0**, because that device has no linked folders, no playlists, no bookmarks, no downloads and no followed podcasts. The zeros are the real state, not a failure.
+
+### 13.5 Measured on the device, against the board
+
+`uiautomator dump` on `emulator-5554` (1080×2400 @ 420 dpi = 2.625 px/dp), the dark theme, signed in as `pavalep@gmail.com`. Every element is compared with the board's own coordinates.
+
+| Element | Board | Device | |
+|---|---|---|---|
+| Row label x | 16 | 16 | ✓ |
+| Count right edge x | 373 | 373 | ✓ |
+| Name / email x | 104 | 104 | ✓ |
+| Name line height | 32 | 32 | ✓ |
+| Row pitch | 52 | 52 | ✓ |
+| "Your Library" label centre | 205.5 | 205.5 | ✓ |
+| Every element's **y** | — | board + **25 dp** | the system status bar, which the board does not model |
+
+With that constant 25 dp offset removed, the device and the board agree **within 1 dp** on every element — the name, the email, all three dividers, the count line, all ten rows and both counts.
+
+Three gaps were closed to get there, and each is a measured number, not a guess:
+
+1. the email needed `marginTop: spacing.xs` (4 dp) — the board puts 4 dp between the name's line box and the email's, and the app was stacking them with none;
+2. the "Your Library" divider needed `marginTop: spacing.xs` (4 dp) above `SubsectionTitle`'s own 8 dp — the board's gap is 12 dp and the component's own margin is 8;
+3. the "Activity" and "Account" dividers needed `marginTop: spacing.sm` (8 dp) — the board's gap after a list is 16 dp, and `SubsectionTitle`'s own margin is 8.
+
+### 13.6 The four destinations were verified by tapping them
+
+Every row was tapped on the device and the screen that opened was read back:
+
+| Row | Opens | Verified |
+|---|---|---|
+| gear (header) | `Settings` | ✓ |
+| "Followed podcasts" | `FollowedPodcasts` — **"My Podcasts"**, not the catalogue | ✓ **this is the P-10 fix** |
+| "Local files" | `Library` | ✓ |
+| "Playback statistics" | `Stats` | ✓ |
+
+Both themes were checked on the device: the light theme renders the cream background, the gold dividers and the gold counts of the light board.
+
+### 13.7 Two shared components were extended, not forked
+
+`SettingsRow` gained two **optional** props:
+
+- `accessibilityLabel` — the count in the trailing cluster is invisible to a screen reader otherwise, so "Playlists" is announced as "Playlists, 6";
+- `labelColor` — `primary` by default, `error` for the ONE destructive row a list carries. Three red rows in a row read as an error screen.
+
+No existing call site changes behaviour.
+
+---
+
 ## Carried forward
 
-Every item below is deferred, not done. Each is listed separately so none is lost.
+Every item below is deferred, not done — except the two marked **DONE in R1**, which are closed. Each is listed separately so none is lost.
 
 | ID | Item | Source |
 |---|---|---|
@@ -627,13 +718,15 @@ Every item below is deferred, not done. Each is listed separately so none is los
 | CF-08 | `src/services/cacheService.ts:28` — `getCacheSize` is dead. (`formatBytes` is **used** by the Downloads screen; an earlier reading of this repo was wrong about that.) | §7.2 |
 | CF-09 | `src/screens/About/components/AboutScreen.tsx:35-46, 260-262` — the `LinkItem` comment claims the `as any` cast was removed; it is still there. | §6.5 |
 | CF-10 | `src/navigation/linking.ts` — `Stats: 'stats',` is indented out of alignment with its siblings. Cosmetic. | `src/navigation/linking.ts` |
-| CF-11 | `src/screens/Profile/types/index.ts:3` — `ProfileScreenProps` duplicates the screen's local `Props` type. | §4.3 |
+| CF-11 | **DONE in R1.** `src/screens/Profile/types/index.ts:3` — `ProfileScreenProps` duplicated the screen's local `Props` type. The screen now imports `ProfileScreenProps` from `../types`, the same pattern `SettingsScreen` and `StatsScreen` use. One name, one owner. | §13.2 |
 | CF-12 | `src/state/settingsStore.ts:162` — the default `preferredLanguages` is `'eng, jpn, und'`, and `und` is shown verbatim in the Settings UI. | §6.4 |
 | CF-13 | The Help page's `support@simbaplayer.app` and the About page's `support@simbaplayer.app` mailto are unverified domains. | §6.5 |
-| CF-14 | `src/screens/Profile/components/ProfileScreen.tsx:186-201` — a signed-out user sees an empty grey card where the identity block should be. | §4.3 |
+| CF-14 | **DONE in R1.** `src/screens/Profile/components/ProfileScreen.tsx:186-201` — a signed-out user saw an empty grey card where the identity block should be. The identity block now always renders; signed out it shows the avatar, "Not signed in" and "Sign in to sync your library", and the Account section offers "Sign in". | §13.2 |
 | CF-15 | The Settings screen's `SettingsRow` touch targets are full-bleed (x = 0.000, width = 1.000) while the Profile's are inset (x = 0.039, width = 0.922) — one component, two grammars. | §6.4 |
 | CF-16 | `.eslintrc.js:66,67,118` — the unused-vars rule is off in three places, so the gates cannot see dead code. §11 R6 turns it back on. | §7.1 |
 | CF-17 | The Penpot flow's Home board is still **V1** (`Home / light`, `Home / dark`) while the app renders **V2** (`Home_V2_Light`, `Home_V2_Dark`). Carried from `HOME_V2_REFACTOR.md` §16. | `designs/build-penpot-app.js` |
 | CF-18 | **B-019 — Argent 0.30.1 → 0.32.0.** Needs the user's explicit informed consent. **Do it LAST.** Do not update autonomously. | standing backlog |
 | CF-19 | The Penpot Play hand walk, the un-measured device proofs (empty library / "first run" board, pinned playlist, bookmark, long-press menu), the seeded-data proofs (F-065 ×2, F-066), the 2026-11-03 native crash, the 75-site weight-intent sweep, the API 24–30 PiP path, NO-JANK, B-018, the v7 doc rename banners, iOS verification, the dark-theme variants for the remaining screens, the optional `Allura.ttf` upload, the page-by-page loop for the remaining ~48 screens, `graphify-out/`, F-10, F-13, F-15, F-17, B-050 — all carried unchanged. | `HOME_V2_REFACTOR.md` |
 | CF-20 | **Decision D-B has a behavioural consequence.** `rememberPlaybackPosition` is not only a toggle — the player's resume path may read it. Before the key is deleted, the resume behaviour must be read and either kept unconditionally or the deletion made safe. The same check applies to `scanOnLaunch` (does anything trigger a scan at launch?) and `notificationsEnabled` (the manifest asks for `POST_NOTIFICATIONS` — is the service gated on this key?). | §12 D-B |
+| CF-21 | The `Avatar` fallback for a user with **no** initials draws a MUSIC note (`SvgIcon name="music"`) — a media glyph on an account avatar. The app's SVG set has no person/user glyph, so adding one is a design decision, not a code fix. | §13.3 |
+| CF-22 | The Penpot boards' absolute Y coordinates do **not** include the Android status bar, so every device measurement carries a constant **+25 dp** offset. Any future board-vs-device comparison must subtract it, or the boards must model the bar. (Measured on `emulator-5554`, 411×914 dp.) | §13.5 |

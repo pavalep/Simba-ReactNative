@@ -1,25 +1,73 @@
-// ────────────────────────────────────────────────────────
-// Simba Player — Profile Screen (Phase 42)
-// Real store-backed stats · recently played · shortcuts ·
-// theme quick toggle · sign out / revoke / clear data
-// ────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────
+// Simba Player — Profile Screen (RC1)
+//
+// The account page, rebuilt on the V2 grammar. The design this
+// implements is the `Profile / light` and `Profile / dark` boards in
+// Penpot (page `SIMBA`), drawn by `designs/penpot/profile.js`.
+//
+// WHY IT LOOKS LIKE THIS
+// ──────────────────────
+//
+// The screen this replaces (the "Phase 42" version) had five blocks:
+//
+//   1. a 7-cell stats grid — `flexBasis: '30%'`, so it laid out three
+//      to a row and the SEVENTH tile was an orphan; and because
+//      `formatDuration(0)` returns `''`, that orphan had no value at
+//      all;
+//   2. a "Recently Played" chip strip — Home already has that rail;
+//   3. an 8-row "Shortcuts" block — Home's rails again, and three of
+//      its rows (Bookmarks, Playlists, Followed) were printed a SECOND
+//      time further down the same screen;
+//   4. a "Preferences" block with one row — a Theme toggle that
+//      Settings already owns;
+//   5. a "Sign out" in the HEADER, drawn as a text label inside the
+//      header's fixed 36×36 right-action circle, so it wrapped onto
+//      two lines and was clipped.
+//
+// It also read its numbers from TWO different stores: the grid's
+// "Tracks" and "Videos" came from `useMediaStore`, while the Stats
+// page read the same two numbers from `useSessionStore.mediaLibrary`.
+// The same words, two numbers, on two screens.
+//
+// What is here now:
+//
+//   • an UNBOXED identity — avatar, name, email, no card around it
+//     (the same rule the V2 Home greeting follows);
+//   • ONE count line under "Your Library" — the VLC pattern. The
+//     tracks and videos are read from `useSessionStore.mediaLibrary`,
+//     which is the SAME store the Stats page reads, so the two pages
+//     cannot disagree;
+//   • ONE list of your things, each count riding on its own row;
+//   • ONE Activity row;
+//   • ONE Account section, where only "Sign out" is red.
+//
+// The section titles are the Cormorant italic gold divider
+// (`SubsectionTitle`'s `displaySerif` variant) — the same grammar the
+// Home page's "Your Library" / "Discover" dividers use. The rows are
+// the app's own `SettingsRow`, unboxed: the old screen wrapped them
+// in an elevated group card, the V2 grammar does not.
+//
+// Every row's destination was verified against the live Penpot file:
+// the board's connectors resolve to Settings, AllPlaylistsScreen,
+// Bookmarks, History, Downloads, FollowedPodcasts, Library, Stats and
+// Login respectively. `Followed Podcasts` points at the FOLLOWED list
+// (`FollowedPodcasts`), not at the podcast catalogue — the old screen
+// had the same bug Home already fixed.
+//
+// See `md/PROFILE_RC1_REFACTOR.md` for the analysis behind all of it.
+// ────────────────────────────────────────────────────────────────
 
 import React, {useCallback, useMemo, useState} from 'react';
-import {
-  View,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  FlatList,
-} from 'react-native';
+import {View, StyleSheet, ScrollView} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useBottomChromeInset} from '../../../infrastructure/player/miniPlayerChrome';
 import {useTheme} from '../../../theme';
+import {spacing} from '../../../theme/tokens';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {Avatar} from '../../../components/core/Avatar/Avatar';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
-import {ActivityOrb} from '../../../components/feedback/ActivityOrb/ActivityOrb';
 import {SettingsRow} from '../../../components/utility/SettingsRow/SettingsRow';
+import {SubsectionTitle} from '../../../components/utility/SubsectionTitle/SubsectionTitle';
 import {InternalHeader} from '../../../components/layout/InternalHeader/InternalHeader';
 import {ConfirmDialog} from '../../../components/core/Dialog/ConfirmDialog';
 import {useToast} from '../../../components/feedback/Toast/Toast';
@@ -27,100 +75,78 @@ import {useAuth} from '../../../hooks/useAuth';
 import {usePlaylists} from '../../../features/playlists';
 import {useBookmarks} from '../../../features/bookmarks';
 import {useFollowedPodcasts} from '../../../features/followedPodcasts';
-
 import {useRecentHistory} from '../../../features/recentHistory';
-
-import {useSessionStore} from '../../../state';
-import {formatDuration} from '../../../utils/timeAgo';
+import {
+  useSessionStore,
+  useMediaStore,
+  useDownloadsStore,
+} from '../../../state';
 import {clearCache} from '../../../services/cacheService';
-import type {RootStackScreenProps} from '../../../navigation/types';
-import {normalizeMediaClassification} from '../../../types/media';
-import {useResumeAwareLaunch} from '../../../infrastructure/player';
-import {useSettingsStore} from '../../../state';
-import {useMediaStore} from '../../../state';
+import type {ProfileScreenProps} from '../types';
 
-type Props = RootStackScreenProps<'Profile'>;
+type Props = ProfileScreenProps;
 
-const THEME_ORDER: Array<'system' | 'dark' | 'light'> = [
-  'system',
-  'dark',
-  'light',
-];
-
-const THEME_LABEL: Record<'system' | 'dark' | 'light', string> = {
-  system: 'System',
-  dark: 'Dark',
-  light: 'Light',
+/**
+ * The trailing cluster of a row: the count in gold, then the chevron.
+ *
+ * The count is `caption` (Inter 13/18) in the brand gold — the place
+ * the V2 grammar spends its gold when there is no artwork to spend it
+ * on. The board draws it at Inter Medium 500; the family key below
+ * selects the Medium face directly, which is how a weight is carried
+ * in this app (never a `fontWeight` prop — see
+ * `src/constants/fontFamily.ts`).
+ */
+const RowTrailing: React.FC<{count?: number}> = ({count}) => {
+  const {colors} = useTheme();
+  return (
+    <View style={styles.trailing}>
+      {count != null && (
+        <AppText variant="caption" color="accent">
+          {count}
+        </AppText>
+      )}
+      <SvgIcon name="chevronRight" size={14} color={colors.text.tertiary} />
+    </View>
+  );
 };
 
 export const ProfileScreen: React.FC<Props> = ({navigation}) => {
   const {colors} = useTheme();
   const bottomChromeInset = useBottomChromeInset();
   const toast = useToast();
-  const {openPlayer} = useResumeAwareLaunch();
 
-  const {user, isLoading, signIn, signOut, revokeAccess} =
-    useAuth();
+  const {user, signIn, signOut, revokeAccess} = useAuth();
 
-  // ── Real store stats (42.3 — no fabricated numbers) ──
-  const trackCount = useMediaStore(s => s.tracks.length);
-  const allTracks = useMediaStore(s => s.tracks);
+  // ── The counts ───────────────────────────────────────────────────
+  //
+  // ONE owner per number.
+  //
+  // The tracks and videos come from `useSessionStore.mediaLibrary` —
+  // the same store `StatsScreen.tsx:43,68-74` reads — so the Profile
+  // and the Stats page cannot print different numbers for the same
+  // words. (The old screen read them from `useMediaStore`, which is
+  // the SCAN result: a different set of files entirely.)
+  const mediaLibrary = useSessionStore(state => state.mediaLibrary);
   const {playlists} = usePlaylists();
-  const playlistCount = playlists.length;
   const {bookmarkCount, clearAll: clearAllBookmarks} = useBookmarks();
   const {count: followedPodcastCount} = useFollowedPodcasts();
+  const downloadCount = useDownloadsStore(state => state.records.length);
+  const localFileCount = useMediaStore(state => state.tracks.length);
+  const {clearRecent} = useRecentHistory();
 
-  const {list: recentFiles, clearRecent} = useRecentHistory();
-  // V17 Phase 77: session.playCounts moved to the new
-  // `useSessionStore` Zustand store. The Redux `useAppSelector`
-  // call is removed for this field; the other selectors on this
-  // line (settings.themeMode) will move to `useSettingsStore` in
-  // Phase 79.
-  const playCounts = useSessionStore(state => state.playCounts);
-  const themeMode = useSettingsStore(state => state.themeMode);
-
+  const trackCount = useMemo(
+    () => mediaLibrary.filter(e => e.mediaType === 'audio').length,
+    [mediaLibrary],
+  );
   const videoCount = useMemo(
-    () => allTracks.filter(t => t.mediaType === 'video').length,
-    [allTracks],
+    () => mediaLibrary.filter(e => e.mediaType === 'video').length,
+    [mediaLibrary],
   );
 
-  const totalPlays = useMemo(
-    () => Object.values(playCounts).reduce((sum, n) => sum + n, 0),
-    [playCounts],
-  );
-
-  /** Honest estimate: Σ(playCount × duration) across recent entries. */
-  const playbackSeconds = useMemo(
-    () =>
-      recentFiles.reduce((sum, entry) => {
-        const count = playCounts[entry.fileUri] ?? 0;
-        return sum + count * Math.max(0, entry.duration);
-      }, 0),
-    [recentFiles, playCounts],
-  );
-
-  // ── Dialogs (42.6 / 42.7 / 43.5) ──
+  // ── Dialogs ─────────────────────────────────────────────────────
   const [signOutVisible, setSignOutVisible] = useState(false);
   const [revokeVisible, setRevokeVisible] = useState(false);
   const [wipeVisible, setWipeVisible] = useState(false);
-
-  const stats: Array<{label: string; value: string}> = [
-    {label: 'Tracks', value: String(trackCount)},
-    {label: 'Videos', value: String(videoCount)},
-    {label: 'Bookmarks', value: String(bookmarkCount)},
-    {label: 'Followed', value: String(followedPodcastCount)},
-    {label: 'Playlists', value: String(playlistCount)},
-
-    {label: 'Plays', value: String(totalPlays)},
-    {label: 'Playback', value: formatDuration(playbackSeconds)},
-  ];
-
-  // ── Theme quick toggle (42.5) ──
-  const handleThemeToggle = useCallback(() => {
-    const next = THEME_ORDER[(THEME_ORDER.indexOf(themeMode) + 1) % THEME_ORDER.length];
-    useSettingsStore.getState().setThemeMode(next);
-    toast.show(`Theme: ${THEME_LABEL[next]}`);
-  }, [themeMode, toast]);
 
   const handleConfirmSignOut = useCallback(async () => {
     setSignOutVisible(false);
@@ -147,225 +173,170 @@ export const ProfileScreen: React.FC<Props> = ({navigation}) => {
     toast.show('Local data cleared');
   }, [clearRecent, clearAllBookmarks, toast]);
 
-  const handleRecentPress = useCallback(
-    (entry: (typeof recentFiles)[number]) => {
-      // W9.5 — `entry.position` is SECONDS; `startPositionMs` is
-      // MILLISECONDS. Passing it straight through sought to ~1/1000th
-      // of the saved spot AND bypassed the seam's resume policy. The
-      // lane and kind travel with the launch now, so the entry is
-      // classified correctly when it is written back on close.
-      openPlayer({
-        uri: entry.fileUri,
-        title: entry.title,
-        type: entry.mediaType === 'video' ? 'video' : 'audio',
-        mediaLane: entry.mediaType,
-        ...(entry.type ? {mediaKind: entry.type} : {}),
-        ...(entry.thumbnailPath ? {thumbnailPath: entry.thumbnailPath} : {}),
-      });
-    },
-    [openPlayer],
-  );
-
-  const recentStrip = recentFiles.slice(0, 5);
+  const isSignedIn = Boolean(user);
+  const displayName = user?.name || 'Not signed in';
+  const displayEmail = user?.email || 'Sign in to sync your library';
 
   return (
     <SafeAreaView
       style={[styles.root, {backgroundColor: colors.background.primary}]}
       edges={['top']}>
-      {/* InternalHeader includes the canonical chevron back arrow */}
+      {/* The header's right action is a GEAR, not a label.
+          The right slot is a fixed 36×36 circle (`InternalHeader.tsx:151-157`),
+          so the old "Sign out" TEXT wrapped onto two lines and was
+          clipped. A gear is the one door to Settings that YouTube,
+          Spotify, Apple Music, Plex and Tencent Video all put on the
+          account screen. Sign-out lives in the Account section below,
+          where there is room for it. */}
       <InternalHeader
         title="Profile"
-        rightAction={
-          user
-            ? {label: 'Sign out', onPress: () => setSignOutVisible(true)}
-            : undefined
-        }
+        rightAction={{
+          icon: 'settings',
+          onPress: () => navigation.navigate('Settings'),
+        }}
       />
+
+      {/* No horizontal padding here: the rows are FULL BLEED — the
+          hairline runs the whole width — and `SettingsRow` carries its
+          own 16 dp gutter. The board draws them that way too. */}
       <ScrollView contentContainerStyle={styles.scroll} bounces>
-        {/* ── Header card (42.1/42.2) ── */}
-        <View
-          style={[styles.headerCard, {backgroundColor: colors.background.elevated}]}>
-          {user ? (
-            <>
-              <Avatar uri={user.photo} name={user.name} size={64} />
-              <View style={styles.headerInfo}>
-                <AppText variant="h3" color="primary">
-                  {user.name || 'Simba User'}
-                </AppText>
-                <AppText variant="caption" color="secondary">
-                  {user.email || 'Signed in with Google'}
-                </AppText>
-              </View>
-            </>
-          ) : null}
-        </View>
-
-        {/* ── Stats grid (42.3) — flexWrap flow, .map kept ── */}
-        <View style={styles.statsGrid}>
-          {stats.map(stat => (
-            <View
-              key={stat.label}
-              style={[
-                styles.statCell,
-                {backgroundColor: colors.background.elevated},
-              ]}>
-              <AppText variant="h3" color="primary">
-                {stat.value}
-              </AppText>
-              <AppText variant="caption" color="tertiary">
-                {stat.label}
-              </AppText>
-            </View>
-          ))}
-        </View>
-
-        {/* ── Recently played strip (42.4) ── */}
-        {recentStrip.length > 0 && (
-          <View style={styles.section}>
-            <AppText variant="displaySans" color="primary" style={styles.sectionTitle}>
-              Recently Played
+        {/* ── the identity (unboxed) ─────────────────────────────────── */}
+        <View style={styles.identity}>
+          <Avatar uri={user?.photo} name={user?.name} size={72} />
+          <View style={styles.identityText}>
+            <AppText variant="h2" color="primary" numberOfLines={1}>
+              {displayName}
             </AppText>
-            {/* 59.1: virtualized recent strip */}
-            <FlatList
-              horizontal
-              data={recentStrip}
-              keyExtractor={entry => entry.fileUri}
-              showsHorizontalScrollIndicator={false}
-              renderItem={({item: entry}) => (
-                <TouchableOpacity
-                  style={[
-                    styles.recentChip,
-                    {backgroundColor: colors.background.elevated},
-                  ]}
-                  onPress={() => handleRecentPress(entry)}
-                  activeOpacity={0.7}
-                  accessibilityRole="button"
-                  accessibilityLabel={entry.title}>
-                  <SvgIcon
-                    name={entry.mediaType === 'audio' ? 'music' : 'video'}
-                    size={16}
-                    color={colors.accent.gold}
-                  />
-                  <AppText
-                    variant="caption"
-                    color="primary"
-                    numberOfLines={1}
-                    style={styles.recentLabel}>
-                    {entry.title}
-                  </AppText>
-                </TouchableOpacity>
-              )}
-
-              initialNumToRender={Math.min(recentStrip.length, 24)}
-              windowSize={5}
-              maxToRenderPerBatch={12}
-            />
+            <AppText
+              variant="caption"
+              color="secondary"
+              numberOfLines={1}
+              style={styles.identityEmail}>
+              {displayEmail}
+            </AppText>
           </View>
+        </View>
+
+        {/* ── Your Library ───────────────────────────────────────────── */}
+        <View style={styles.dividerFirst}>
+          <SubsectionTitle label="Your Library" variant="displaySerif" />
+        </View>
+
+        {/* THE COUNT LINE — one line, one store, no tiles. */}
+        <AppText variant="caption" color="secondary" style={styles.countLine}>
+          {`${trackCount} tracks · ${videoCount} videos · ${playlists.length} playlists`}
+        </AppText>
+
+        <SettingsRow
+          label="Playlists"
+          accessibilityLabel={`Playlists, ${playlists.length}`}
+          onPress={() => navigation.navigate('AllPlaylistsScreen')}
+          trailing={<RowTrailing count={playlists.length} />}
+        />
+        <SettingsRow
+          label="Bookmarks"
+          accessibilityLabel={`Bookmarks, ${bookmarkCount}`}
+          onPress={() => navigation.navigate('Bookmarks')}
+          trailing={<RowTrailing count={bookmarkCount} />}
+        />
+        <SettingsRow
+          label="History"
+          onPress={() => navigation.navigate('History')}
+          trailing={<RowTrailing />}
+        />
+        <SettingsRow
+          label="Downloads"
+          accessibilityLabel={`Downloads, ${downloadCount}`}
+          onPress={() => navigation.navigate('Downloads')}
+          trailing={<RowTrailing count={downloadCount} />}
+        />
+        <SettingsRow
+          label="Followed podcasts"
+          accessibilityLabel={`Followed podcasts, ${followedPodcastCount}`}
+          onPress={() => navigation.navigate('FollowedPodcasts')}
+          trailing={<RowTrailing count={followedPodcastCount} />}
+        />
+        <SettingsRow
+          label="Local files"
+          accessibilityLabel={`Local files, ${localFileCount}`}
+          onPress={() => navigation.navigate('Library')}
+          trailing={<RowTrailing count={localFileCount} />}
+        />
+
+        {/* ── Activity ───────────────────────────────────────────────── */}
+        <View style={styles.divider}>
+          <SubsectionTitle label="Activity" variant="displaySerif" />
+        </View>
+        <SettingsRow
+          label="Playback statistics"
+          onPress={() => navigation.navigate('Stats')}
+          trailing={<RowTrailing />}
+        />
+
+        {/* ── Account ────────────────────────────────────────────────── */}
+        <View style={styles.divider}>
+          <SubsectionTitle label="Account" variant="displaySerif" />
+        </View>
+        {isSignedIn ? (
+          <>
+            {/* Only ONE red row. Revoke and Clear live behind a
+                confirmation dialog, so the row itself does not have to
+                shout — and three red rows in a row read as an error
+                screen. */}
+            <SettingsRow
+              label="Sign out"
+              accessibilityLabel="Sign out"
+              onPress={() => setSignOutVisible(true)}
+              trailing={
+                <View style={styles.trailing}>
+                  <SvgIcon name="chevronRight" size={14} color={colors.text.tertiary} />
+                </View>
+              }
+              labelColor="error"
+            />
+            <SettingsRow
+              label="Revoke Google access"
+              accessibilityLabel="Revoke Google access"
+              onPress={() => setRevokeVisible(true)}
+              trailing={
+                <View style={styles.trailing}>
+                  <SvgIcon name="chevronRight" size={14} color={colors.text.tertiary} />
+                </View>
+              }
+            />
+            <SettingsRow
+              label="Clear local data"
+              accessibilityLabel="Clear local data"
+              onPress={() => setWipeVisible(true)}
+              trailing={
+                <View style={styles.trailing}>
+                  <SvgIcon name="chevronRight" size={14} color={colors.text.tertiary} />
+                </View>
+              }
+            />
+          </>
+        ) : (
+          /* Signed out: the account page's one job is to offer the
+             sign-in. YouTube, Spotify, Apple Music, Plex, VLC, Tencent
+             Video and Huawei Video all show a sign-in action on the
+             account screen, so this is the existing affordance, not a
+             new one. */
+          <SettingsRow
+            label="Sign in"
+            accessibilityLabel="Sign in"
+            onPress={() => void signIn()}
+            trailing={
+              <View style={styles.trailing}>
+                <SvgIcon name="chevronRight" size={14} color={colors.text.tertiary} />
+              </View>
+            }
+          />
         )}
 
-        {/* ── Shortcuts (42.4) ── */}
-        <View style={styles.section}>
-          <AppText variant="displaySans" color="primary" style={styles.sectionTitle}>
-            Shortcuts
-          </AppText>
-          <View style={[styles.groupCard, {backgroundColor: colors.background.elevated}]}>
-            <SettingsRow
-              label="History"
-              description="Recently played with filters"
-              onPress={() => navigation.navigate('History')}
-              trailing={<SvgIcon name="chevronRight" size={18} color={colors.text.tertiary} />}
-            />
-            <SettingsRow
-              label="Stats"
-              description="Plays, streaks and top media"
-              onPress={() => navigation.navigate('Stats')}
-              trailing={<SvgIcon name="chevronRight" size={18} color={colors.text.tertiary} />}
-            />
-            <SettingsRow
-              label="Bookmarks"
-              description={`${bookmarkCount} saved positions`}
-              onPress={() => navigation.navigate('Bookmarks')}
-              trailing={<SvgIcon name="chevronRight" size={18} color={colors.text.tertiary} />}
-            />
-            <SettingsRow
-              label="Playlists"
-              description={`${playlistCount} playlists`}
-              onPress={() => navigation.navigate('AllPlaylistsScreen')}
-              trailing={<SvgIcon name="chevronRight" size={18} color={colors.text.tertiary} />}
-            />
-            <SettingsRow
-              label="Followed Podcasts"
-              description={`${followedPodcastCount} followed feeds`}
-              onPress={() => navigation.navigate('PodcastsScreen')}
-              trailing={<SvgIcon name="chevronRight" size={18} color={colors.text.tertiary} />}
-            />
-            <SettingsRow
-              label="Downloads"
-              description="Offline media and download status"
-              onPress={() => navigation.navigate('Downloads')}
-              trailing={<SvgIcon name="chevronRight" size={18} color={colors.text.tertiary} />}
-            />
-            <SettingsRow
-              label="Local Media"
-              description="Linked folders and device library"
-              onPress={() => navigation.navigate('LinkedFolders', {type: 'audio'})}
-              trailing={<SvgIcon name="chevronRight" size={18} color={colors.text.tertiary} />}
-            />
-            <SettingsRow
-              label="Settings"
-              description="Appearance, audio, storage"
-              onPress={() => navigation.navigate('Settings')}
-              trailing={<SvgIcon name="chevronRight" size={18} color={colors.text.tertiary} />}
-            />
-          </View>
-        </View>
-
-        {/* ── Preferences ── */}
-        <View style={styles.section}>
-          <AppText variant="displaySans" color="primary" style={styles.sectionTitle}>
-            Preferences
-          </AppText>
-          <View style={[styles.groupCard, {backgroundColor: colors.background.elevated}]}>
-            <SettingsRow
-              label="Theme"
-              description={`Currently: ${THEME_LABEL[themeMode]}`}
-              onPress={handleThemeToggle}
-              trailing={<AppText variant="caption" color="accent">Tap to switch</AppText>}
-            />
-          </View>
-        </View>
-
-        {/* ── Account (42.6 / 42.7 / 43.5) ── */}
-        <View style={styles.section}>
-          <AppText variant="displaySans" color="primary" style={styles.sectionTitle}>
-            Account
-          </AppText>
-          <View style={[styles.groupCard, {backgroundColor: colors.background.elevated}]}>
-            <SettingsRow
-              label="Sign Out"
-              description="Return to the sign-in screen"
-              onPress={() => setSignOutVisible(true)}
-              trailing={<AppText variant="caption" style={{color: colors.semantic.error}}>Logout</AppText>}
-            />
-            <SettingsRow
-              label="Revoke Google Access"
-              description="Permanently disconnect this account"
-              onPress={() => setRevokeVisible(true)}
-              trailing={<AppText variant="caption" style={{color: colors.semantic.error}}>Revoke</AppText>}
-            />
-            <SettingsRow
-              label="Clear Local Data"
-              description="Recents, bookmarks and cached files"
-              onPress={() => setWipeVisible(true)}
-              trailing={<AppText variant="caption" style={{color: colors.semantic.error}}>Wipe</AppText>}
-            />
-          </View>
-        </View>
-
-        <View style={{height: bottomChromeInset}} />
+        <View style={{height: bottomChromeInset + spacing.xl}} />
       </ScrollView>
 
-      {/* ── Confirm dialogs ── */}
+      {/* ── Confirm dialogs ──────────────────────────────────────────── */}
       <ConfirmDialog
         visible={signOutVisible}
         title="Sign Out"
@@ -404,68 +375,37 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scroll: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
+    paddingTop: spacing.xl,
   },
-  headerCard: {
+  identity: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 16,
-    padding: 16,
-    gap: 12,
+    gap: spacing.lg,
+    paddingHorizontal: spacing.lg,
   },
-  headerInfo: {
+  identityText: {
     flex: 1,
   },
-  placeholderAvatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
+  identityEmail: {
+    marginTop: spacing.xs,
   },
-  signInBtn: {
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 10,
+  // The gaps the board puts above its dividers: 12 dp before the first
+  // one (right after the identity) and 16 dp before the ones that
+  // follow a list. `SubsectionTitle` carries its own 8 dp marginTop,
+  // so these supply the rest.
+  dividerFirst: {
+    marginTop: spacing.xs,
   },
-  signInLabel: {
-    fontWeight: '700',
+  divider: {
+    marginTop: spacing.sm,
   },
-  groupCard: {
-    borderRadius: 12,
+  countLine: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
   },
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    marginTop: 12,
-  },
-  statCell: {
-    flexGrow: 1,
-    flexBasis: '30%',
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 8,
-    alignItems: 'center',
-  },
-  section: {
-    marginTop: 20,
-  },
-  sectionTitle: {
-    marginBottom: 10,
-  },
-  recentChip: {
+  trailing: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    borderRadius: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    marginRight: 8,
-    maxWidth: 200,
-  },
-  recentLabel: {
-    flexShrink: 1,
+    gap: spacing.sm,
   },
 });
