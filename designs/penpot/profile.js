@@ -48,6 +48,14 @@
  *    only the account has (playback statistics), the account actions, and
  *    the app's own pages. Settings lost its "About" section for the same
  *    reason — it was a second index of the About page's own link list.
+ *
+ * 5. **The Profile and the Settings page are ONE page** (2026-11-11,
+ *    `md/PROFILE_SETTINGS_MERGE.md`). The owner found the Profile "too
+ *    less" and asked for the Settings page to be merged into it, so
+ *    `profileBoard` now carries the preferences as well: 21 rows in 9
+ *    groups. The `Settings` boards are gone, and the Profile's header
+ *    lost its gear — the gear used to open the page you are now on.
+ *    There is no `settingsBoard` in this file any more.
  */
 
 'use strict';
@@ -179,7 +187,14 @@ function profileKit(themeName) {
    */
   function row(name, o) {
     const out = [];
-    const h = o.description ? 66 : ROW.minHeight;
+    // The row's own height.
+    //
+    // A row with a description is 67 dp on the device, not 66: the
+    // SettingsRow's own padding (12 + 12), the label's 22 dp line, the
+    // 2 dp gap and the description's 18 dp line, plus the hairline under
+    // the row. Measured on `emulator-5554` (1080×2400 @ 420 dpi):
+    // 175–176 px = 66.7–67.0 dp.
+    const h = o.description ? 67 : ROW.minHeight;
     const midY = o.y + h / 2;
     if (o.icon) {
       out.push(
@@ -207,13 +222,13 @@ function profileKit(themeName) {
     if (o.description) {
       out.push(
         k.text(name + ' description', o.description, {
-          x: textX,
+          x: o.descriptionX != null ? o.descriptionX : textX,
           y: o.y + 36,
           family: 'Inter',
           weight: 400,
           size: 13,
           lineHeight: 18,
-          fill: c.text.tertiary,
+          fill: o.descriptionFill || c.text.tertiary,
         }),
       );
     }
@@ -260,14 +275,19 @@ function profileKit(themeName) {
   }
 
   /**
-   * A switch — the app's own toggle (`SettingsScreen.tsx:176-186`).
+   * A switch — the app's own toggle.
    *
    * The track is `border.subtle` off and `accent.goldDim` on, the thumb is
    * `accent.gold` on and `text.tertiary` off.
+   *
+   * The track is 46 × 27 dp, which is what the app's `Switch` measures on
+   * the device (`emulator-5554`, 1080×2400 @ 420 dpi: 122 × 71 px = 46.5 ×
+   * 27.0 dp, flush with the 16 dp gutter). The old 44 × 26 was the iOS
+   * size and was never measured here.
    */
   function toggle(name, o) {
-    const w = 44;
-    const h = 26;
+    const w = 46;
+    const h = 27;
     const x = SCREEN_W - ROW.padX - w;
     const y = o.y + (ROW.minHeight - h) / 2;
     return [
@@ -407,12 +427,34 @@ function profileKit(themeName) {
 // ─── the Profile ───────────────────────────────────────────────────────────
 
 /**
- * The Profile page.
+ * The Profile page — MERGED with the Settings page (2026-11-11).
  *
  * The identity is UNBOXED — no card around it, the same rule the V2 greeting
  * follows on Home. The section titles are the Cormorant dividers. The rows
- * are the app's own `SettingsRow`s, and the counts ride on the rows instead
- * of standing on their own as tiles.
+ * are the app's own `SettingsRow`s.
+ *
+ * WHAT IT IS NOW
+ * --------------
+ * The Profile used to be "you" (identity, activity, the account) and the
+ * Settings page was "how the app behaves" (28 rows in 7 groups). The owner
+ * found the Profile "too less" and asked for the two to be one page, so
+ * this board carries BOTH: 21 rows in 9 groups.
+ *
+ * The order is the page's argument: who you are → what you have done → how
+ * the app looks → how it plays → how the subtitles look → where your files
+ * come from → your account → the app's own pages → the one destructive
+ * preference action.
+ *
+ * WHAT IS STILL NOT ON IT
+ * -----------------------
+ * * **No library index.** Home owns the library. "Your Library" and its six
+ *   rows stay gone (md/CONTENT_OWNERSHIP.md).
+ * * **No gear in the header.** It would open the page you are already on.
+ * * **No "Accent Color" row.** The old Settings row had no `onPress` and
+ *   `useSettingsStore` has no accent field — gold is the app's only accent
+ *   and it is not a preference. A row that cannot be changed is not a row.
+ * * **No Discover section.** All seven of its rows already sit on Home's
+ *   Explore Contents rail.
  *
  * @param {'light'|'dark'} themeName
  */
@@ -421,12 +463,10 @@ function profileBoard(themeName) {
   const {k, c} = P;
   const shapes = [];
 
-  // The header: the back chevron, the serif title, and the GEAR — the one
-  // door to Settings on the account page, the way YouTube, Spotify, Apple
-  // Music, Plex and Tencent Video all put it there. The old header's right
-  // action was the TEXT "Sign out", which wrapped and was clipped inside a
-  // 36 dp circle; sign-out lives in the Account section instead.
-  shapes.push(...P.header('Profile', 'Profile', {rightIcon: 'settings'}));
+  // The header: the back chevron and the serif title, and NOTHING on the
+  // right. The gear used to be the one door to the Settings page — which is
+  // this page now.
+  shapes.push(...P.header('Profile', 'Profile'));
 
   let y = HEADER_H;
 
@@ -460,137 +500,55 @@ function profileBoard(themeName) {
   );
   y += 72;
 
-  // ── Activity ──────────────────────────────────────────────────────────
-  //
-  // The Profile is "you", not "your library".
-  //
-  // Home owns the library — it carries the Recently Played, Pinned
-  // Playlists, Bookmarks and Followed Podcasts rails, each with a "See
-  // All" — so a second index of the same six things here would be the
-  // app saying the same thing twice, under the same "Your Library"
-  // heading. The "Your Library" section is gone from this page.
-  //
-  // What is left is what Home cannot show: the account, and the numbers
-  // only the account has. `Stats` is reachable from nowhere else in the
-  // app, so this row is its single door.
-  y += spacing.md; // 12
-  shapes.push(...k.divider('Activity', 'Activity', y));
-  y += 48; // the divider's own block: 12 + 24 + 12
-  {
-    const out = P.row('Profile Stats', {y, label: 'Playback statistics'});
-    shapes.push(...out);
-    y += out.rowHeight;
-  }
-
-  // ── Account ───────────────────────────────────────────────────────────
-  y += spacing.lg;
-  shapes.push(...k.divider('Account', 'Account', y));
-  y += 48;
-  {
-    // Only ONE red row. Revoke and Clear live behind a confirmation
-    // dialog, so the row itself does not have to shout — and three red
-    // rows in a row read as an error screen.
-    const out = P.row('Profile Sign out', {
-      y,
-      label: 'Sign out',
-      destructive: true,
-    });
-    shapes.push(...out);
-    y += out.rowHeight;
-  }
-  {
-    const out = P.row('Profile Revoke', {y, label: 'Revoke Google access'});
-    shapes.push(...out);
-    y += out.rowHeight;
-  }
-  {
-    const out = P.row('Profile Clear data', {y, label: 'Clear local data'});
-    shapes.push(...out);
-    y += out.rowHeight;
-  }
-
-  // ── Support ───────────────────────────────────────────────────────────
-  //
-  // The last two rows are the app's own pages. They used to sit in
-  // Settings' "About" section, which was a SECOND INDEX of the About
-  // page's own link list — the same pages, listed twice, in two places.
-  // The About page stays the hub (it owns the version, the credits, the
-  // licences, the privacy policy and the terms); the Profile keeps the
-  // one door to it, and to the FAQ.
-  //
-  // YouTube, Spotify, Tencent Video and Huawei Video all put Help and
-  // the legal pages on the account screen, for the same reason: that is
-  // where a user looks for them.
-  y += spacing.lg; // 16
-  shapes.push(...k.divider('Support', 'Support', y));
-  y += 48;
-  {
-    const out = P.row('Profile Help', {y, label: 'Help'});
-    shapes.push(...out);
-    y += out.rowHeight;
-  }
-  {
-    const out = P.row('Profile About', {y, label: 'About Simba'});
-    shapes.push(...out);
-    y += out.rowHeight;
-  }
-
-  y += spacing.xl;
-  return {width: SCREEN_W, height: y, shapes};
-}
-
-// ─── the Settings page, rebuilt ────────────────────────────────────────────
-
-/**
- * Settings, rebuilt.
- *
- * Two things are GONE: the **Discover** section (seven rows that duplicate
- * Home's Explore Contents rail — decision D-C) and the **account card** (it
- * draws the Profile's identity block again, and tapping it opens the
- * Profile).
- *
- * The section titles are the Cormorant dividers, not the V7 `displaySans`
- * headings, so the page speaks with the same voice as the Profile.
- */
-function settingsBoard(themeName) {
-  const P = profileKit(themeName);
-  const {k, c} = P;
-  const shapes = [];
-  let y = HEADER_H;
-
-  const SECTION = (name, label) => {
-    y += spacing.lg;
+  /**
+   * A section: the Cormorant divider, then the rows.
+   *
+   * The gap before the divider is NOT the same for the first section as
+   * for the ones after it, and the difference is the app's own:
+   *
+   *   • the FIRST divider follows the identity block, and the Profile
+   *     gives it 4 dp of its own margin (`dividerFirst`) — so the
+   *     divider's label sits 24 dp below the identity;
+   *   • the others follow a row, and the Profile gives them 8 dp
+   *     (`divider`) — so their labels sit 28 dp below the row.
+   *
+   * `SubsectionTitle` adds its own 8 dp margin and 12 dp of padding, so
+   * the board's own gap is 12 for the first section and 16 for the rest.
+   * Measured on `emulator-5554`: 24 dp and 28 dp from the content above
+   * to the divider's label.
+   */
+  const SECTION = (name, label, first) => {
+    y += first ? 12 : spacing.lg; // 12, then 16
     shapes.push(...k.divider(name, label, y));
-    y += 48;
+    y += 48; // the divider's own block: 12 + 24 + 12
   };
 
+  /** A row, and the advance past it. */
+  const ROW_AT = (name, o) => {
+    const out = P.row(name, o);
+    shapes.push(...out);
+    y += out.rowHeight;
+    return out;
+  };
+
+  // ── Activity ──────────────────────────────────────────────────────────
+  //
+  // `Stats` is reachable from nowhere else in the app, so this row is its
+  // single door.
+  SECTION('Profile Activity', 'Activity', true);
+  ROW_AT('Profile Stats', {y, label: 'Playback statistics'});
+
   // ── Appearance ────────────────────────────────────────────────────────
-  SECTION('Settings Appearance', 'Appearance');
-  {
-    const out = P.row('Settings Theme', {
-      y,
-      label: 'Theme',
-      description: 'System',
-    });
-    shapes.push(...out);
-    y += out.rowHeight;
-  }
-  {
-    // The old "Accent Color — Gold — Simba brand" row had no onPress: it
-    // looked like a setting and did nothing. It is gone rather than kept
-    // as a decoration.
-    const out = P.row('Settings Accent', {y, label: 'Accent colour', count: 'Gold'});
-    shapes.push(...out);
-    y += out.rowHeight;
-  }
+  SECTION('Profile Appearance', 'Appearance');
+  ROW_AT('Profile Theme', {y, label: 'Theme', description: 'System'});
 
   // ── Playback ──────────────────────────────────────────────────────────
-  SECTION('Settings Playback', 'Playback');
+  SECTION('Profile Playback', 'Playback');
   for (const [name, label, on] of [
-    ['Settings Hardware acceleration', 'Hardware acceleration', true],
-    ['Settings Audio normalization', 'Audio normalisation', false],
-    ['Settings Dialogue boost', 'Dialogue boost', false],
-    ['Settings Skip silence', 'Skip silence', false],
+    ['Profile Hardware acceleration', 'Hardware acceleration', true],
+    ['Profile Audio normalization', 'Audio normalization', false],
+    ['Profile Dialogue boost', 'Dialogue boost', false],
+    ['Profile Skip silence', 'Skip silence', false],
   ]) {
     shapes.push(
       ...P.row(name, {y, label, chevron: false}),
@@ -598,82 +556,100 @@ function settingsBoard(themeName) {
     );
     y += ROW.minHeight;
   }
-  {
-    const out = P.row('Settings Subtitle language', {
-      y,
-      label: 'Subtitle language',
-      description: 'English, Japanese',
-    });
-    shapes.push(...out);
-    y += out.rowHeight;
-  }
-  {
-    const out = P.row('Settings Audio Settings', {
-      y,
-      label: 'Audio settings',
-      description: 'Equalizer and audio tuning',
-    });
-    shapes.push(...out);
-    y += out.rowHeight;
-  }
+  ROW_AT('Profile Subtitle language', {
+    y,
+    label: 'Subtitle language',
+    // The row shows the languages as NAMES, not as mpv codes — the same
+    // names the picker it opens shows. Measured on the device:
+    // "English, Japanese, Default (auto)".
+    description: 'English, Japanese, Default (auto)',
+  });
+  ROW_AT('Profile Audio settings', {
+    y,
+    label: 'Audio settings',
+    description: 'Equalizer and audio tuning',
+  });
 
   // ── Subtitles ─────────────────────────────────────────────────────────
-  SECTION('Settings Subtitles', 'Subtitles');
-  for (const [name, label, desc] of [
-    ['Settings Font size', 'Font size', 'Medium'],
-    ['Settings Text colour', 'Text colour', '#FFFFFF'],
-    ['Settings Background opacity', 'Background opacity', 'Light'],
-  ]) {
-    const out = P.row(name, {y, label, description: desc});
-    shapes.push(...out);
+  SECTION('Profile Subtitles', 'Subtitles');
+  ROW_AT('Profile Font size', {y, label: 'Font size', description: 'Medium'});
+  {
+    // The Text color row's description is a SWATCH and the hex — the
+    // app shows the colour, not only its name. The swatch is 16 dp at
+    // the gutter, the hex sits 6 dp to its right, and the hex is in
+    // `text.secondary` (the other descriptions are `text.tertiary`).
+    const out = P.row('Profile Text color', {
+      y,
+      label: 'Text color',
+      description: '#FFFFFF',
+      descriptionX: ROW.padX + 16 + 6,
+      descriptionFill: c.text.secondary,
+    });
+    shapes.push(
+      k.rect('Profile Text color swatch', {
+        x: ROW.padX,
+        y: y + 37,
+        w: 16,
+        h: 16,
+        radius: 4,
+        fill: '#FFFFFF',
+        stroke: c.border.subtle,
+        strokeWidth: 1,
+      }),
+      ...out,
+    );
     y += out.rowHeight;
   }
-  {
-    shapes.push(
-      ...P.row('Settings Auto-load subtitles', {
-        y,
-        label: 'Auto-load subtitles',
-        chevron: false,
-      }),
-      ...P.toggle('Settings Auto-load subtitles toggle', {y, on: true}),
-    );
-    y += ROW.minHeight;
-  }
+  ROW_AT('Profile Background opacity', {
+    y,
+    label: 'Background opacity',
+    description: 'Light',
+  });
+  shapes.push(
+    ...P.row('Profile Auto-load subtitles', {
+      y,
+      label: 'Auto-load subtitles',
+      chevron: false,
+    }),
+    ...P.toggle('Profile Auto-load subtitles toggle', {y, on: true}),
+  );
+  y += ROW.minHeight;
 
   // ── Library ───────────────────────────────────────────────────────────
-  SECTION('Settings Library', 'Library');
-  for (const [name, label, desc] of [
-    ['Settings Linked Folders', 'Linked folders', 'None'],
-    ['Settings MPV options', 'MPV options', 'Default'],
-  ]) {
-    const out = P.row(name, {y, label, description: desc});
-    shapes.push(...out);
-    y += out.rowHeight;
-  }
+  //
+  // Not a library INDEX — the two rows are where the library comes FROM
+  // (the linked folders) and how the player is configured (the MPV
+  // options). The media itself is on Home and on the Library page.
+  SECTION('Profile Library', 'Library');
+  ROW_AT('Profile Linked folders', {y, label: 'Linked folders', description: 'None'});
+  ROW_AT('Profile MPV options', {y, label: 'MPV options', description: 'Default'});
 
-  // ── Reset preferences ─────────────────────────────────────────────────
+  // ── Account ───────────────────────────────────────────────────────────
   //
-  // Settings is a PREFERENCES page and nothing else. Its "About"
-  // section — Version, About Simba, Credits, Changelog, Help, Open
-  // source licences — was a second index of the About page's own link
-  // list, and those rows now live on the Profile, which is where
-  // YouTube, Spotify, Tencent Video and Huawei Video put them.
+  // Only ONE red row. Revoke and Clear live behind a confirmation
+  // dialog, so the row itself does not have to shout — and three red
+  // rows in a row read as an error screen.
+  SECTION('Profile Account', 'Account');
+  ROW_AT('Profile Sign out', {y, label: 'Sign out', destructive: true});
+  ROW_AT('Profile Revoke', {y, label: 'Revoke Google access'});
+  ROW_AT('Profile Clear data', {y, label: 'Clear local data'});
+
+  // ── Support ───────────────────────────────────────────────────────────
   //
-  // "Reset preferences" STAYS: it acts on the settings themselves, so
-  // this is the page that owns it. The About page's footer "Reset all
-  // settings" is the duplicate, and it goes.
+  // The app's own pages. They used to sit in Settings' "About" section,
+  // which was a SECOND INDEX of the About page's own link list. The About
+  // page stays the hub; the Profile keeps the one door to it, and to the
+  // FAQ.
+  SECTION('Profile Support', 'Support');
+  ROW_AT('Profile Help', {y, label: 'Help'});
+  ROW_AT('Profile About', {y, label: 'About Simba'});
+
+  // ── Reset ─────────────────────────────────────────────────────────────
   //
-  // It is drawn as its own group because it is the one row that is not a
-  // preference but an ACTION on them.
-  SECTION('Settings Reset', 'Reset');
-  {
-    const out = P.row('Settings Reset preferences', {
-      y,
-      label: 'Reset preferences',
-    });
-    shapes.push(...out);
-    y += out.rowHeight;
-  }
+  // Its own group, because it is the one row that is not a preference but
+  // an ACTION on them.
+  SECTION('Profile Reset', 'Reset');
+  ROW_AT('Profile Reset preferences', {y, label: 'Reset preferences'});
 
   y += spacing.xl;
   return {width: SCREEN_W, height: y, shapes};
@@ -855,10 +831,16 @@ function aboutBoard(themeName) {
 /**
  * The Help page, rebuilt.
  *
- * The structure is the app's own: a search field and three collapsible
- * sections. What changes is the COPY — the six answers that sent the user
- * to a setting with no UI are gone, and the page says "Settings" because
- * that is what the page is called.
+ * The structure is the app's own: a search field and collapsible sections.
+ * What changes is the COPY — the answers that sent the user to a setting
+ * with no UI are gone, and nothing points at a page called "Settings" any
+ * more, because there is no such page: the preferences live on the Profile
+ * now (md/PROFILE_SETTINGS_MERGE.md).
+ *
+ * The board draws three sections of two questions. The CODE carries more —
+ * six sections — and the two have not been reconciled; the Help page still
+ * wants its own pass. The board is the sketch of the shape, not of the
+ * whole FAQ.
  */
 function helpBoard(themeName) {
   const P = profileKit(themeName);
@@ -906,8 +888,10 @@ function helpBoard(themeName) {
       ['Which formats are supported?', 'How does picture-in-picture work?'],
     ],
     [
-      'Settings & accessibility',
-      ['How do I reset all settings?', 'How do I change the theme?'],
+      // The page is called "Settings" no longer — the preferences live on
+      // the Profile now — so the section is named after what it is about.
+      'Appearance',
+      ['How do I change the theme?', 'How do I reset my preferences?'],
     ],
   ];
   for (const [section, questions] of SECTIONS) {
@@ -1109,7 +1093,6 @@ function statsBoard(themeName) {
 module.exports = {
   profileKit,
   profileBoard,
-  settingsBoard,
   aboutBoard,
   helpBoard,
   legalBoard,

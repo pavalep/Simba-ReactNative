@@ -1,7 +1,25 @@
-# Content ownership — Home → Profile → Settings
+# Content ownership — Home → Profile
 
 **Status:** analysis, 2026-11-11. Nothing in §5 has been built yet.
-**Companions:** `md/PROFILE_RC1_REFACTOR.md` (the Profile's own rebuild, §13) · `md/HOME_V2_REFACTOR.md` (Home's redesign).
+**Companions:** `md/PROFILE_RC1_REFACTOR.md` (the Profile's own rebuild, §13) · `md/HOME_V2_REFACTOR.md` (Home's redesign) · `md/PROFILE_SETTINGS_MERGE.md` (the merge of the Settings page into the Profile, which **removes the third level of the model below**).
+
+> **Amended 2026-11-11 — the third level is gone.**
+> The model below is **Home › Profile › Settings**. The owner then found the
+> Profile "too less" and asked for the Settings page to be merged into it, so
+> the model is now **Home › Profile**:
+>
+> | Screen | Its one job | The test |
+> |---|---|---|
+> | **Home** | **your stuff, and what to play** | it is where the library lives, so nothing else re-lists the library |
+> | **Profile** | **you** — who you are, what you have done, the account itself, **and how the app behaves for you** | nothing on it may be a list of your media |
+>
+> The Settings page is **deleted**. Its rows live on the Profile; the
+> `simbaplayer://settings` URL still resolves, through a React Navigation
+> `alias` on the Profile's path. The full decision, the row-by-row inventory
+> and the deep-link proof are in `md/PROFILE_SETTINGS_MERGE.md`.
+>
+> What the merge does **not** do is bring the library index back: "Your
+> Library" is still gone from the Profile, because Home owns it.
 
 ---
 
@@ -80,8 +98,8 @@ Read as: *when two screens could own the same content, the higher one wins.*
 | Screen | Its one job | The test |
 |---|---|---|
 | **Home** | **your stuff, and what to play** | it is where the library lives, so nothing else re-lists the library |
-| **Profile** | **you** — who you are, what you have done, and the account itself | nothing on it may be a list of your media |
-| **Settings** | **how the app behaves** | nothing on it may be a fact about you or about the app; only preferences |
+| **Profile** | **you** — who you are, what you have done, the account itself, and how the app behaves for you | nothing on it may be a list of your media |
+| ~~**Settings**~~ | ~~**how the app behaves**~~ | **merged into the Profile, 2026-11-11 — see `md/PROFILE_SETTINGS_MERGE.md`** |
 
 This is not an invention. It is what every shipping app of this class does:
 
@@ -118,9 +136,9 @@ Every content item in the app, and the screen that owns it.
 | 9 | Sign out · Revoke Google access · Clear local data | **`Profile`** | the Profile's "Account" group | Home, Settings |
 | 10 | Help / FAQ | **`Profile`** | the Profile's "Support" group → `Help` | Settings |
 | 11 | About Simba — version, credits, licences, privacy, terms, changelog, rate, share, report a bug, contact | **`Profile`** → `About` | the Profile's "Support" group → `About` | Settings |
-| 12 | Theme, accent, hardware acceleration, audio normalisation, dialogue boost, skip silence, subtitle language/style/colour/opacity, auto-load subtitles, equalizer | **`Settings`** | the Profile's gear → `Settings` | Home, Profile |
-| 13 | Linked folders, MPV options, auto-delete downloads | **`Settings`** | the Profile's gear → `Settings` | Home, Profile |
-| 14 | Reset preferences | **`Settings`** | the Profile's gear → `Settings` | Home, Profile |
+| 12 | Theme, hardware acceleration, audio normalization, dialogue boost, skip silence, subtitle language/style/color/opacity, auto-load subtitles, equalizer | **`Profile`** | the Profile's "Appearance" / "Playback" / "Subtitles" groups | Home |
+| 13 | Linked folders, MPV options | **`Profile`** | the Profile's "Library" group | Home |
+| 14 | Reset preferences | **`Profile`** | the Profile's "Reset" group | Home |
 
 Two consequences fall out of the table and are worth stating plainly:
 

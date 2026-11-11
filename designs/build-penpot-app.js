@@ -57,7 +57,6 @@ const {homeV2Board} = require('./penpot/home-v2');
 const {splashBoard} = require('./penpot/splash');
 const {
   profileBoard,
-  settingsBoard,
   aboutBoard,
   helpBoard,
   legalBoard,
@@ -205,17 +204,20 @@ for (const theme of ['light', 'dark']) {
 
 // The RC1 account + internal pages — DRAWN, not placeholders.
 //
-// These eight screens are the ones the RC1 wave rebuilds: the Profile, the
-// Settings page, and the six internal pages that were broken or lying (the
-// About page's collapsed link list, the Help page's six answers to controls
-// that do not exist, the legal pages' hardcoded gold slab, the Credits page's
-// Redux claim). The drawing is `designs/penpot/profile.js`.
+// These screens are the ones the RC1 wave rebuilds: the Profile, and the
+// six internal pages that were broken or lying (the About page's collapsed
+// link list, the Help page's six answers to controls that do not exist,
+// the legal pages' hardcoded gold slab, the Credits page's Redux claim).
+// The drawing is `designs/penpot/profile.js`.
+//
+// There is no "Settings" page here any more: the preferences were merged
+// into the Profile on 2026-11-11 (`md/PROFILE_SETTINGS_MERGE.md`), so the
+// Profile board carries them and the Settings boards are deleted.
 //
 // BOTH themes for every one of them: the pages are a family, and a family
 // that only exists in the light theme is half a family.
 const RC1_PAGES = [
   {route: 'Profile', draw: profileBoard},
-  {route: 'Settings', draw: settingsBoard},
   {route: 'About', draw: aboutBoard},
   {route: 'Help', draw: helpBoard},
   {route: 'Privacy', draw: theme => legalBoard(theme, 'privacy')},
@@ -599,9 +601,78 @@ const buildBatches = [];
   if (batch.length) buildBatches.push(batch);
 }
 
+/**
+ * The grid: where each row starts, and where the boards that are too WIDE
+ * for a column go.
+ *
+ * A row's height is the TALLEST board in it, not the phone's height. The
+ * Home boards are 1493 dp and the merged Profile is 1840 dp, and a board
+ * that the row below it overlaps is a board that cannot be seen.
+ *
+ * The fixed pitch (914 + 700 = 1614) is what the merged Profile broke: it
+ * is 226 dp taller than the row it starts in, so the first row of boards
+ * below it would have covered its last four rows. (It is the same rule
+ * the Home boards were given by hand: the gap is wide because some boards
+ * are bigger than a phone.)
+ *
+ * A COLUMN has the same problem: the Home_V2 boards are 1568 dp wide and
+ * the column pitch is 1411, so they used to lie on top of their
+ * neighbours — and the last one covered 157 dp of the merged Profile, the
+ * board this wave is about. A board wider than the pitch therefore goes
+ * into the WIDE BAND below the grid, side by side, where nothing can hide
+ * it.
+ *
+ * The offsets are computed HERE, where the whole board list is known, and
+ * they travel in the plan — the plugin draws one batch at a time and
+ * cannot know the size of a board it has not drawn yet.
+ */
+const GRID_PITCH = SCREEN_W + GAP_X;
+
+/** The boards that are too wide for a column. */
+const wideBoards = boards.filter(b => b.w > GRID_PITCH);
+
+/** Where each row of the grid starts. */
+const rowOffsets = (() => {
+  const rowHeights = [];
+  boards.forEach((b, i) => {
+    if (b.w > GRID_PITCH) return; // the wide band has rows of its own
+    const row = Math.floor(i / COLS);
+    rowHeights[row] = Math.max(rowHeights[row] || 0, b.h);
+  });
+  const offsets = [];
+  let y = 0;
+  for (let r = 0; r < rowHeights.length; r++) {
+    offsets[r] = y;
+    y += rowHeights[r] + GAP_Y;
+  }
+  return {offsets, bottom: y - GAP_Y};
+})();
+
+/**
+ * Where the wide boards go: a band under the grid, each one beside the
+ * next, with a gap the width of a phone's gutter.
+ */
+const widePositions = (() => {
+  const positions = {};
+  let x = 0;
+  for (const b of wideBoards) {
+    positions[b.name] = {x, y: rowOffsets.bottom + GAP_Y};
+    x += b.w + GAP_X;
+  }
+  return positions;
+})();
+
 const BUILD_PLAN = {
   page: PAGE_NAME,
-  layout: {w: SCREEN_W, h: SCREEN_H, cols: COLS, gapX: GAP_X, gapY: GAP_Y},
+  layout: {
+    w: SCREEN_W,
+    h: SCREEN_H,
+    cols: COLS,
+    gapX: GAP_X,
+    gapY: GAP_Y,
+    rowOffsets: rowOffsets.offsets,
+    wide: widePositions,
+  },
   media: mediaIds,
 };
 
@@ -975,10 +1046,24 @@ const base = PLAN.index || 0;
 PLAN.boards.forEach((b, i) => {
   const board = boards[b.name];
   if (!board) return;
+  // A board that is too wide for a column goes to the wide band under the
+  // grid, where it cannot lie on top of anything.
+  const wide = L.wide && L.wide[b.name];
+  if (wide) {
+    board.x = wide.x;
+    board.y = wide.y;
+    return;
+  }
   const col = (base + i) % L.cols;
   const row = Math.floor((base + i) / L.cols);
   board.x = col * (L.w + L.gapX);
-  board.y = row * (L.h + L.gapY);
+  // The row's own height, so a board taller than a phone pushes the row
+  // below it down instead of being hidden by it. L.rowOffsets is the
+  // measured version; the fixed pitch is the fallback.
+  board.y =
+    L.rowOffsets && L.rowOffsets[row] != null
+      ? L.rowOffsets[row]
+      : row * (L.h + L.gapY);
 });
 for (const b of report.boards) {
   const board = boards[b.name];
@@ -1316,6 +1401,12 @@ buildBatches.forEach((group, i) => {
       'Home / dark — page',
       // The empty copy of the Login screen — the real one is the orb pair.
       'Login / light',
+      // The Settings boards — the preferences were merged into the Profile
+      // on 2026-11-11 (md/PROFILE_SETTINGS_MERGE.md), so these two are
+      // no longer part of the map. They are removed by NAME, because the
+      // new plan does not own them and would otherwise leave them behind.
+      'Settings / light',
+      'Settings / dark',
     ],
   });
   written.push(writePayload('penpot-app-build-' + (i + 1) + '.json', buildCode.replace('__PLAN__', JSON.stringify(plan))));
@@ -1357,5 +1448,19 @@ console.log('  page: ' + PAGE_NAME + '   flow: ' + FLOW_NAME + '  (starts at ' +
 console.log('  boards: ' + boards.length + '   links: ' + links.length + ' in ' +
   linkChunks.length + ' call' + (linkChunks.length === 1 ? '' : 's') +
   '   media: ' + usedMedia.size + ' (' + batches.length + ' upload batch' + (batches.length === 1 ? '' : 'es') + ')');
-console.log('  media ids known: ' + Object.keys(mediaIds).length + '/' + usedMedia.size +
-  (Object.keys(mediaIds).length === usedMedia.size ? '  — ready to build' : '  — run the media calls first'));
+// How many of the media this build actually USES have an id.
+//
+// The count is of the USED media, not of the ids in hand: the store keeps
+// the ids of pictures that are no longer drawn (the Settings boards' icons,
+// after the merge), so comparing the two raw sizes reported "run the media
+// calls first" on a build that had nothing to upload.
+const missingMedia = [...usedMedia].filter(key => !mediaIds[key]);
+console.log(
+  '  media ids known: ' +
+    (usedMedia.size - missingMedia.length) +
+    '/' +
+    usedMedia.size +
+    (missingMedia.length
+      ? '  — run the media calls first'
+      : '  — ready to build'),
+);

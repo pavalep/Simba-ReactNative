@@ -54,19 +54,23 @@ const ROUTES = [
   {route: 'Search', title: 'Search', group: 'Main'},
   {route: 'Profile', title: 'Profile', group: 'Main'},
 
-  // ── Settings ──
-  {route: 'Settings', title: 'Settings', group: 'Settings'},
-  {route: 'About', title: 'About', group: 'Settings'},
-  {route: 'AudioSettings', title: 'Audio Settings', group: 'Settings'},
-  {route: 'Equalizer', title: 'Equalizer', group: 'Settings'},
-  {route: 'LinkedFolders', title: 'Linked Folders', group: 'Settings'},
-  {route: 'FolderLinkingWizard', title: 'Link a Folder', group: 'Settings'},
-  {route: 'Changelog', title: 'Changelog', group: 'Settings'},
-  {route: 'Licenses', title: 'Open Source Licenses', group: 'Settings'},
-  {route: 'Credits', title: 'Credits', group: 'Settings'},
-  {route: 'Privacy', title: 'Privacy Policy', group: 'Settings'},
-  {route: 'Terms', title: 'Terms of Service', group: 'Settings'},
-  {route: 'Help', title: 'Help', group: 'Settings'},
+  // ── The Profile's own pages ──────────────────────────────────────
+  //
+  // There is no "Settings" page any more (2026-11-11,
+  // `md/PROFILE_SETTINGS_MERGE.md`): the preferences were merged into the
+  // Profile, so the pages the Profile leads to are these — the About page
+  // and its hub, the audio pages, the folder pages and the legal pages.
+  {route: 'About', title: 'About', group: 'Profile'},
+  {route: 'AudioSettings', title: 'Audio Settings', group: 'Profile'},
+  {route: 'Equalizer', title: 'Equalizer', group: 'Profile'},
+  {route: 'LinkedFolders', title: 'Linked Folders', group: 'Profile'},
+  {route: 'FolderLinkingWizard', title: 'Link a Folder', group: 'Profile'},
+  {route: 'Changelog', title: 'Changelog', group: 'Profile'},
+  {route: 'Licenses', title: 'Open Source Licenses', group: 'Profile'},
+  {route: 'Credits', title: 'Credits', group: 'Profile'},
+  {route: 'Privacy', title: 'Privacy Policy', group: 'Profile'},
+  {route: 'Terms', title: 'Terms of Service', group: 'Profile'},
+  {route: 'Help', title: 'Help', group: 'Profile'},
 
   // ── The user's own library ──
   {route: 'Bookmarks', title: 'Bookmarks', group: 'Your library'},
@@ -202,13 +206,18 @@ const EDGES = [
   {from: 'Library', to: 'AlbumScreen', trigger: 'click', shape: 'Album tile', label: 'album'},
   {from: 'Library', to: 'PlaylistDetail', trigger: 'click', shape: 'Playlist card', label: 'playlist'},
   {from: 'Library', to: 'FolderBrowser', trigger: 'click', shape: 'Folder row', label: 'folder'},
-  {from: 'Library', to: 'Settings', trigger: 'click', shape: 'Go to Settings', label: 'Go to Settings'},
+  // The Library's empty state used to say "Go to Settings". There is no
+  // Settings page any more — and a page called Settings was never the
+  // right door to a folder picker, so the empty state now links the
+  // folders directly (md/PROFILE_SETTINGS_MERGE.md).
+  {from: 'Library', to: 'LinkedFolders', trigger: 'click', label: 'Link folders'},
   {from: 'Library', to: 'FolderLinkingWizard', trigger: 'click', shape: 'Link Folder', label: 'Link Folder'},
 
   // ── Profile ──
   //
   // The Profile is "you", not "your library" (2026-11-11,
-  // `md/CONTENT_OWNERSHIP.md`).
+  // `md/CONTENT_OWNERSHIP.md`), and it is also where the preferences live
+  // (2026-11-11, `md/PROFILE_SETTINGS_MERGE.md`).
   //
   // Its six library rows — Playlists, Bookmarks, History, Downloads,
   // Followed podcasts, Local files — are GONE. Home already carries the
@@ -218,33 +227,24 @@ const EDGES = [
   // same "Your Library" heading, is the app saying the same thing twice.
   //
   // What the Profile keeps is what nothing else owns: the account
-  // (Activity → Stats; Account → sign out, revoke, clear) and the app's
+  // (Activity → Stats; Account → sign out, revoke, clear), the
+  // preferences (Appearance, Playback, Subtitles, Library), the app's
   // own pages (Support → Help, About Simba) — which used to be
   // re-listed in Settings' "About" section.
   {from: 'Profile', to: 'Stats', trigger: 'click', shape: 'Profile Stats label', label: 'Playback statistics'},
   {from: 'Profile', to: 'Help', trigger: 'click', shape: 'Profile Help label', label: 'Help'},
   {from: 'Profile', to: 'About', trigger: 'click', shape: 'Profile About label', label: 'About Simba'},
-  // The gear in the header — the ONE door to Settings on the account page,
-  // the way YouTube, Spotify, Apple Music, Plex and Tencent Video all do it.
-  {from: 'Profile', to: 'Settings', trigger: 'click', shape: 'Profile right glyph', label: 'Settings'},
+  {from: 'Profile', to: 'AudioSettings', trigger: 'click', shape: 'Profile Audio settings label', label: 'Audio settings'},
+  // The Profile's "Linked folders" row opens a picker, and the picker
+  // leads to the Linked Folders page — the prototype walks the last hop.
+  {from: 'Profile', to: 'LinkedFolders', trigger: 'click', shape: 'Profile Linked folders label', label: 'Linked folders'},
   {from: 'Profile', to: 'Login', trigger: 'click', shape: 'Profile Sign out label', label: 'Sign out'},
 
-  // ── Settings ──
-  //
-  // The Discover section is GONE (decision D-C, 2026-11-11): all seven of
-  // its rows duplicated cards that already sit on Home's Explore Contents
-  // rail. The account card is gone too — it drew the Profile's identity
-  // block again, and tapping it opened the Profile.
-  {from: 'Settings', to: 'AudioSettings', trigger: 'click', shape: 'Settings Audio Settings label', label: 'Audio settings'},
-  {from: 'Settings', to: 'LinkedFolders', trigger: 'click', shape: 'Settings Linked Folders label', label: 'Linked folders'},
-  // Settings' "About" section is GONE (2026-11-11, md/CONTENT_OWNERSHIP.md).
-  // Its seven rows — Version, About Simba, Credits, Changelog, Help, Open
-  // source licences, Privacy policy, Terms of use — were a SECOND INDEX of
-  // the About page's own link list, and they now sit on the Profile, which
-  // is where YouTube, Spotify, Tencent Video and Huawei Video put them.
-  // Each of those pages keeps exactly ONE door: the About page's.
-
   // ── The settings stack's own pages ──
+  //
+  // The "Settings" page itself is GONE (2026-11-11,
+  // md/PROFILE_SETTINGS_MERGE.md): the Profile carries the preferences now,
+  // and its two doors into the settings stack are the edges above.
   {from: 'AudioSettings', to: 'Equalizer', trigger: 'click', shape: 'Audio Settings Preset', label: 'Preset'},
   {from: 'LinkedFolders', to: 'FolderLinkingWizard', trigger: 'click', shape: 'Add Folder', label: 'Add Folder'},
   {from: 'FolderLinkingWizard', to: 'Library', trigger: 'click', shape: 'Go to Library', label: 'Go to Library'},
@@ -267,7 +267,11 @@ const EDGES = [
   {from: 'AllPlaylistsScreen', to: 'PlaylistDetail', trigger: 'click', shape: 'Playlist card', label: 'playlist'},
   {from: 'PlaylistDetail', to: 'AddToPlaylist', trigger: 'click', shape: 'Playlist Add items', label: 'Add items'},
   {from: 'PlaylistDetail', to: 'FolderBrowser', trigger: 'click', shape: 'Playlist Add local files', label: 'Add local files'},
-  {from: 'FolderBrowser', to: 'Settings', trigger: 'click', shape: 'FolderBrowser Settings', label: 'Settings'},
+  // The Folder Browser's permission error used to offer a "Settings"
+  // action that opened Simba's own Settings page. A storage permission is
+  // granted in the OPERATING SYSTEM's settings, so that action now opens
+  // the OS app settings (Linking.openSettings()) — which is not a board
+  // (md/PROFILE_SETTINGS_MERGE.md).
 
   // ── Catalogue ──
   {from: 'PodcastsScreen', to: 'PodcastDetail', trigger: 'click', shape: 'Podcast row', label: 'podcast'},
