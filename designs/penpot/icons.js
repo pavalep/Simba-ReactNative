@@ -109,7 +109,7 @@ const ICONS = [
   { name: 'clock', file: 'ic_clock.svg', size: 18, light: 'gold', dark: 'gold' },
   { name: 'listMusic', file: 'ic_list_music.svg', size: 18, light: 'gold', dark: 'gold' },
   { name: 'bookmark', file: 'ic_bookmark.svg', size: 18, light: 'gold', dark: 'gold' },
-  { name: 'podcastRings', file: 'ic_podcast_rings.svg', size: 18, light: 'gold', dark: 'gold' },
+  { name: 'podcastRings', file: 'ic_podcast_rings.svg', size: 32, light: 'gold', dark: 'gold' },
   { name: 'compass', file: 'ic_compass.svg', size: 18, light: 'gold', dark: 'gold' },
   { name: 'chevronDown', file: 'ic_chevron_down.svg', size: 18, light: 'chevron', dark: 'chevron' },
   { name: 'chevronRight', file: 'ic_chevron_right.svg', size: 14, light: 'chevron', dark: 'chevron' },
@@ -124,14 +124,18 @@ const ICONS = [
   // (`GenreChipsShelf.tsx:52-54`) — the SAME file as the 12 px rail type
   // badge, but the chip paints it in gold, not on-media white.
   { name: 'musicChip', file: 'ui_music.svg', size: 16, light: 'gold', dark: 'gold' },
-  { name: 'clapperboard', file: 'ic_clapperboard.svg', size: 22, light: 'gold', dark: 'gold' },
-  { name: 'disc3', file: 'ic_disc_3.svg', size: 22, light: 'gold', dark: 'gold' },
-  { name: 'radioTower', file: 'ic_radio_tower.svg', size: 22, light: 'gold', dark: 'gold' },
-  { name: 'tv', file: 'ic_tv.svg', size: 22, light: 'gold', dark: 'gold' },
-  { name: 'bookOpen', file: 'ic_book_open.svg', size: 22, light: 'gold', dark: 'gold' },
-  { name: 'videoCamera', file: 'ic_video_camera.svg', size: 22, light: 'gold', dark: 'gold' },
-  { name: 'archive', file: 'ic_archive.svg', size: 22, light: 'gold', dark: 'gold' },
-  { name: 'folder', file: 'ui_folder.svg', size: 22, light: 'gold', dark: 'gold' },
+  // The Explore Contents badge glyphs. They are 32 dp because the card's
+  // badge is a 40 dp disc with a 32 dp glyph inside it, CENTRED on the
+  // poster (`CategoryCard.tsx`). They are rendered at 4x, so the PNG is
+  // 128 px and the board stays sharp at the size it draws them.
+  { name: 'clapperboard', file: 'ic_clapperboard.svg', size: 32, light: 'gold', dark: 'gold' },
+  { name: 'disc3', file: 'ic_disc_3.svg', size: 32, light: 'gold', dark: 'gold' },
+  { name: 'radioTower', file: 'ic_radio_tower.svg', size: 32, light: 'gold', dark: 'gold' },
+  { name: 'tv', file: 'ic_tv.svg', size: 32, light: 'gold', dark: 'gold' },
+  { name: 'bookOpen', file: 'ic_book_open.svg', size: 32, light: 'gold', dark: 'gold' },
+  { name: 'videoCamera', file: 'ic_video_camera.svg', size: 32, light: 'gold', dark: 'gold' },
+  { name: 'archive', file: 'ic_archive.svg', size: 32, light: 'gold', dark: 'gold' },
+  { name: 'folder', file: 'ui_folder.svg', size: 32, light: 'gold', dark: 'gold' },
   { name: 'music', file: 'ui_music.svg', size: 12, light: 'onMedia', dark: 'onMedia' },
   { name: 'video', file: 'ui_video.svg', size: 12, light: 'onMedia', dark: 'onMedia' },
   { name: 'play', file: 'ic_play.svg', size: 24, light: '#1A1A1C', dark: '#0A0A0C' },

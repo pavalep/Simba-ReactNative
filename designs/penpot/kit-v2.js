@@ -370,12 +370,20 @@ function kitV2(themeName) {
    * description the way the app's own `numberOfLines={2}` breaks it.
    *
    * The poster keeps the app's 140:160 shape, scaled to the page's 160 dp
-   * rail pitch, and the app's own 40 dp icon disc sits in its top-left
-   * corner (`CategoryCard.tsx`).
+   * rail pitch.
+   *
+   * THE BADGE IS CENTRED. The card's badge is the app's own 40 dp icon
+   * disc with a 32 dp glyph inside it, and it sits in the MIDDLE of the
+   * poster on every card — the one with art and the one without. It used to
+   * sit in the top-left corner, and the card with no cover (Local Files) had
+   * no disc at all and drew a bare 44 dp glyph instead, so the one card
+   * without art looked like a different kind of card.
    */
   function categoryTile(name, o) {
     const w = o.w || RAIL_W;
     const h = Math.round((w * 160) / 140); // the app's 140 x 160 card
+    const disc = 40; // the app's 40 dp icon disc
+    const glyph = 32; // the glyph inside it
     const out = [];
     if (o.artwork) {
       out.push(
@@ -386,20 +394,6 @@ function kitV2(themeName) {
           h,
           media: o.artwork,
           radius: radius.md,
-        }),
-        k.ellipse(name + ' icon disc', {
-          x: o.x + spacing.md,
-          y: o.y + spacing.md,
-          w: 40,
-          h: 40,
-          fill: 'rgba(10,10,12,0.45)',
-        }),
-        k.image(name + ' icon glyph', {
-          x: o.x + spacing.md + 9,
-          y: o.y + spacing.md + 9,
-          w: 22,
-          h: 22,
-          media: iconKey(o.icon),
         }),
       );
     } else {
@@ -414,15 +408,26 @@ function kitV2(themeName) {
           radius: radius.md,
           fill: c.accent.goldSoft,
         }),
-        k.image(name + ' icon glyph', {
-          x: o.x + w / 2 - 22,
-          y: o.y + h / 2 - 22,
-          w: 44,
-          h: 44,
-          media: iconKey(o.icon),
-        }),
       );
     }
+    // The badge — the same disc on every card, centred on the poster.
+    out.push(
+      k.ellipse(name + ' icon disc', {
+        x: o.x + (w - disc) / 2,
+        y: o.y + (h - disc) / 2,
+        w: disc,
+        h: disc,
+        fill: 'rgba(10,10,12,0.45)',
+      }),
+      // The app's own per-section glyph (`BrowseAllShelf.tsx`).
+      k.image(name + ' icon glyph', {
+        x: o.x + (w - glyph) / 2,
+        y: o.y + (h - glyph) / 2,
+        w: glyph,
+        h: glyph,
+        media: iconKey(o.icon),
+      }),
+    );
     out.push(
       role(name + ' title', o.title, 'cardTitle', {
         x: o.x,

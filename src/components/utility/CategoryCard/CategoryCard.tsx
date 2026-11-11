@@ -9,8 +9,17 @@
 // breaks it.
 //
 // The poster keeps the app's 140 : 160 shape, scaled to the page's
-// 160 dp rail pitch, and the app's own 40 dp icon disc sits in its
-// top-left corner.
+// 160 dp rail pitch.
+//
+// ONE GRAMMAR FOR THE BADGE. The app's own 40 dp icon disc sits in the
+// CENTRE of the poster, on every card, with the section's glyph inside it.
+//
+// The disc used to sit in the poster's top-left corner, and the card with
+// no cover — Local Files — had no disc at all and drew a bare 44 dp glyph
+// on its gold tile instead. So the one card without art looked like a
+// different kind of card, and the badge on the other eight sat in the
+// corner of the artwork rather than on it. The disc is the card's badge
+// now, and it is in the same place on all nine.
 //
 // One card, one grammar: the media card, the playlist tile, the
 // podcast tile and this one all put their artwork whole and their text
@@ -26,7 +35,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import {useTheme} from '../../../theme';
-import {radius, spacing} from '../../../theme/tokens';
+import {radius} from '../../../theme/tokens';
 import {SvgIcon} from '../SvgIcon';
 import {AppText} from '../../core/AppText/AppText';
 import {FONT_FAMILY} from '../../../constants/fontFamily';
@@ -36,6 +45,10 @@ import {RAIL_CARD_WIDTH} from '../../media/railMetrics';
 const CARD_WIDTH = RAIL_CARD_WIDTH;
 /** The app's 140 : 160 poster shape, scaled to the rail pitch. */
 const POSTER_HEIGHT = Math.round((CARD_WIDTH * 160) / 140);
+/** The icon disc — the card's badge, the same on every card. */
+const ICON_DISC_SIZE = 40;
+/** The glyph inside the disc. */
+const ICON_GLYPH_SIZE = 32;
 
 export interface CategoryCardProps {
   name: string;
@@ -69,33 +82,27 @@ export const CategoryCard: React.FC<CategoryCardProps> = React.memo(
         style={styles.card}>
         <View style={styles.posterArea}>
           {hasImage ? (
-            <>
-              <Image
-                source={image}
-                style={StyleSheet.absoluteFill}
-                resizeMode="cover"
-              />
-              {/* The icon disc, on the poster's top-left corner. */}
-              <View style={styles.iconCircle}>
-                <SvgIcon
-                  name={icon as never}
-                  size={22}
-                  color={colors.accent.gold}
-                />
-              </View>
-            </>
+            <Image
+              source={image}
+              style={StyleSheet.absoluteFill}
+              resizeMode="cover"
+            />
           ) : (
-            /* No cover — the app falls back to a gold-tinted poster with
-               the glyph in the middle. */
+            /* No cover — the app falls back to a gold-tinted poster. */
             <View
-              style={[styles.posterFallback, {backgroundColor: colors.accent.goldSoft}]}>
-              <SvgIcon
-                name={icon as never}
-                size={44}
-                color={colors.accent.gold}
-              />
-            </View>
+              style={[styles.posterFallback, {backgroundColor: colors.accent.goldSoft}]}
+            />
           )}
+
+          {/* The icon disc, in the CENTRE of the poster — the same badge on
+              every card, the one with art and the one without. */}
+          <View style={styles.iconCircle}>
+            <SvgIcon
+              name={icon as never}
+              size={ICON_GLYPH_SIZE}
+              color={colors.accent.gold}
+            />
+          </View>
         </View>
 
         {/* The text is UNDER the poster, on the page's own background —
@@ -130,16 +137,16 @@ const styles = StyleSheet.create({
   posterFallback: {
     width: '100%',
     height: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   iconCircle: {
+    // The badge is CENTRED on the poster: the poster's box minus the
+    // disc, halved.
     position: 'absolute',
-    top: spacing.md,
-    left: spacing.md,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    top: (POSTER_HEIGHT - ICON_DISC_SIZE) / 2,
+    left: (CARD_WIDTH - ICON_DISC_SIZE) / 2,
+    width: ICON_DISC_SIZE,
+    height: ICON_DISC_SIZE,
+    borderRadius: ICON_DISC_SIZE / 2,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(0,0,0,0.45)',

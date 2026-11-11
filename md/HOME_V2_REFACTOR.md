@@ -2288,3 +2288,111 @@ light — orb rest` connector is an `after-delay` with a 1500 ms delay.
 | — | The dark-theme variants for the remaining screens |
 | — | The optional `Allura.ttf` upload to Penpot |
 | — | The page-by-page loop for the remaining ~48 screens (one at a time, not all at once) |
+
+---
+
+## §16 — The Explore Contents badge moved to the centre (2026-11-11)
+
+The Explore Contents rail carried **two grammars**. Eight of the nine cards put
+their badge in the poster's **top-left corner** — a 40 dp disc with a 22 dp
+glyph in it — and the one card with no art, **Local Files**, had no disc at all
+and drew a bare 44 dp glyph on its gold tile instead.
+
+So the badge on the other eight sat in the corner of the artwork rather than
+on it, and the one card without art looked like a different kind of card.
+
+The badge is now in the **centre** of the poster on **every** card, with a
+**32 dp** glyph inside the 40 dp disc.
+
+### What changed
+
+| what | where |
+|---|---|
+| the badge's place | `CategoryCard.tsx` — the disc is centred on the poster |
+| the glyph's size | `CategoryCard.tsx` — 22 dp → 32 dp |
+| one grammar | `CategoryCard.tsx` — the card with no cover now gets the same disc |
+| the V2 design | `designs/penpot/kit-v2.js` — `categoryTile` draws the same badge |
+| the V1 design | `designs/penpot/kit.js` — `categoryCard` draws the same badge |
+| the glyph art | `designs/penpot/icons.js` — the nine category icons render at 32 dp (a 128 px PNG) instead of 22, so the board draws them at the size the app draws them |
+
+`CategoryCard` is used by exactly one screen — `BrowseAllShelf`, the Explore
+Contents rail — so the change is contained to that rail.
+
+### Measured on the device
+
+The Local Files card, dark theme, 1080 × 2400 @ 420 dpi (2.625 px/dp):
+
+| what | measured |
+|---|---|
+| the tile | 160.0 dp wide, its centre at x 315.2 dp |
+| the disc's centre | x 314.1 dp |
+| the glyph's centre | x 315.6 dp |
+
+The badge sits in the middle of the card — not in its corner.
+
+### A drift this wave found
+
+The Penpot page carries **two** Home drawings, and they are not the same
+screen:
+
+| board | what it draws |
+|---|---|
+| `Home / light`, `Home / dark` | the **V1** layout (`designs/penpot/home.js`) — the text over a scrim on the poster |
+| `Home_V2_Light`, `Home_V2_Dark` | the **V2** layout (`designs/penpot/home-v2.js`) — the text under the poster, which is what the app renders |
+
+Read back off the live page, `Home / dark` holds **201** V1-named shapes and
+**0** V2-named ones — and the prototype flow walks it (`SIMBA app` starts at
+`Splash / light` and lands on `Home / dark`). So the walk walks a screen the
+app no longer shows, while the app's own screen sits next to it on the page
+as a board that is not in the flow.
+
+The badge change was applied to **both** boards, so the two agree on it —
+but the drift itself is not fixed, and it is not this wave's job to fix it.
+
+### The Penpot plan has to be regenerated after the media upload
+
+Nine icons changed, so they were re-rendered and re-uploaded (18 PNGs — nine
+icons × two themes). The first board pass died on batches 2–7 with `no media
+for ico.podcastRings.light` and `no media for ico.clapperboard.light`.
+
+The reason is the plan: `build-penpot-app.js` writes the media ids INTO the
+plan files, and the plan had been generated BEFORE the upload, so it carried
+no id for any asset that had changed. The order is:
+
+```
+build-penpot-app.js → run-media.js → build-penpot-app.js AGAIN → boards → links → flow
+```
+
+The second plan run reports `media ids known: 67/67`; the first one reported
+`49/67` and said "run the media calls first".
+
+### Carried forward
+
+| # | Item |
+|---|---|
+| F-10 | The `HomeSection` `SHELF` arm's `items: any[]` type hole |
+| F-13 | The app's in-settings theme toggle cycles Dark → Light → System; the phone's setting is the source of truth, so the toggle's "System" position is the one that matters |
+| F-15 | The Penpot plugin's recovery: the MCP button in the toolbar starts the plugin tab, and a closed tab needs the app restarted and the file reopened by hand. A note in `designs/README.md` would save the next person the search. |
+| F-17 | **Restated (§15).** The native splash's plain "Simba" (the system face, 46.5 dp wide) against the Login's script "Simba" (Allura, 107.3 dp wide), 1.5 s apart on a first run. The native one is a deliberate v7 choice, so this is a decision to take, not a bug to patch blind. |
+| — | The 75-site weight-intent sweep (`600` → `FONT_FAMILY.inter.semibold`, `500` → `FONT_FAMILY.inter.medium`) |
+| — | Device proof still un-measured: the empty library / "first run" board |
+| — | Device proof still un-measured: a pinned playlist |
+| — | Device proof still un-measured: a bookmark |
+| — | Device proof still un-measured: the long-press menu |
+| — | The Penpot Play hand walk (still API-verified only) |
+| — | B-050 (the lib's PiP chrome) |
+| — | B-019 (the Argent update — **consent outstanding, do it LAST**) |
+| — | Seeded-data device proof F-065 (×1) |
+| — | Seeded-data device proof F-065 (×2) |
+| — | Seeded-data device proof F-066 |
+| — | The 2026-11-03 native crash |
+| — | `graphify-out/` |
+| — | The API 24–30 PiP path |
+| — | NO-JANK |
+| — | B-018 |
+| — | The v7 doc rename banners |
+| — | iOS verification |
+| — | The dark-theme variants for the remaining screens |
+| — | The optional `Allura.ttf` upload to Penpot |
+| — | The page-by-page loop for the remaining ~48 screens (one at a time, not all at once) |
+| — | **NEW (§16).** The Penpot flow's Home board is still the V1 drawing (`Home / dark`, 201 V1-named shapes, 0 V2-named), while the app renders the V2 layout. The prototype walks a screen the app no longer shows. Deciding which Home the flow walks — and whether the V1 boards are retired — is its own piece of work. |

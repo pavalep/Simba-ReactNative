@@ -784,8 +784,12 @@ function kit(themeName) {
 
   /**
    * An Explore Contents card — `CategoryCard.tsx`: 140x160, the cover
-   * full-bleed, a dark scrim so the text stays readable, the icon disc at
-   * the top left, and the title and description at the bottom.
+   * full-bleed, a dark scrim so the text stays readable, the icon disc
+   * CENTRED on the poster, and the title and description at the bottom.
+   *
+   * The badge is the same on every card: a 40 dp disc with a 32 dp glyph
+   * inside it, in the middle of the poster. It used to sit in the top-left
+   * corner, and the card with no cover had no disc at all.
    */
   function categoryCard(name, o) {
     const w = o.w || 140;
@@ -825,18 +829,18 @@ function kit(themeName) {
         fill: 'rgba(10,10,12,0.62)',
       }),
       ellipse(name + ' icon disc', {
-        x: o.x + spacing.md,
-        y: o.y + spacing.md,
+        x: o.x + (w - 40) / 2,
+        y: o.y + (h - 40) / 2,
         w: 40,
         h: 40,
-        fill: o.artwork ? 'rgba(10,10,12,0.45)' : c.accent.goldSoft,
+        fill: 'rgba(10,10,12,0.45)',
       }),
       // The app's own per-section glyph (`BrowseAllShelf.tsx`).
       image(name + ' icon glyph', {
-        x: o.x + spacing.md + 9,
-        y: o.y + spacing.md + 9,
-        w: 22,
-        h: 22,
+        x: o.x + (w - 32) / 2,
+        y: o.y + (h - 32) / 2,
+        w: 32,
+        h: 32,
         media: iconKey(o.icon),
       }),
       text(name + ' title', o.title, {
