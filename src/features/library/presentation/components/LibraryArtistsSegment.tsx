@@ -12,7 +12,15 @@ interface LibraryArtistsSegmentProps {
   isMediaScanning: boolean;
   scannedTrackCount: number;
   colors: ColorTokens;
-  onNavigateToSettings: () => void;
+  /**
+   * Links an AUDIO folder.
+   *
+   * The empty state used to send the user to a page called "Settings"
+   * (the Preferences page, before it was merged into the Profile on
+   * 2026-11-11). A page called Settings was never the right door to a
+   * folder picker, so the empty state links the folder itself.
+   */
+  onLinkFolders: () => void;
   onScanAudioFolders: () => void;
   onArtistPress: (artistName: string) => void;
   onViewAllArtists?: () => void;
@@ -23,7 +31,7 @@ export const LibraryArtistsSegment: React.FC<LibraryArtistsSegmentProps> = React
   isMediaScanning,
   scannedTrackCount,
   colors,
-  onNavigateToSettings,
+  onLinkFolders,
   onScanAudioFolders,
   onArtistPress,
   onViewAllArtists,
@@ -33,9 +41,9 @@ export const LibraryArtistsSegment: React.FC<LibraryArtistsSegmentProps> = React
       <EmptyState
         icon="headphones"
         title="No audio folders linked"
-        description="Link audio folders in Settings first, then switch to Artists to browse by artist."
-        actionLabel="Go to Settings"
-        onAction={onNavigateToSettings}
+        description="Link an audio folder and Simba will scan it into your library."
+        actionLabel="Link folders"
+        onAction={onLinkFolders}
       />
     );
   }

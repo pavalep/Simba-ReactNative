@@ -4,7 +4,6 @@ import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {useAuthStore} from '../state';
 import {
   RootStackParamList,
-  SettingsScreenProps,
   AboutScreenProps,
   AudioSettingsScreenProps,
   EqualizerScreenProps,
@@ -63,7 +62,6 @@ import {DownloadsScreen} from '../screens/DownloadsScreen';
 // "Settings". They are root routes now, so the whole app is ONE flat
 // native stack — which is what it already was everywhere else. See the
 // note on `RootStackParamList` in ./types.ts for what the nesting cost.
-import {SettingsScreen} from '../screens/Settings';
 import {AboutScreen} from '../screens/About';
 import {AudioSettingsScreen} from '../screens/AudioSettings';
 import {EqualizerScreen} from '../screens/Equalizer';
@@ -90,12 +88,6 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 // The props types are the ROOT stack's now (not a composite), which is the
 // point of the flattening: a settings screen navigates to its siblings
 // directly, with no parent to reach through.
-
-const SettingsRender = (props: SettingsScreenProps) => (
-  <ScreenErrorBoundary>
-    <SettingsScreen {...props} />
-  </ScreenErrorBoundary>
-);
 
 const AboutRender = (props: AboutScreenProps) => (
   <ScreenErrorBoundary onGoBack={() => props.navigation?.goBack()}>
@@ -211,12 +203,11 @@ export const RootNavigator: React.FC = () => {
       {/* ── The settings screens ────────────────────────────────────────
           Each one keeps the `ScreenErrorBoundary` the nested stack gave
           it, so a throwing settings screen still offers a way back
-          instead of taking the app down with it. */}
-      <Stack.Screen
-        name="Settings"
-        component={SettingsRender}
-        options={{animation: 'slide_from_right'}}
-      />
+          instead of taking the app down with it.
+
+          There is no "Settings" screen here any more: the preferences
+          were merged into the Profile on 2026-11-11
+          (`md/PROFILE_SETTINGS_MERGE.md`). */}
       <Stack.Screen
         name="About"
         component={AboutRender}

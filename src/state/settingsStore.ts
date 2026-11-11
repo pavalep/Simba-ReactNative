@@ -145,6 +145,23 @@ export interface SettingsActions {
   setHomeCity: (city: string) => void;
 
   reset: () => void;
+
+  /**
+   * Restore every PREFERENCE to its default, and keep the folder links.
+   *
+   * `reset()` clears the whole state, and the whole state includes
+   * `videoFolders`, `audioFolders` and `linkedFolders` — so the old
+   * "Reset preferences" dialog, which promised that "Linked folders,
+   * local media, downloads, and personal items will be preserved", was
+   * promising something the code did not do: the linked folders were
+   * dropped with everything else.
+   *
+   * A folder link is not a preference. It is where the user's files come
+   * from, and unlinking them is not what a user tapping "Reset
+   * preferences" is asking for. This action resets the preferences and
+   * leaves the links alone.
+   */
+  resetPreferences: () => void;
 }
 
 const initialState: SettingsState = {
@@ -234,7 +251,7 @@ let staleLaunchFlagOnDisk = false;
 
 export const useSettingsStore = create<SettingsState & SettingsActions>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       ...initialState,
 
       setThemeMode: (themeMode) => set({themeMode}),
@@ -348,6 +365,22 @@ export const useSettingsStore = create<SettingsState & SettingsActions>()(
       setHomeCity: (homeCity) => set({homeCity}),
 
       reset: () => set({...initialState}),
+
+      resetPreferences: () => {
+        const {
+          videoFolders,
+          audioFolders,
+          linkedFolders,
+          lastScanTimestamp,
+        } = get();
+        set({
+          ...initialState,
+          videoFolders,
+          audioFolders,
+          linkedFolders,
+          lastScanTimestamp,
+        });
+      },
     }),
     {
       name: 'settings',

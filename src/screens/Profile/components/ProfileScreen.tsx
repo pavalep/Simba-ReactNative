@@ -1,64 +1,57 @@
 // ────────────────────────────────────────────────────────────────
-// Simba Player — Profile Screen (RC1)
+// Simba Player — Profile Screen (RC1, merged with Settings)
 //
-// The account page, rebuilt on the V2 grammar. The design this
-// implements is the `Profile / light` and `Profile / dark` boards in
-// Penpot (page `SIMBA`), drawn by `designs/penpot/profile.js`.
+// The account page AND the preferences page, as ONE screen.
 //
-// WHY IT LOOKS LIKE THIS
-// ──────────────────────
+// The design this implements is the `Profile / light` and `Profile / dark`
+// boards in Penpot (page `SIMBA`), drawn by `designs/penpot/profile.js`.
 //
-// The screen this replaces (the "Phase 42" version) had five blocks:
+// WHY IT IS ONE PAGE
+// ──────────────────
 //
-//   1. a 7-cell stats grid — `flexBasis: '30%'`, so it laid out three
-//      to a row and the SEVENTH tile was an orphan; and because
-//      `formatDuration(0)` returns `''`, that orphan had no value at
-//      all;
-//   2. a "Recently Played" chip strip — Home already has that rail;
-//   3. an 8-row "Shortcuts" block — Home's rails again, and three of
-//      its rows (Bookmarks, Playlists, Followed) were printed a SECOND
-//      time further down the same screen;
-//   4. a "Preferences" block with one row — a Theme toggle that
-//      Settings already owns;
-//   5. a "Sign out" in the HEADER, drawn as a text label inside the
-//      header's fixed 36×36 right-action circle, so it wrapped onto
-//      two lines and was clipped.
+// The Profile used to be "you" and the Settings page was "how the app
+// behaves", and the owner found the Profile "too less":
 //
-// It also read its numbers from TWO different stores: the grid's
-// "Tracks" and "Videos" came from `useMediaStore`, while the Stats
-// page read the same two numbers from `useSessionStore.mediaLibrary`.
-// The same words, two numbers, on two screens.
+//   "now profile seems too less, merge settings to profile else it will
+//    feel too less"
 //
-// What is here now:
+// Two pages for one person, split by a row of content that belongs
+// together. The merged page carries 21 rows in 9 groups:
 //
-//   • an UNBOXED identity — avatar, name, email, no card around it
-//     (the same rule the V2 Home greeting follows);
-//   • ONE count line under "Your Library" — the VLC pattern. The
-//     tracks and videos are read from `useSessionStore.mediaLibrary`,
-//     which is the SAME store the Stats page reads, so the two pages
-//     cannot disagree;
-//   • ONE list of your things, each count riding on its own row;
-//   • ONE Activity row;
-//   • ONE Account section, where only "Sign out" is red.
+//   identity → Activity → Appearance → Playback → Subtitles →
+//   Library → Account → Support → Reset
+//
+// WHAT IS STILL NOT ON IT
+// ───────────────────────
+//
+// • **No library index.** "Your Library" and its six rows are gone:
+//   Home already carries the Recently Played, Pinned Playlists, Bookmarks
+//   and Followed Podcasts rails, each with a "See All", and the Library
+//   page owns Downloads and the local media. A second index of the same
+//   library under the same heading is the app saying the same thing
+//   twice (`md/CONTENT_OWNERSHIP.md`).
+//
+// • **No gear in the header.** It would open the page you are already on.
+//
+// • **No "Accent Color" row.** The old Settings row had no `onPress` and
+//   `useSettingsStore` has no accent field: gold is the app's only accent
+//   and it is not a preference. A row that cannot be changed is not a row.
+//
+// • **No Discover section.** All seven of its rows already sit on Home's
+//   Explore Contents rail.
 //
 // The section titles are the Cormorant italic gold divider
 // (`SubsectionTitle`'s `displaySerif` variant) — the same grammar the
-// Home page's "Your Library" / "Discover" dividers use. The rows are
-// the app's own `SettingsRow`, unboxed: the old screen wrapped them
-// in an elevated group card, the V2 grammar does not.
+// Home page's "Your Library" / "Discover" dividers use. The rows are the
+// app's own `SettingsRow`, unboxed.
 //
-// Every row's destination was verified against the live Penpot file:
-// the board's connectors resolve to Settings, AllPlaylistsScreen,
-// Bookmarks, History, Downloads, FollowedPodcasts, Library, Stats and
-// Login respectively. `Followed Podcasts` points at the FOLLOWED list
-// (`FollowedPodcasts`), not at the podcast catalogue — the old screen
-// had the same bug Home already fixed.
-//
-// See `md/PROFILE_RC1_REFACTOR.md` for the analysis behind all of it.
+// See `md/PROFILE_SETTINGS_MERGE.md` for the decision and the full
+// row-by-row inventory, and `md/CONTENT_OWNERSHIP.md` for the ownership
+// model this page sits in.
 // ────────────────────────────────────────────────────────────────
 
-import React, {useCallback, useMemo, useState} from 'react';
-import {View, StyleSheet, ScrollView} from 'react-native';
+import React, {useCallback, useState} from 'react';
+import {View, StyleSheet, ScrollView, Switch} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useBottomChromeInset} from '../../../infrastructure/player/miniPlayerChrome';
 import {useTheme} from '../../../theme';
@@ -72,41 +65,55 @@ import {InternalHeader} from '../../../components/layout/InternalHeader/Internal
 import {ConfirmDialog} from '../../../components/core/Dialog/ConfirmDialog';
 import {useToast} from '../../../components/feedback/Toast/Toast';
 import {useAuth} from '../../../hooks/useAuth';
-import {usePlaylists} from '../../../features/playlists';
 import {useBookmarks} from '../../../features/bookmarks';
-import {useFollowedPodcasts} from '../../../features/followedPodcasts';
 import {useRecentHistory} from '../../../features/recentHistory';
-import {
-  useSessionStore,
-  useMediaStore,
-  useDownloadsStore,
-} from '../../../state';
+import {useSettingsStore} from '../../../state';
 import {clearCache} from '../../../services/cacheService';
+import {
+  MpvConfigEditor,
+  LinkedFoldersDialog,
+  ThemePickerDialog,
+  SubtitleLanguageDialog,
+  SubtitleStyleDialog,
+} from '../components';
+import type {MpvOption} from '../components/MpvConfigEditor';
+import {useProfileScreen} from '../hooks/useProfileScreen';
 import type {ProfileScreenProps} from '../types';
 
 type Props = ProfileScreenProps;
 
 /**
- * The trailing cluster of a row: the count in gold, then the chevron.
+ * The right chevron of a row that opens something.
  *
- * The count is `caption` (Inter 13/18) in the brand gold — the place
- * the V2 grammar spends its gold when there is no artwork to spend it
- * on. The board draws it at Inter Medium 500; the family key below
- * selects the Medium face directly, which is how a weight is carried
- * in this app (never a `fontWeight` prop — see
- * `src/constants/fontFamily.ts`).
+ * `SettingsRow` draws no chevron of its own — the trailing cluster is the
+ * caller's — so every row that goes somewhere carries one. It is the app's
+ * own 14 px chevron, flush with the 16 dp gutter.
  */
-const RowTrailing: React.FC<{count?: number}> = ({count}) => {
+const Chevron: React.FC = () => {
+  const {colors} = useTheme();
+  return <SvgIcon name="chevronRight" size={14} color={colors.text.tertiary} />;
+};
+
+/**
+ * The switch of a row that toggles something.
+ *
+ * The track is `border.subtle` off and `accent.goldDim` on, the thumb is
+ * `accent.gold` on and `text.tertiary` off — the app's own switch colours.
+ */
+const Toggle: React.FC<{
+  value: boolean;
+  onValueChange: (value: boolean) => void;
+  label: string;
+}> = ({value, onValueChange, label}) => {
   const {colors} = useTheme();
   return (
-    <View style={styles.trailing}>
-      {count != null && (
-        <AppText variant="caption" color="accent">
-          {count}
-        </AppText>
-      )}
-      <SvgIcon name="chevronRight" size={14} color={colors.text.tertiary} />
-    </View>
+    <Switch
+      value={value}
+      onValueChange={onValueChange}
+      trackColor={{false: colors.border.subtle, true: colors.accent.goldDim}}
+      thumbColor={value ? colors.accent.gold : colors.text.tertiary}
+      accessibilityLabel={label}
+    />
   );
 };
 
@@ -116,37 +123,49 @@ export const ProfileScreen: React.FC<Props> = ({navigation}) => {
   const toast = useToast();
 
   const {user, signIn, signOut, revokeAccess} = useAuth();
-
-  // ── The counts ───────────────────────────────────────────────────
-  //
-  // ONE owner per number.
-  //
-  // The tracks and videos come from `useSessionStore.mediaLibrary` —
-  // the same store `StatsScreen.tsx:43,68-74` reads — so the Profile
-  // and the Stats page cannot print different numbers for the same
-  // words. (The old screen read them from `useMediaStore`, which is
-  // the SCAN result: a different set of files entirely.)
-  const mediaLibrary = useSessionStore(state => state.mediaLibrary);
-  const {playlists} = usePlaylists();
-  const {bookmarkCount, clearAll: clearAllBookmarks} = useBookmarks();
-  const {count: followedPodcastCount} = useFollowedPodcasts();
-  const downloadCount = useDownloadsStore(state => state.records.length);
-  const localFileCount = useMediaStore(state => state.tracks.length);
   const {clearRecent} = useRecentHistory();
+  const {clearAll: clearAllBookmarks} = useBookmarks();
 
-  const trackCount = useMemo(
-    () => mediaLibrary.filter(e => e.mediaType === 'audio').length,
-    [mediaLibrary],
-  );
-  const videoCount = useMemo(
-    () => mediaLibrary.filter(e => e.mediaType === 'video').length,
-    [mediaLibrary],
-  );
+  const {
+    themeMode,
+    themeLabel,
+    hardwareAcceleration,
+    audioNormalization,
+    dialogueBoost,
+    skipSilenceEnabled,
+    preferredLanguages,
+    preferredLanguagesLabel,
+    subtitleFontSize,
+    subtitleTextColor,
+    subtitleBackgroundOpacity,
+    subtitleFontLabel,
+    subtitleBgLabel,
+    autoLoadSubtitles,
+    mpvOptions,
+    linkedFoldersLabel,
+    mpvOptionsLabel,
+    themeDialogVisible,
+    setThemeDialogVisible,
+    mpvEditorVisible,
+    setMpvEditorVisible,
+    linkedFoldersDialogVisible,
+    setLinkedFoldersDialogVisible,
+    subtitleLanguageDialogVisible,
+    setSubtitleLanguageDialogVisible,
+    subtitleStyleDialogVisible,
+    setSubtitleStyleDialogVisible,
+    handleThemePress,
+    handleMpvPress,
+    handleLinkedFoldersPress,
+    handleSubtitleLanguagePress,
+    handleSubtitleStylePress,
+  } = useProfileScreen();
 
   // ── Dialogs ─────────────────────────────────────────────────────
   const [signOutVisible, setSignOutVisible] = useState(false);
   const [revokeVisible, setRevokeVisible] = useState(false);
   const [wipeVisible, setWipeVisible] = useState(false);
+  const [resetVisible, setResetVisible] = useState(false);
 
   const handleConfirmSignOut = useCallback(async () => {
     setSignOutVisible(false);
@@ -173,6 +192,12 @@ export const ProfileScreen: React.FC<Props> = ({navigation}) => {
     toast.show('Local data cleared');
   }, [clearRecent, clearAllBookmarks, toast]);
 
+  const handleConfirmReset = useCallback(() => {
+    setResetVisible(false);
+    useSettingsStore.getState().resetPreferences();
+    toast.show('Preferences reset');
+  }, [toast]);
+
   const isSignedIn = Boolean(user);
   const displayName = user?.name || 'Not signed in';
   const displayEmail = user?.email || 'Sign in to sync your library';
@@ -181,20 +206,10 @@ export const ProfileScreen: React.FC<Props> = ({navigation}) => {
     <SafeAreaView
       style={[styles.root, {backgroundColor: colors.background.primary}]}
       edges={['top']}>
-      {/* The header's right action is a GEAR, not a label.
-          The right slot is a fixed 36×36 circle (`InternalHeader.tsx:151-157`),
-          so the old "Sign out" TEXT wrapped onto two lines and was
-          clipped. A gear is the one door to Settings that YouTube,
-          Spotify, Apple Music, Plex and Tencent Video all put on the
-          account screen. Sign-out lives in the Account section below,
-          where there is room for it. */}
-      <InternalHeader
-        title="Profile"
-        rightAction={{
-          icon: 'settings',
-          onPress: () => navigation.navigate('Settings'),
-        }}
-      />
+      {/* The header's right slot is EMPTY. It used to hold a gear — the
+          one door to the Settings page — which is this page now. A gear
+          that opens the page you are already on is a lie. */}
+      <InternalHeader title="Profile" />
 
       {/* No horizontal padding here: the rows are FULL BLEED — the
           hairline runs the whole width — and `SettingsRow` carries its
@@ -217,60 +232,168 @@ export const ProfileScreen: React.FC<Props> = ({navigation}) => {
           </View>
         </View>
 
-        {/* ── Your Library ───────────────────────────────────────────── */}
-        <View style={styles.dividerFirst}>
-          <SubsectionTitle label="Your Library" variant="displaySerif" />
-        </View>
-
-        {/* THE COUNT LINE — one line, one store, no tiles. */}
-        <AppText variant="caption" color="secondary" style={styles.countLine}>
-          {`${trackCount} tracks · ${videoCount} videos · ${playlists.length} playlists`}
-        </AppText>
-
-        <SettingsRow
-          label="Playlists"
-          accessibilityLabel={`Playlists, ${playlists.length}`}
-          onPress={() => navigation.navigate('AllPlaylistsScreen')}
-          trailing={<RowTrailing count={playlists.length} />}
-        />
-        <SettingsRow
-          label="Bookmarks"
-          accessibilityLabel={`Bookmarks, ${bookmarkCount}`}
-          onPress={() => navigation.navigate('Bookmarks')}
-          trailing={<RowTrailing count={bookmarkCount} />}
-        />
-        <SettingsRow
-          label="History"
-          onPress={() => navigation.navigate('History')}
-          trailing={<RowTrailing />}
-        />
-        <SettingsRow
-          label="Downloads"
-          accessibilityLabel={`Downloads, ${downloadCount}`}
-          onPress={() => navigation.navigate('Downloads')}
-          trailing={<RowTrailing count={downloadCount} />}
-        />
-        <SettingsRow
-          label="Followed podcasts"
-          accessibilityLabel={`Followed podcasts, ${followedPodcastCount}`}
-          onPress={() => navigation.navigate('FollowedPodcasts')}
-          trailing={<RowTrailing count={followedPodcastCount} />}
-        />
-        <SettingsRow
-          label="Local files"
-          accessibilityLabel={`Local files, ${localFileCount}`}
-          onPress={() => navigation.navigate('Library')}
-          trailing={<RowTrailing count={localFileCount} />}
-        />
-
         {/* ── Activity ───────────────────────────────────────────────── */}
-        <View style={styles.divider}>
+        <View style={styles.dividerFirst}>
           <SubsectionTitle label="Activity" variant="displaySerif" />
         </View>
         <SettingsRow
           label="Playback statistics"
+          accessibilityLabel="Playback statistics"
           onPress={() => navigation.navigate('Stats')}
-          trailing={<RowTrailing />}
+          trailing={<Chevron />}
+        />
+
+        {/* ── Appearance ─────────────────────────────────────────────── */}
+        <View style={styles.divider}>
+          <SubsectionTitle label="Appearance" variant="displaySerif" />
+        </View>
+        <SettingsRow
+          label="Theme"
+          description={themeLabel}
+          onPress={handleThemePress}
+          trailing={<Chevron />}
+        />
+
+        {/* ── Playback ───────────────────────────────────────────────── */}
+        <View style={styles.divider}>
+          <SubsectionTitle label="Playback" variant="displaySerif" />
+        </View>
+        <SettingsRow
+          label="Hardware acceleration"
+          trailing={
+            <Toggle
+              label="Hardware acceleration"
+              value={hardwareAcceleration}
+              onValueChange={val =>
+                useSettingsStore.getState().setHardwareAcceleration(val)
+              }
+            />
+          }
+        />
+        <SettingsRow
+          label="Audio normalization"
+          trailing={
+            <Toggle
+              label="Audio normalization"
+              value={audioNormalization}
+              onValueChange={val =>
+                useSettingsStore.getState().setAudioNormalization(val)
+              }
+            />
+          }
+        />
+        <SettingsRow
+          label="Dialogue boost"
+          trailing={
+            <Toggle
+              label="Dialogue boost"
+              value={dialogueBoost}
+              onValueChange={val =>
+                useSettingsStore.getState().setDialogueBoost(val)
+              }
+            />
+          }
+        />
+        <SettingsRow
+          label="Skip silence"
+          description="Automatically skip silent sections"
+          trailing={
+            <Toggle
+              label="Skip silence"
+              value={skipSilenceEnabled}
+              onValueChange={val =>
+                useSettingsStore.getState().setSkipSilence(val)
+              }
+            />
+          }
+        />
+        <SettingsRow
+          label="Subtitle language"
+          description={preferredLanguagesLabel}
+          onPress={handleSubtitleLanguagePress}
+          trailing={<Chevron />}
+        />
+        <SettingsRow
+          label="Audio settings"
+          description="Equalizer and audio tuning"
+          onPress={() => navigation.navigate('AudioSettings')}
+          trailing={<Chevron />}
+        />
+
+        {/* ── Subtitles ──────────────────────────────────────────────── */}
+        <View style={styles.divider}>
+          <SubsectionTitle label="Subtitles" variant="displaySerif" />
+        </View>
+        <SettingsRow
+          label="Font size"
+          description={subtitleFontLabel}
+          onPress={handleSubtitleStylePress}
+          trailing={<Chevron />}
+        />
+        <SettingsRow
+          label="Text color"
+          // The description is a NODE (the swatch and the hex), so the
+          // default label — `${label}, ${description}` — would read
+          // "Text color, [object Object]" to a screen reader. The row
+          // says the value instead.
+          accessibilityLabel={`Text color, ${subtitleTextColor}`}
+          description={
+            <View style={styles.swatchRow}>
+              <View
+                style={[
+                  styles.swatch,
+                  {
+                    backgroundColor: subtitleTextColor,
+                    borderColor: colors.border.subtle,
+                  },
+                ]}
+              />
+              <AppText variant="caption" color="secondary">
+                {subtitleTextColor}
+              </AppText>
+            </View>
+          }
+          onPress={handleSubtitleStylePress}
+          trailing={<Chevron />}
+        />
+        <SettingsRow
+          label="Background opacity"
+          description={subtitleBgLabel}
+          onPress={handleSubtitleStylePress}
+          trailing={<Chevron />}
+        />
+        <SettingsRow
+          label="Auto-load subtitles"
+          trailing={
+            <Toggle
+              label="Auto-load subtitles"
+              value={autoLoadSubtitles}
+              onValueChange={val =>
+                useSettingsStore.getState().setAutoLoadSubtitles(val)
+              }
+            />
+          }
+        />
+
+        {/* ── Library ────────────────────────────────────────────────── */}
+        {/* Not a library INDEX — these two rows are where the library
+            comes FROM (the linked folders) and how the player is
+            configured (the MPV options). The media itself is on Home and
+            on the Library page. */}
+        <View style={styles.divider}>
+          <SubsectionTitle label="Library" variant="displaySerif" />
+        </View>
+        <SettingsRow
+          label="Linked folders"
+          description={linkedFoldersLabel}
+          onPress={handleLinkedFoldersPress}
+          trailing={<Chevron />}
+        />
+        <SettingsRow
+          label="MPV options"
+          description={mpvOptionsLabel}
+          onPress={handleMpvPress}
+          trailing={<Chevron />}
         />
 
         {/* ── Account ────────────────────────────────────────────────── */}
@@ -287,32 +410,20 @@ export const ProfileScreen: React.FC<Props> = ({navigation}) => {
               label="Sign out"
               accessibilityLabel="Sign out"
               onPress={() => setSignOutVisible(true)}
-              trailing={
-                <View style={styles.trailing}>
-                  <SvgIcon name="chevronRight" size={14} color={colors.text.tertiary} />
-                </View>
-              }
+              trailing={<Chevron />}
               labelColor="error"
             />
             <SettingsRow
               label="Revoke Google access"
               accessibilityLabel="Revoke Google access"
               onPress={() => setRevokeVisible(true)}
-              trailing={
-                <View style={styles.trailing}>
-                  <SvgIcon name="chevronRight" size={14} color={colors.text.tertiary} />
-                </View>
-              }
+              trailing={<Chevron />}
             />
             <SettingsRow
               label="Clear local data"
               accessibilityLabel="Clear local data"
               onPress={() => setWipeVisible(true)}
-              trailing={
-                <View style={styles.trailing}>
-                  <SvgIcon name="chevronRight" size={14} color={colors.text.tertiary} />
-                </View>
-              }
+              trailing={<Chevron />}
             />
           </>
         ) : (
@@ -325,13 +436,39 @@ export const ProfileScreen: React.FC<Props> = ({navigation}) => {
             label="Sign in"
             accessibilityLabel="Sign in"
             onPress={() => void signIn()}
-            trailing={
-              <View style={styles.trailing}>
-                <SvgIcon name="chevronRight" size={14} color={colors.text.tertiary} />
-              </View>
-            }
+            trailing={<Chevron />}
           />
         )}
+
+        {/* ── Support ────────────────────────────────────────────────── */}
+        <View style={styles.divider}>
+          <SubsectionTitle label="Support" variant="displaySerif" />
+        </View>
+        <SettingsRow
+          label="Help"
+          accessibilityLabel="Help"
+          onPress={() => navigation.navigate('Help')}
+          trailing={<Chevron />}
+        />
+        <SettingsRow
+          label="About Simba"
+          accessibilityLabel="About Simba"
+          onPress={() => navigation.navigate('About')}
+          trailing={<Chevron />}
+        />
+
+        {/* ── Reset ──────────────────────────────────────────────────── */}
+        {/* Its own group, because it is the one row that is not a
+            preference but an ACTION on them. */}
+        <View style={styles.divider}>
+          <SubsectionTitle label="Reset" variant="displaySerif" />
+        </View>
+        <SettingsRow
+          label="Reset preferences"
+          accessibilityLabel="Reset preferences"
+          onPress={() => setResetVisible(true)}
+          trailing={<Chevron />}
+        />
 
         <View style={{height: bottomChromeInset + spacing.xl}} />
       </ScrollView>
@@ -364,6 +501,61 @@ export const ProfileScreen: React.FC<Props> = ({navigation}) => {
         onConfirm={handleConfirmWipe}
         onCancel={() => setWipeVisible(false)}
       />
+      {/* The reset keeps the linked folders: a folder link is where the
+          user's files come from, not a preference, and the old dialog
+          promised exactly that while the code did the opposite. */}
+      <ConfirmDialog
+        visible={resetVisible}
+        title="Reset preferences"
+        message="Every preference goes back to its default — theme, playback, subtitles and MPV options. Your linked folders, media, downloads and playlists are not touched."
+        confirmLabel="Reset"
+        destructive
+        onConfirm={handleConfirmReset}
+        onCancel={() => setResetVisible(false)}
+      />
+
+      {/* ── The five dialogs the preference rows open ───────────────── */}
+      <ThemePickerDialog
+        visible={themeDialogVisible}
+        onClose={() => setThemeDialogVisible(false)}
+        themeMode={themeMode}
+        onSelectTheme={mode => useSettingsStore.getState().setThemeMode(mode)}
+        colors={colors}
+      />
+      <SubtitleLanguageDialog
+        visible={subtitleLanguageDialogVisible}
+        onClose={() => setSubtitleLanguageDialogVisible(false)}
+        preferredLanguages={preferredLanguages}
+        onSelect={codes => useSettingsStore.getState().setPreferredLanguages(codes)}
+        colors={colors}
+      />
+      <SubtitleStyleDialog
+        visible={subtitleStyleDialogVisible}
+        onClose={() => setSubtitleStyleDialogVisible(false)}
+        fontSize={subtitleFontSize}
+        textColor={subtitleTextColor}
+        bgOpacity={subtitleBackgroundOpacity}
+        onFontSize={px => useSettingsStore.getState().setSubtitleFontSize(px)}
+        onTextColor={c => useSettingsStore.getState().setSubtitleTextColor(c)}
+        onBgOpacity={o =>
+          useSettingsStore.getState().setSubtitleBackgroundOpacity(o)
+        }
+        colors={colors}
+      />
+      <MpvConfigEditor
+        visible={mpvEditorVisible}
+        onClose={() => setMpvEditorVisible(false)}
+        options={mpvOptions}
+        onSave={(options: MpvOption[]) =>
+          useSettingsStore.getState().setMpvOptions(options)
+        }
+      />
+      <LinkedFoldersDialog
+        visible={linkedFoldersDialogVisible}
+        onClose={() => setLinkedFoldersDialogVisible(false)}
+        onNavigate={type => navigation.navigate('LinkedFolders', {type})}
+        colors={colors}
+      />
     </SafeAreaView>
   );
 };
@@ -389,23 +581,25 @@ const styles = StyleSheet.create({
   identityEmail: {
     marginTop: spacing.xs,
   },
-  // The gaps the board puts above its dividers: 12 dp before the first
-  // one (right after the identity) and 16 dp before the ones that
-  // follow a list. `SubsectionTitle` carries its own 8 dp marginTop,
-  // so these supply the rest.
+  // The gaps the board puts above its dividers: 4 dp before the first
+  // one (right after the identity) and 8 dp before the ones that follow a
+  // list. `SubsectionTitle` carries its own 8 dp marginTop, so these
+  // supply the rest.
   dividerFirst: {
     marginTop: spacing.xs,
   },
   divider: {
     marginTop: spacing.sm,
   },
-  countLine: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.md,
-  },
-  trailing: {
+  swatchRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: 6,
+  },
+  swatch: {
+    width: 16,
+    height: 16,
+    borderRadius: 4,
+    borderWidth: 1,
   },
 });

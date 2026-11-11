@@ -9,7 +9,6 @@ export type {
   LibraryScreenProps,
   FolderBrowserScreenProps,
   PlaylistDetailScreenProps,
-  SettingsScreenProps,
   AboutScreenProps,
   AudioSettingsScreenProps,
 } from './types';

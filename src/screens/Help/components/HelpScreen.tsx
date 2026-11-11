@@ -32,7 +32,7 @@ const FAQ_SECTIONS: FaqSection[] = [
     items: [
       {
         q: 'How do I add my media to the library?',
-        a: 'Open Settings → Linked Folders, then tap "Add Folder" to link a folder on your device. Simba scans linked folders and builds your library automatically. You can rescan at any time from Preferences.',
+        a: 'Open Profile → Linked folders, then tap "Add Folder" to link a folder on your device. Simba scans linked folders and builds your library automatically. Pull down on the Library page to rescan at any time.',
       },
       {
         q: 'Where is my library stored?',
@@ -54,7 +54,7 @@ const FAQ_SECTIONS: FaqSection[] = [
       },
       {
         q: 'How do I resume a video or song where I left off?',
-        a: 'Simba remembers playback positions automatically. Videos show a resume prompt with the saved position; audio resumes from the saved spot when reopened. Toggle this in Preferences → Remember playback position.',
+        a: 'Simba remembers playback positions automatically. Videos show a resume prompt with the saved position; audio resumes from the saved spot when reopened.',
       },
       {
         q: 'How does picture-in-picture work?',
@@ -62,11 +62,11 @@ const FAQ_SECTIONS: FaqSection[] = [
       },
       {
         q: 'Can I play audio in the background?',
-        a: 'Yes. Audio keeps playing with the screen off or while you use other apps, and a media notification lets you pause, skip, or stop from the lock screen. Control this in Preferences → Media notifications.',
+        a: 'Yes. Audio keeps playing with the screen off or while you use other apps, and a media notification lets you pause, skip, or stop from the lock screen.',
       },
       {
         q: 'Why does my video show a black screen?',
-        a: 'The video surface may conflict with hardware acceleration on some devices. Try Settings → Audio & Playback → Hardware acceleration, or update your device graphics drivers.',
+        a: 'The video surface may conflict with hardware acceleration on some devices. Try turning hardware acceleration off in Profile → Playback, or update your device graphics drivers.',
       },
     ],
   },
@@ -107,20 +107,18 @@ const FAQ_SECTIONS: FaqSection[] = [
     ],
   },
   {
-    title: 'Settings & Accessibility',
+    // The preferences live on the Profile page (md/PROFILE_SETTINGS_MERGE.md),
+    // so this section is named after what it is about.
+    title: 'Appearance',
     icon: 'settings',
     items: [
       {
-        q: 'How do I change the app language?',
-        a: 'Preferences → Language. Choose System default to follow your device language, or pick a language explicitly.',
+        q: 'How do I change the theme?',
+        a: 'Open Profile → Appearance → Theme and choose System, Light or Dark.',
       },
       {
-        q: 'How do I make controls bigger?',
-        a: 'Preferences → Larger controls scales the player buttons for easier tapping. High-contrast subtitles improves subtitle legibility in the video player.',
-      },
-      {
-        q: 'How do I reset all settings?',
-        a: 'Open About → Reset all settings. This restores every setting to its default value — it does not delete your media or playlists.',
+        q: 'How do I reset my preferences?',
+        a: 'Open Profile → Reset → Reset preferences. Every preference goes back to its default — theme, playback, subtitles and MPV options. Your linked folders, media, downloads and playlists are not touched.',
       },
     ],
   },
@@ -130,19 +128,15 @@ const FAQ_SECTIONS: FaqSection[] = [
     items: [
       {
         q: 'A file does not play or shows an error',
-        a: 'Confirm the file is not corrupt and is in a supported format. Try disabling hardware acceleration in Settings, then replay. If the error persists, use About → Report Bug so we can investigate.',
+        a: 'Confirm the file is not corrupt and is in a supported format. Try turning hardware acceleration off in Profile → Playback, then replay. If the error persists, use About → Report a bug so we can investigate.',
       },
       {
         q: 'My library is empty after linking a folder',
-        a: 'Make sure the folder is readable by the app (Android storage permissions may need to be granted in system Settings), then trigger a rescan from Preferences → Rescan library.',
-      },
-      {
-        q: 'Notifications are not showing',
-        a: 'On Android 13+, notification permission must be granted. Enable Media notifications in Preferences — Simba will ask for permission the first time. Also confirm the system-level permission is allowed for Simba.',
+        a: 'Make sure the folder is readable by the app (Android storage permissions may need to be granted in the system settings), then pull down on the Library page to rescan.',
       },
       {
         q: 'Playback is choppy or stutters',
-        a: 'Try toggling hardware acceleration in Settings → Audio & Playback, close other heavy apps, and make sure the file is stored locally rather than on a slow network share.',
+        a: 'Try toggling hardware acceleration in Profile → Playback, close other heavy apps, and make sure the file is stored locally rather than on a slow network share.',
       },
     ],
   },

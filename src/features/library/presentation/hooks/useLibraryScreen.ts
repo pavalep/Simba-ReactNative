@@ -187,33 +187,44 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
   //
   // The settings screens are ROOT routes now (they used to live in a
   // nested `SettingsStack`), so the nested `{screen: …}` form is gone:
-  // `Settings`, `LinkedFolders` and `FolderLinkingWizard` are siblings
-  // of every other route, reached with one plain `navigate` call.
-  const navigateToSettings = useCallback(() => {
-    navigation.navigate({name: 'Settings', params: undefined});
-  }, [navigation]);
+  // `LinkedFolders` and `FolderLinkingWizard` are siblings of every
+  // other route, reached with one plain `navigate` call.
+  //
+  // There is no `Settings` route any more: the preferences were merged
+  // into the Profile on 2026-11-11 (`md/PROFILE_SETTINGS_MERGE.md`),
+  // and the empty states that used to say "Go to Settings" now link the
+  // folders directly — a page called Settings was never the right door
+  // to a folder picker.
 
-  const navigateToLinkedFolders = useCallback(
+  // The `navigate(name, params)` form, not the object form.
+//
+// React Navigation 7 deprecated `navigate({name, params})` — it warns on
+// every call ("Passing an object as the argument to 'navigate' is
+// deprecated. Use 'navigate(name, params, options)' instead"), and the
+// warning is in the user's console on every folder link. The typed
+// overloads resolve the same way: the route name is a literal and the
+// params are checked against the route's own param list.
+const navigateToLinkedFolders = useCallback(
     (type: 'video' | 'audio') => {
-      navigation.navigate({name: 'LinkedFolders', params: {type}});
+      navigation.navigate('LinkedFolders', {type});
     },
     [navigation],
   );
 
   const navigateToFolderBrowser = useCallback(
     (folderPath: string) => {
-      navigation.navigate({name: 'FolderBrowser', params: {initialPath: folderPath}});
+      navigation.navigate('FolderBrowser', {initialPath: folderPath});
     },
     [navigation],
   );
 
   const handleLinkFolder = useCallback(() => {
-    navigation.navigate({name: 'FolderLinkingWizard', params: {}});
+    navigation.navigate('FolderLinkingWizard', {});
   }, [navigation]);
 
   const handleArtistPress = useCallback(
     (artistName: string) => {
-      navigation.navigate({name: 'ArtistScreen', params: {artistName}});
+      navigation.navigate('ArtistScreen', {artistName});
     },
     [navigation],
   );
@@ -223,10 +234,7 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
       // Real bug fix: the route's typed param is `albumName`, not
       // `albumTitle`. The previous `(navigation as any).navigate(...)`
       // was silently dropping the album name on navigation.
-      navigation.navigate({
-        name: 'AlbumScreen',
-        params: {albumName: albumTitle, artistName},
-      });
+      navigation.navigate('AlbumScreen', {albumName: albumTitle, artistName});
     },
     [navigation],
   );
@@ -334,7 +342,7 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
     isRefreshing: isScanning, hasAnimated,
     isAudioPlaying, currentAudioUri,
     handleRefresh,
-    navigateToSettings, navigateToLinkedFolders, navigateToFolderBrowser, handleLinkFolder,
+    navigateToLinkedFolders, navigateToFolderBrowser, handleLinkFolder,
     handleArtistPress, handleAlbumPress, handleScanAudioFolders, handleMediaPress,
     handleCreatePlaylist, handlePlayAllPlaylist, handleShufflePlaylist,
     handlePlaylistCardPress,

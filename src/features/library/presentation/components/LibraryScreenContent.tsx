@@ -61,7 +61,7 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
     isRefreshing, hasAnimated,
     isAudioPlaying, currentAudioUri,
     handleRefresh,
-    navigateToSettings, navigateToLinkedFolders, navigateToFolderBrowser, handleLinkFolder,
+    navigateToLinkedFolders, navigateToFolderBrowser, handleLinkFolder,
     handleArtistPress, handleAlbumPress, handleScanAudioFolders, handleMediaPress,
     handleCreatePlaylist, handlePlayAllPlaylist, handleShufflePlaylist,
     handlePlaylistCardPress,
@@ -377,17 +377,16 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
               viewMode={viewMode}
               isAudioPlaying={isAudioPlaying}
               currentAudioUri={currentAudioUri}
-              onNavigateToSettings={navigateToSettings}
               onNavigateToFolderBrowser={navigateToFolderBrowser}
               onNavigateToLinkedFolders={navigateToLinkedFolders}
               onMediaPress={handleMediaPress}
             />
           )}
           {activeSegment === 'artists' && (
-            <LibraryArtistsSegment audioFolders={audioFolders} isMediaScanning={isScanning} scannedTrackCount={scannedTrackCount} colors={colors} onNavigateToSettings={navigateToSettings} onScanAudioFolders={handleScanAudioFolders} onArtistPress={handleArtistPress} onViewAllArtists={() => navigation.navigate('AllAudioScreen', {sort: 'artist'})} />
+            <LibraryArtistsSegment audioFolders={audioFolders} isMediaScanning={isScanning} scannedTrackCount={scannedTrackCount} colors={colors} onLinkFolders={() => navigateToLinkedFolders('audio')} onScanAudioFolders={handleScanAudioFolders} onArtistPress={handleArtistPress} onViewAllArtists={() => navigation.navigate('AllAudioScreen', {sort: 'artist'})} />
           )}
           {activeSegment === 'albums' && (
-            <LibraryAlbumsSegment audioFolders={audioFolders} isMediaScanning={isScanning} scannedTrackCount={scannedTrackCount} colors={colors} onNavigateToSettings={navigateToSettings} onScanAudioFolders={handleScanAudioFolders} onAlbumPress={handleAlbumPress} onViewAllAlbums={() => navigation.navigate('AllAudioScreen', {})} />
+            <LibraryAlbumsSegment audioFolders={audioFolders} isMediaScanning={isScanning} scannedTrackCount={scannedTrackCount} colors={colors} onLinkFolders={() => navigateToLinkedFolders('audio')} onScanAudioFolders={handleScanAudioFolders} onAlbumPress={handleAlbumPress} onViewAllAlbums={() => navigation.navigate('AllAudioScreen', {})} />
           )}
         </Animated.View>
       </ScrollView>

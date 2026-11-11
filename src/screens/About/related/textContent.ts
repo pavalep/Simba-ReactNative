@@ -19,7 +19,7 @@ const textContent = {
   rateOnPlayStore: 'Rate on Play Store',
   resetAlertTitle: 'Reset All Settings',
   resetAlertMessage:
-    'Are you sure you want to reset all settings to their defaults? This action cannot be undone.',
+    'Are you sure you want to reset all settings to their defaults? Your linked folders are unlinked too. This action cannot be undone.',
   cancel: 'Cancel',
   reset: 'Reset',
 } as const;

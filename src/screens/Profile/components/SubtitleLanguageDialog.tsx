@@ -13,7 +13,14 @@ interface SubtitleLanguageDialogProps {
   colors: ColorTokens;
 }
 
-const LANGUAGES: Array<{code: string; label: string}> = [
+/**
+ * The languages the app offers, and their mpv codes.
+ *
+ * Exported because the Profile's "Subtitle language" row shows the SAME
+ * names — one owner per fact: the row and the picker must not be able to
+ * disagree about what "eng" is called.
+ */
+export const SUBTITLE_LANGUAGES: Array<{code: string; label: string}> = [
   {code: 'und', label: 'Default (auto)'},
   {code: 'eng', label: 'English'},
   {code: 'spa', label: 'Spanish'},
@@ -71,7 +78,7 @@ export const SubtitleLanguageDialog: React.FC<SubtitleLanguageDialogProps> = ({
       title="Subtitle Language"
       message="Pick preferred subtitle languages (mpv slang). Tap to toggle.">
       <View style={styles.grid}>
-        {LANGUAGES.map(lang => {
+        {SUBTITLE_LANGUAGES.map(lang => {
           const isSelected = currentCodes.includes(lang.code);
           return (
             <TouchableOpacity

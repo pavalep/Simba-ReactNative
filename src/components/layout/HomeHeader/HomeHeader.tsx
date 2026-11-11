@@ -108,7 +108,12 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
     if (onAvatarPress) {
       onAvatarPress();
     } else {
-      navigation.navigate('Settings');
+      // The fallback used to be `navigation.navigate('Settings')` — the
+      // gear's page. There is no Settings route any more: the
+      // preferences were merged into the Profile on 2026-11-11
+      // (`md/PROFILE_SETTINGS_MERGE.md`), so the fallback is the
+      // Profile, which is where the avatar leads anyway.
+      navigation.navigate('Profile');
     }
   };
 

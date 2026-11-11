@@ -18,7 +18,8 @@ const NAV_STATE_KEY = 'simba-nav-state-v1';
 // initialRoute and the auth flow decides where the user lands.
 const RESTORABLE_ROUTES = new Set([
   'MainTabs',
-  'Settings',
+  // There is no 'Settings' route any more — the preferences were merged
+  // into the Profile on 2026-11-11 (`md/PROFILE_SETTINGS_MERGE.md`).
   'Bookmarks',
   'Profile',
   'History',

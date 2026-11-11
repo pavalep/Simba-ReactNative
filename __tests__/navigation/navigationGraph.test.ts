@@ -135,9 +135,15 @@ function declaredRoutes(file: string, typeName: string): string[] {
   return names;
 }
 
-/** The settings screens that used to live inside the nested stack. */
+/**
+ * The settings screens that used to live inside the nested stack.
+ *
+ * There is no `Settings` in the list: the Preferences page was merged
+ * into the Profile on 2026-11-11 (`md/PROFILE_SETTINGS_MERGE.md`), and
+ * `simbaplayer://settings` is now an ALIAS of the Profile's path rather
+ * than a route of its own.
+ */
 const SETTINGS_ROUTES = [
-  'Settings',
   'About',
   'AudioSettings',
   'Equalizer',
@@ -153,7 +159,6 @@ const SETTINGS_ROUTES = [
 
 /** The deep-link path each settings screen has always answered to. */
 const SETTINGS_PATHS: Record<string, string> = {
-  Settings: 'settings',
   About: 'settings/about',
   AudioSettings: 'settings/audio',
   Equalizer: 'settings/equalizer',
@@ -204,6 +209,20 @@ describe('the navigation graph is one flat stack', () => {
     }
   });
 
+  it('registers no "Settings" route at all', () => {
+    // The Preferences page was merged into the Profile on 2026-11-11
+    // (`md/PROFILE_SETTINGS_MERGE.md`). A second screen rendering the
+    // same rows would be two owners for one page.
+    const source = fs.readFileSync(path.join(NAV, 'RootNavigator.tsx'), 'utf8');
+    expect(source).not.toContain('name="Settings"');
+
+    const types = codeOf(path.join(NAV, 'types.ts'));
+    // The declaration, not the substring: `AudioSettingsScreenProps`
+    // contains "SettingsScreenProps".
+    expect(types).not.toMatch(/export type SettingsScreenProps/);
+    expect(types).not.toMatch(/^\s*Settings: undefined;/m);
+  });
+
   it('registers no other navigator inside the root navigator', () => {
     const source = fs.readFileSync(path.join(NAV, 'RootNavigator.tsx'), 'utf8');
     // A nested stack would be mounted through a `component={...}` that is
@@ -239,7 +258,12 @@ describe('the settings screens are root routes, not a nested group', () => {
   it('resolves the settings paths that were always valid', () => {
     // These paths are a public contract: a share link or a bookmark that
     // points at simbaplayer://settings/privacy must keep working.
-    expect(resolve('/settings')!.last.name).toBe('Settings');
+    //
+    // The bare `simbaplayer://settings` used to open the Preferences
+    // page. That page is now the Profile, and the path is kept as an
+    // ALIAS of it — so the URL still resolves, and it resolves to the
+    // screen that holds the preferences.
+    expect(resolve('/settings')!.last.name).toBe('Profile');
     expect(resolve('/settings/privacy')!.last.name).toBe('Privacy');
     expect(resolve('/settings/terms')!.last.name).toBe('Terms');
     expect(resolve('/settings/about')!.last.name).toBe('About');
@@ -249,6 +273,22 @@ describe('the settings screens are root routes, not a nested group', () => {
     expect(resolve('/settings/help')!.last.name).toBe('Help');
     expect(resolve('/settings/audio')!.last.name).toBe('AudioSettings');
     expect(resolve('/settings/equalizer')!.last.name).toBe('Equalizer');
+  });
+
+  it('keeps the Profile reachable under its own path too', () => {
+    expect(resolve('/profile')!.last.name).toBe('Profile');
+    // The alias must not make the Profile a NESTED route.
+    expect(resolve('/settings')!.nested).toBe(false);
+  });
+
+  it('declares the "settings" path as an alias of the Profile', () => {
+    // The alias is what keeps the published URL working; without it the
+    // path would silently resolve to nothing.
+    const screens = (linking.config as {
+      screens: Record<string, {path?: string; alias?: string[]}>;
+    }).screens;
+    expect(screens.Profile.path).toBe('profile');
+    expect(screens.Profile.alias).toContain('settings');
   });
 
   it('still parses the settings path parameters', () => {

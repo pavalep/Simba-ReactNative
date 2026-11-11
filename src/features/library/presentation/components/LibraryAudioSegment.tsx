@@ -20,7 +20,6 @@ interface LibraryAudioSegmentProps {
   viewMode?: 'grid' | 'list';
   isAudioPlaying?: boolean;
   currentAudioUri?: string | null;
-  onNavigateToSettings: () => void;
   onNavigateToFolderBrowser: (folderPath: string) => void;
   onNavigateToLinkedFolders: (type: 'video' | 'audio') => void;
   onMediaPress: (track: ScannedTrack) => void;
@@ -33,7 +32,6 @@ export const LibraryAudioSegment: React.FC<LibraryAudioSegmentProps> = React.mem
   sortBy,
   colors,
   isAudioPlaying = false,
-  onNavigateToSettings,
   onNavigateToFolderBrowser,
   onNavigateToLinkedFolders,
   onMediaPress,
@@ -147,9 +145,9 @@ export const LibraryAudioSegment: React.FC<LibraryAudioSegmentProps> = React.mem
       <EmptyState
         icon="music"
         title="No audio files yet"
-        description="Link audio folders in Settings to populate your library."
-        actionLabel="Go to Settings"
-        onAction={onNavigateToSettings}
+        description="Link an audio folder and Simba will scan it into your library."
+        actionLabel="Link folders"
+        onAction={() => onNavigateToLinkedFolders('audio')}
       />
     );
   }

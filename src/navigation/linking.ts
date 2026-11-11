@@ -49,7 +49,16 @@ export const linking: LinkingOptions<RootStackParamList> = {
     initialRouteName: 'Home',
     screens: {
       Login: 'login',
-      Profile: 'profile',
+      // The Profile is also the preferences page — the Settings page was
+      // merged into it on 2026-11-11 (`md/PROFILE_SETTINGS_MERGE.md`).
+      //
+      // The `settings` path is kept as an ALIAS, so `simbaplayer://settings`
+      // still resolves to the same screen it always did. `alias` is a
+      // supported `PathConfig` field (`@react-navigation/core`'s
+      // `types.tsx`), and the alias configs are matched AFTER the main
+      // ones and by segment count, so the more specific `settings/…`
+      // siblings below still win over the bare `settings`.
+      Profile: {path: 'profile', alias: ['settings']},
       History: 'history',
             Stats: 'stats',
       Home: 'home',
@@ -59,7 +68,6 @@ export const linking: LinkingOptions<RootStackParamList> = {
       // routes now, but the PATHS are deliberately unchanged — the same
       // URLs that resolved before still resolve, because a linking config
       // maps a route NAME to a path, and the name is all that changed.
-      Settings: 'settings',
       Equalizer: 'settings/equalizer',
       About: 'settings/about',
       AudioSettings: 'settings/audio',

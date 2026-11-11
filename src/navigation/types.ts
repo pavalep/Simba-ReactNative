@@ -22,8 +22,12 @@ export type RootStackParamList = {
   //     `?.` made a missing parent a silent no-op.
   // The app has no tabs and exactly one stack, so the settings screens are
   // siblings of every other screen. The deep-link PATHS are unchanged
-  // (`settings`, `settings/privacy`, …) — see navigation/linking.ts.
-  Settings: undefined;
+  // (`settings/privacy`, …) — see navigation/linking.ts.
+  //
+  // There is no "Settings" ROUTE any more: the preferences were merged
+  // into the Profile on 2026-11-11 (`md/PROFILE_SETTINGS_MERGE.md`). The
+  // `simbaplayer://settings` URL still resolves — it is an ALIAS of the
+  // Profile's path, not a route of its own.
   About: undefined;
   AudioSettings: undefined;
   Equalizer: undefined;
@@ -179,7 +183,9 @@ export type DownloadsScreenProps = RootStackScreenProps<'Downloads'>;
 // These used to be typed as `CompositeScreenProps<SettingsStack…, RootStack…>`
 // so they could reach the root navigator from inside the nested one. They are
 // root routes now, so the composite is gone: one navigator, one props type.
-export type SettingsScreenProps = RootStackScreenProps<'Settings'>;
+//
+// There is no `SettingsScreenProps` any more: the Settings screen was
+// merged into the Profile on 2026-11-11 (`md/PROFILE_SETTINGS_MERGE.md`).
 export type AboutScreenProps = RootStackScreenProps<'About'>;
 export type AudioSettingsScreenProps = RootStackScreenProps<'AudioSettings'>;
 export type EqualizerScreenProps = RootStackScreenProps<'Equalizer'>;

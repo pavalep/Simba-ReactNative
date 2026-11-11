@@ -2,6 +2,7 @@ import React, {useState, useEffect, useMemo, useCallback} from 'react';
 import {
   View,
   FlatList,
+  Linking,
   TouchableOpacity,
   StyleSheet,
   RefreshControl,
@@ -139,7 +140,7 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
         message.includes('access denied');
       setError(
         permissionDenied
-          ? 'Storage permission is required to browse this folder. Open Settings to review access, then retry.'
+          ? 'Storage permission is required to browse this folder. Open the system Settings to review access, then retry.'
           : err.message || 'Unable to read directory',
       );
       setItems([]);
@@ -217,12 +218,19 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
         action: error.toLowerCase().includes('permission')
           ? {
               label: 'Settings',
-              onPress: () => navigation.navigate('Settings'),
+              // A storage permission is granted in the OPERATING SYSTEM's
+              // settings, not in the app's own preferences. The action used
+              // to open Simba's Settings page, which could not grant
+              // anything; it now opens the OS app settings
+              // (`Linking.openSettings()`).
+              onPress: () => {
+                Linking.openSettings().catch(() => {});
+              },
             }
           : {label: 'Retry', onPress: () => readDirectory(currentPath)},
       });
     }
-  }, [error, currentPath, navigation, readDirectory, toast]);
+  }, [error, currentPath, readDirectory, toast]);
 
   // ── Multi-select handlers ─────────────────────
 
