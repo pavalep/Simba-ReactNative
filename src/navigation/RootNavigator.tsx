@@ -1,7 +1,7 @@
 import React, {useEffect, useState} from 'react';
 import {View, StyleSheet} from 'react-native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
-import {useAuthStore, useSettingsStore} from '../state';
+import {useAuthStore} from '../state';
 import {
   RootStackParamList,
   SettingsScreenProps,
@@ -19,7 +19,6 @@ import {
 } from './types';
 import HomeScreen from '../screens/Home';
 import {LibraryScreen} from '../features/library/presentation/screens/Library';
-import {SplashScreen} from '../screens/Splash';
 import {LoginScreen} from '../screens/Login';
 import {BookmarksScreen} from '../screens/Bookmarks';
 import {ProfileScreen} from '../screens/Profile';
@@ -167,15 +166,19 @@ const HelpRender = (props: HelpScreenProps) => (
 // ─── Direct authenticated destinations ─────────────────────────────
 
 export const RootNavigator: React.FC = () => {
-  const hasLaunched = useSettingsStore(state => state.hasLaunched);
   // V17 Phase 78: auth.isAuthenticated moved to `useAuthStore`.
   const isAuthenticated = useAuthStore(s => s.isAuthenticated);
 
-  const initialRoute = !hasLaunched
-    ? 'Splash'
-    : !isAuthenticated
-    ? 'Login'
-    : 'Home';
+  // There is NO JS splash screen. The app's splash is the native
+  // `SplashActivity` (the launch theme's `windowSplashScreen*` attributes on
+  // Android 12+, and `activity_splash.xml` before it) — it is the first thing
+  // the user sees, on every cold start, before the bundle is even up.
+  //
+  // What used to live here — a JS `Splash` route that ran while
+  // `hasLaunched` was false — was removed on 2026-11-11: it was a second
+  // splash, with a second set of rings, in a different typeface from the
+  // native one. One splash, one surface, one owner: the native one.
+  const initialRoute = !isAuthenticated ? 'Login' : 'Home';
 
   return (
     <View style={styles.wrapper}>
@@ -190,7 +193,6 @@ export const RootNavigator: React.FC = () => {
           headerShown: false,
           animation: 'fade',
         }}>
-      <Stack.Screen name="Splash" component={SplashScreen} />
       <Stack.Screen
         name="Login"
         component={LoginScreen}

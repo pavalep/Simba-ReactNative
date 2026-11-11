@@ -1,7 +1,9 @@
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 
 export type RootStackParamList = {
-  Splash: undefined;
+  // There is no JS `Splash` route: the app's splash is the native
+  // `SplashActivity`, which runs before the bundle mounts. See
+  // `RootNavigator.tsx`.
   Login: undefined;
   Home: undefined;
   Library: undefined;

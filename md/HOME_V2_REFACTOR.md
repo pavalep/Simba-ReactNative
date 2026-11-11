@@ -1888,6 +1888,13 @@ appears on a first run). Recorded as F-14 below.
 
 ## §13 — The JS Splash showed an empty page (2026-11-10)
 
+> **This section measures a screen that no longer exists.** The JS Splash was
+> removed on 2026-11-11 — the native `SplashActivity` is the app's only
+> splash. §15 has the decision and what replaced this. The measurements
+> below are kept as the record of what the JS Splash did and why the lockup
+> owner (`LOCKUP_TAGLINE`) matters, but nothing here describes the app as it
+> stands.
+
 The Splash is the app's first screen. It was carrying a tagline that did not
 fit, and — underneath that — a lockup that was **never drawn at all**. Both
 were measured on the device, and both are fixed.
@@ -2099,6 +2106,163 @@ as **F-17**.
 | — | B-019 (the Argent update — **consent outstanding, do it LAST**) |
 | — | The seeded-data device proofs (F-065 ×2) |
 | — | The seeded-data device proofs (F-066) |
+| — | The 2026-11-03 native crash |
+| — | `graphify-out/` |
+| — | The API 24–30 PiP path |
+| — | NO-JANK |
+| — | B-018 |
+| — | The v7 doc rename banners |
+| — | iOS verification |
+| — | The dark-theme variants for the remaining screens |
+| — | The optional `Allura.ttf` upload to Penpot |
+| — | The page-by-page loop for the remaining ~48 screens (one at a time, not all at once) |
+
+## §15 — The JS Splash is gone; the native splash is the splash (2026-11-11)
+
+The app had **two** splashes. The native `SplashActivity` — the one the
+launcher starts on every cold start — and a JS `Splash` screen that ran after
+the bundle mounted, on the first launch after install. Two surfaces, two sets
+of rings, and the name set in two different faces.
+
+It was found in the design: the `Splash / dark` board carried the JS lockup
+with its two circles. The JS splash is not a screen the app should have, so
+it is gone.
+
+### What was removed
+
+| what | where |
+|---|---|
+| the screen | `src/screens/Splash/` — `index.tsx`, `components/SplashScreen.tsx`, `types/index.ts` |
+| the route | `RootNavigator.tsx` — the `'Splash'` screen and the `!hasLaunched` branch of `initialRoute` |
+| the route type | `navigation/types.ts` — `Splash: undefined` |
+| the deep link | `navigation/linking.ts` — `Splash: 'splash'` |
+| the flag | `state/settingsStore.ts` — `hasLaunched` and `markLaunched()` |
+
+`hasLaunched` only ever decided whether the JS splash was the initial route.
+With the screen gone nothing reads it, so it is gone with it — and a `merge`
+on the store drops the stale key out of installs that still carry it.
+
+#### The merge was not enough on its own
+
+A `merge` fixes the **in-memory** state. zustand v5 does **not** write the
+merged state back to storage on rehydrate: `hydrate()` calls
+`set(mergedState, true)` — the raw store `set`, not the persisted
+`api.setState` — and only a `migrate` triggers a write-back, and a `migrate`
+fires solely on a version mismatch. So the dead key would have sat in the
+persisted blob until some unrelated write happened to rewrite it.
+
+`CURRENT_PERSIST_VERSION` is shared by every store, and a store whose version
+no longer matches without a `migrate` refuses to hydrate at all — so the
+shared constant was **not** bumped. Instead the store forces exactly one
+write when the merge actually shed the key:
+
+```ts
+merge: (persisted, current) => {
+  const {hasLaunched: _dropped, ...rest} = (persisted ?? {});
+  staleLaunchFlagOnDisk = _dropped !== undefined;
+  return {...current, ...rest};
+},
+onRehydrateStorage: () => () => {
+  if (!staleLaunchFlagOnDisk) return;
+  staleLaunchFlagOnDisk = false;
+  useSettingsStore.setState({});   // goes through zustand's own write path
+},
+```
+
+`__tests__/state/settingsStore.test.ts` covers the four cases: the key is
+gone from the state, the blob is rewritten without it, a clean blob is left
+untouched (no write on every launch), and the next launch does not rewrite
+it again.
+
+The initial route is now the login or the home, by the one fact that still
+matters:
+
+```ts
+const initialRoute = !isAuthenticated ? 'Login' : 'Home';
+```
+
+The Login's **orb** stays: the soft pulsing gold disc behind the lockup is
+the Login's own treatment, and it was confirmed as intended.
+
+### What the native splash actually draws
+
+`activity_splash.xml`, measured on the device on a dark cold start:
+
+| what | the layout | measured |
+|---|---|---|
+| the page | `@color/splash_background` — `#F5F0E8` / `#0A0A0C` | `#0a0a0c` |
+| the glow | a 220 × 220 dp radial gold gradient, alpha 0.4 → 0.7 | a 2–3% wash: `#0a0a0c` → `#11100e` inside it, `#f5f0e8` → `#f3ede2` in the light theme |
+| the lion | 96 × 96 dp, `@color/splash_ink` | `#b27340` |
+| the loading ring | a 180 × 180 dp box holding a rotating ring shape | the visible band is **125.6 dp across and 6.5 dp thick** |
+| the wordmark | a plain `TextView`: "Simba", 14sp, letter spacing 0.15, `@color/splash_wordmark` | `#c9a84c`, its ink at y 573.5–584.2 dp |
+
+The ring's band is not readable off the XML — `splash_ring_shape` puts it at
+a fraction of the ImageView's box — so it was measured.
+
+### The device proof
+
+A cold start on a signed-out install, captured frame by frame (200 frames,
+1080 × 2400 @ 420 dpi = 2.625 px/dp), classified against the known
+signatures:
+
+| frames | what | how it was told apart |
+|---|---|---|
+| f1–f7 | the **Android 12+ system splash** | the page is `#0a0a0c` and the only ink is the launcher icon, 106 dp wide at y 393–521 dp |
+| f8–f9 | the **native `SplashActivity`** | the lion is 96 dp at y 388–430 dp, and the gold wordmark's ink is at y 574–585 dp — 46 dp wide |
+| f10–f40 | the RN dev loading screen | the page is `#303030` |
+| f41–f200 | the **Login** | the orb, the lockup, the Google button |
+
+**No frame shows a JS splash.** The JS splash's progress ring was drawn in
+gold (`accent.gold`), and gold pixels appear in exactly two frames — f8 and
+f9 — at the native wordmark's own position and size. The pulse ring and the
+203 dp progress ring never appear. The signed-out cold start goes native
+splash → Login with no lockup and no progress ring between them.
+
+The signed-in cold start goes native splash → **Home**, the same way.
+
+#### Reading an MMKV file is not reading a value
+
+MMKV is append-only. A `set` appends a new copy of the value; the file keeps
+the old one. So a raw scan of `files/mmkv/simba` finds the **first** copy —
+the stale one. The live value is the **last** copy in the file.
+
+Reading the file the naive way showed `hasLaunched` still in the blob and
+nearly produced a false "the fix did not work". The file, read copy by copy:
+
+```
+=== "settings" — 2 copies
+  #1 at byte      9  version=2  keys=37  hasLaunched=true
+  #2 at byte  14121  version=2  keys=36  hasLaunched=false   <== LIVE VALUE (last copy)
+```
+
+Two copies, not three: the write happened once, on the launch that found the
+key, and not again. The file's **size** cannot show this either — MMKV
+pre-allocates in pages, so appending a small value does not grow it.
+
+`designs/penpot/splash.js` now draws the **native** splash, from the layout
+and the measurements above, and the `Splash / light|dark` boards carry it.
+The connector's delay moved from 1200 ms to **1500 ms** — the native
+splash's own hold (`SplashActivity.kt`'s `splashDuration = 1500L`).
+
+### Carried forward
+
+| # | Item |
+|---|---|
+| F-10 | The `HomeSection` `SHELF` arm's `items: any[]` type hole |
+| F-13 | The app's in-settings theme toggle cycles Dark → Light → System; the phone's setting is the source of truth, so the toggle's "System" position is the one that matters |
+| F-15 | The Penpot plugin's recovery: the MCP button in the toolbar starts the plugin tab, and a closed tab needs the app restarted and the file reopened by hand. A note in `designs/README.md` would save the next person the search. |
+| F-17 | **Restated (§15).** The native splash's plain "Simba" (the system face, 46.5 dp wide) against the Login's script "Simba" (Allura, 107.3 dp wide), 1.5 s apart on a first run. The native one is a deliberate v7 choice, so this is a decision to take, not a bug to patch blind. |
+| — | The 75-site weight-intent sweep (`600` → `FONT_FAMILY.inter.semibold`, `500` → `FONT_FAMILY.inter.medium`) |
+| — | Device proof still un-measured: the empty library / "first run" board |
+| — | Device proof still un-measured: a pinned playlist |
+| — | Device proof still un-measured: a bookmark |
+| — | Device proof still un-measured: the long-press menu |
+| — | The Penpot Play hand walk (still API-verified only) |
+| — | B-050 (the lib's PiP chrome) |
+| — | B-019 (the Argent update — **consent outstanding, do it LAST**) |
+| — | Seeded-data device proof F-065 (×1) |
+| — | Seeded-data device proof F-065 (×2) |
+| — | Seeded-data device proof F-066 |
 | — | The 2026-11-03 native crash |
 | — | `graphify-out/` |
 | — | The API 24–30 PiP path |

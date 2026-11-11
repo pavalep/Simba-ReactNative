@@ -4,10 +4,10 @@
  *
  * ## Why this is pinned
  *
- * The Splash and the Login draw the same brand lockup: the lion, the
- * wordmark "Simba", and the tagline "Your media, your way". The tagline
- * was the one part of that lockup each screen owned for itself — and the
- * Splash's copy did not fit on the screen.
+ * The Login draws the brand lockup: the lion, the wordmark "Simba", and
+ * the tagline "Your media, your way". The tagline was the one part of that
+ * lockup each screen owned for itself — and the JS Splash's copy did not
+ * fit on the screen.
  *
  * Measured on the real font file — the advance widths Android lays the
  * line out from, not an estimate:
@@ -18,6 +18,11 @@
  * so the Splash's tagline wrapped onto two lines inside the lockup. The
  * Login's copy — Cormorant Garamond Italic 22/28 — measures 182.8 dp:
  * one line, and quiet enough to sit under the name.
+ *
+ * The JS Splash screen itself was removed on 2026-11-11 — the native
+ * `SplashActivity` is the app's splash. These tests stay: the point they
+ * pin is that the tagline's type has ONE owner, so the next screen that
+ * draws a lockup cannot quietly give itself a different face.
  *
  * The rules these tests pin:
  *
@@ -211,9 +216,10 @@ describe('the lockup tagline', () => {
   });
 
   it('pins the defect it replaced — the bold display face did not fit', () => {
-    // The Splash set the tagline in the `displaySerif` token: Cormorant
+    // The JS Splash set the tagline in the `displaySerif` token: Cormorant
     // Garamond Bold at 48/56. Measured, that line is 414.6 dp against
-    // 347 dp of usable width on a 411 dp screen — two lines.
+    // 347 dp of usable width on a 411 dp screen — two lines. The Login
+    // must never ask for that face.
     const bold = textWidth(
       join(FONT_DIR, 'Cormorant Garamond_bold.ttf'),
       BRAND.tagline,

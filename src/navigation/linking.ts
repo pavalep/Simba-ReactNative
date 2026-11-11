@@ -48,7 +48,6 @@ export const linking: LinkingOptions<RootStackParamList> = {
   config: {
     initialRouteName: 'Home',
     screens: {
-      Splash: 'splash',
       Login: 'login',
       Profile: 'profile',
       History: 'history',

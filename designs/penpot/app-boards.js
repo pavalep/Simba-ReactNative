@@ -43,6 +43,8 @@ const {SCREEN_W, SCREEN_H} = require('./kit');
  */
 const ROUTES = [
   // ── Auth ──
+  // The native splash — the `SplashActivity` the launcher starts, not
+  // a JS route.
   {route: 'Splash', title: 'Splash', group: 'Sign in'},
   {route: 'Login', title: 'Login', group: 'Sign in'},
 
@@ -131,7 +133,9 @@ const ROUTES = [
  */
 const EDGES = [
   // ── Auth ──
-  {from: 'Splash', to: 'Login', trigger: 'after-delay', delay: 1200, label: 'auto → Login'},
+  // The native splash holds for 1.5 s (`SplashActivity.kt`'s
+  // `splashDuration = 1500L`) and then hands over to the RN app.
+  {from: 'Splash', to: 'Login', trigger: 'after-delay', delay: 1500, label: 'auto → Login'},
   {
     from: 'Login',
     to: 'Home',

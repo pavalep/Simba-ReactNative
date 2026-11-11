@@ -208,9 +208,12 @@ for (const route of ROUTES) {
 
 // Splash — the app's entry point, and the board the flow starts on.
 //
-// It is DRAWN, not a placeholder. The animated JS splash is the app's
-// first screen, so a placeholder there means the walk opens on a page
-// that says "not designed yet" — the opposite of what the app shows.
+// It is DRAWN, not a placeholder. The splash is what the user sees first
+// on every cold start, so a placeholder there means the walk opens on a
+// page that says "not designed yet" — the opposite of what the app shows.
+//
+// It is the NATIVE splash — the `SplashActivity` the launcher starts. The
+// JS splash screen that used to hold this board was removed on 2026-11-11.
 //
 // Both themes: the dark one is the same drawing in the other palette.
 // The geometry comes from `designs/penpot/splash.js`, which reads the
@@ -245,8 +248,11 @@ function link(from, to, trigger, extra = {}) {
 }
 
 // The auth flow: Splash → Login → Home.
+//
+// The delay is the native splash's own hold — `SplashActivity.kt`'s
+// `splashDuration = 1500L`.
 link(boardName('Splash', 'light'), LOGIN_REST, 'after-delay', {
-  delay: 1200,
+  delay: 1500,
   label: 'auto → Login',
 });
 link(LOGIN_REST, boardName('Home', 'light'), 'click', {

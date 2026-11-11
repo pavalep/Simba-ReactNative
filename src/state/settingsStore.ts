@@ -62,7 +62,12 @@ export interface SettingsState {
   mpvOptions: MpvOption[];
 
   // App lifecycle
-  hasLaunched: boolean;
+  //
+  // `hasLaunched` used to live here: it gated a JS `Splash` route that ran
+  // on the first launch after install. That screen is gone (2026-11-11) —
+  // the app's splash is the native `SplashActivity`, which needs no flag —
+  // so the field is gone with it. The `merge` below drops the stale key out
+  // of installs that still have it persisted.
 
   // Accessibility & misc (Phase 46)
   largerControls: boolean;
@@ -130,8 +135,6 @@ export interface SettingsActions {
 
   setMpvOptions: (options: MpvOption[]) => void;
 
-  markLaunched: () => void;
-
   setLargerControls: (on: boolean) => void;
   setHighContrastSubtitles: (on: boolean) => void;
   setScanOnLaunch: (on: boolean) => void;
@@ -181,8 +184,6 @@ const initialState: SettingsState = {
 
   mpvOptions: [],
 
-  hasLaunched: false,
-
   largerControls: false,
   highContrastSubtitles: false,
   scanOnLaunch: false,
@@ -215,6 +216,21 @@ function upsertLinkedFolder(
     },
   ];
 }
+
+/**
+ * True when the last rehydrate found a stale `hasLaunched` in the persisted
+ * blob, and the store has not yet written the shed state back.
+ *
+ * zustand v5 does NOT write the merged state back to storage on rehydrate.
+ * `hydrate()` calls `set(mergedState, true)` — the raw store `set`, not the
+ * persisted `api.setState` — and only a `migrate` triggers a write-back, and
+ * a `migrate` fires solely on a version mismatch. The `merge` below therefore
+ * fixes the IN-MEMORY state, but the dead key would sit in the on-disk blob
+ * until some unrelated write happened to rewrite it. This flag lets the
+ * rehydrate callback force exactly one write, so an install really does shed
+ * the key rather than merely ignoring it.
+ */
+let staleLaunchFlagOnDisk = false;
 
 export const useSettingsStore = create<SettingsState & SettingsActions>()(
   persist(
@@ -318,8 +334,6 @@ export const useSettingsStore = create<SettingsState & SettingsActions>()(
 
       setMpvOptions: (mpvOptions) => set({mpvOptions}),
 
-      markLaunched: () => set({hasLaunched: true}),
-
       setLargerControls: (largerControls) => set({largerControls}),
       setHighContrastSubtitles: (highContrastSubtitles) =>
         set({highContrastSubtitles}),
@@ -339,6 +353,33 @@ export const useSettingsStore = create<SettingsState & SettingsActions>()(
       name: 'settings',
       version: CURRENT_PERSIST_VERSION,
       storage: createJSONStorage(() => sharedMMKVStorage),
+      /**
+       * `hasLaunched` was persisted by the versions that still had a JS
+       * splash screen. It is not part of the state any more, so it is
+       * dropped on the way in — an install that still carries it sheds it
+       * here rather than keeping a key nothing reads.
+       */
+      merge: (persisted, current) => {
+        const {hasLaunched: _dropped, ...rest} = (persisted ?? {}) as Partial<SettingsState> & {
+          hasLaunched?: boolean;
+        };
+        staleLaunchFlagOnDisk = _dropped !== undefined;
+        return {...current, ...rest};
+      },
+      /**
+       * Force one write when the merge shed a stale `hasLaunched`, so the
+       * dead key leaves the persisted blob too — see the note on
+       * `staleLaunchFlagOnDisk`. The write carries the merged state (the key
+       * is already gone from it) and the flag is cleared, so this happens
+       * once, on the launch that finds the key, and not on every launch.
+       */
+      onRehydrateStorage: () => () => {
+        if (!staleLaunchFlagOnDisk) {
+          return;
+        }
+        staleLaunchFlagOnDisk = false;
+        useSettingsStore.setState({});
+      },
     },
   ),
 );
