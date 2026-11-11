@@ -523,6 +523,24 @@ FollowedPodcasts / light    6 shapes   4 text   0 gfx    411x914
 
 The geometry was checked too, not just the names: on `Profile / light` the back button sits at board x + 8, the rules at x + 0, the row labels at x + 16, the chevrons at x + 381 and the counts right-aligned to x + 373 — which is the 16 dp gutter the app's own `SettingsRow` uses.
 
+### 10.4.1 The connectors were resolved, not just counted
+
+A connector count proves that links *were attempted*; it does not prove they point at the right board. Every interaction on `Profile / light` was therefore resolved to its target board by reading `action.destination.id` and mapping the id back through the live board list:
+
+```
+Profile right glyph              ->  Settings / light
+Profile Playlists label          ->  AllPlaylistsScreen / light
+Profile Bookmarks label          ->  Bookmarks / light
+Profile History label            ->  History / light
+Profile Downloads label          ->  Downloads / light
+Profile Followed Podcasts label  ->  FollowedPodcasts / light
+Profile Local Media label        ->  Library / light
+Profile Stats label              ->  Stats / light
+Profile Sign out label           ->  Login / light — orb rest
+```
+
+**`Followed Podcasts` → `FollowedPodcasts / light`** is the one the first links pass reported as skipped (§10.3); it is now confirmed live. The page holds **67 boards**, **376 connectors** across **14 boards**, and one flow — **`SIMBA app`, starting at `Splash / light`**.
+
 ### 10.5 A new gate
 
 The registry drift (§7.4) was a **silent** failure: a connector was simply skipped and the run still reported success. So the check is now a gate:
