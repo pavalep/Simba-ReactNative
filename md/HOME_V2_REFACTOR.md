@@ -2244,6 +2244,21 @@ and the measurements above, and the `Splash / light|dark` boards carry it.
 The connector's delay moved from 1200 ms to **1500 ms** — the native
 splash's own hold (`SplashActivity.kt`'s `splashDuration = 1500L`).
 
+The **live** board was read back through the plugin, not just the local plan:
+
+```
+board: Splash / dark — 4 shapes, 1 stroked
+  ellipse    Splash glow          220x220   #c9a84c at 4% opacity
+  ellipse    Splash loading ring  126x126   stroke #b27340, 6.5 dp
+  rectangle  Splash lion           96x96     image fill
+  text       Splash wordmark       42x17     #c9a84c
+```
+
+**One stroked shape — one circle.** The two the JS splash drew (the pulse
+ring and the 203 dp progress ring) are gone from the board. The `Splash /
+light` board carries the same four shapes, and the `Splash / light` → `Login /
+light — orb rest` connector is an `after-delay` with a 1500 ms delay.
+
 ### Carried forward
 
 | # | Item |
