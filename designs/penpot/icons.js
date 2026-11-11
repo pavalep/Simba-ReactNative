@@ -140,6 +140,33 @@ const ICONS = [
   { name: 'video', file: 'ui_video.svg', size: 12, light: 'onMedia', dark: 'onMedia' },
   { name: 'play', file: 'ic_play.svg', size: 24, light: '#1A1A1C', dark: '#0A0A0C' },
   { name: 'headphones', file: 'ic_headphones.svg', size: 36, light: 'gold', dark: 'gold' },
+
+  // ── The RC1 internal-page glyphs (2026-11-11) ─────────────────────────
+  //
+  // The About page's link list is drawn again on the RC1 boards, and the
+  // list it replaces gave THREE rows the same `settings` gear and TWO rows
+  // the same `music` note. A row whose glyph says nothing is a row the user
+  // has to read to understand — which is the opposite of a glyph's job.
+  //
+  // Every glyph below is the APP'S OWN file (`src/assets/svg/`), listed in
+  // `SvgIcon.tsx`'s icon map. Nothing here is a new drawing.
+  //
+  // The back chevron: the app's `BackButton.tsx` draws `chevronRight`
+  // rotated 180° — Penpot's plan vocabulary has no rotation, so the app's
+  // OWN `ic_chevron_left.svg` is used at the BackButton's 20 px.
+  { name: 'chevronLeft', file: 'ic_chevron_left.svg', size: 20, light: 'ink', dark: 'ink' },
+  { name: 'history', file: 'ic_history.svg', size: 18, light: 'gold', dark: 'gold' },
+  { name: 'award', file: 'ic_award.svg', size: 18, light: 'gold', dark: 'gold' },
+  { name: 'book', file: 'ic_book.svg', size: 18, light: 'gold', dark: 'gold' },
+  { name: 'lock', file: 'ic_lock.svg', size: 18, light: 'gold', dark: 'gold' },
+  { name: 'info', file: 'ic_info.svg', size: 18, light: 'gold', dark: 'gold' },
+  { name: 'trophy', file: 'ic_trophy.svg', size: 18, light: 'gold', dark: 'gold' },
+  { name: 'share', file: 'ic_share.svg', size: 18, light: 'gold', dark: 'gold' },
+  { name: 'alertCircle', file: 'ic_alert_circle.svg', size: 18, light: 'gold', dark: 'gold' },
+  { name: 'megaphone', file: 'ic_megaphone.svg', size: 18, light: 'gold', dark: 'gold' },
+  // The gear in the Profile header — the ONE door to Settings on the
+  // account page (`ui_settings.svg`, the app's own settings glyph).
+  { name: 'settings', file: 'ui_settings.svg', size: 18, light: 'gold', dark: 'gold' },
 ];
 
 function resolveColor(spec, theme) {

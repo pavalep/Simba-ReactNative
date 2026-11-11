@@ -83,6 +83,16 @@ const ROUTES = [
   {route: 'GenreScreen', title: 'Genre', group: 'Your library'},
   {route: 'ArtistDetail', title: 'Artist', group: 'Your library'},
   {route: 'AlbumDetail', title: 'Album', group: 'Your library'},
+  // "My Podcasts" — the feeds the user FOLLOWS.
+  //
+  // This board was missing until 2026-11-11. The app's Home rail has pointed
+  // at `FollowedPodcasts` since the rail's own comment says so
+  // (`src/screens/Home/index.tsx:71-80`), but the prototype's registry had
+  // never heard of the route, so the prototype's "See all Followed Podcasts"
+  // connector pointed at the CATALOGUE — the very page the app's comment
+  // says cannot answer the question. The route exists
+  // (`src/navigation/types.ts:88-96`); the registry had simply drifted.
+  {route: 'FollowedPodcasts', title: 'Followed Podcasts', group: 'Your library'},
 
   // ── The catalogue ──
   {route: 'MoviesScreen', title: 'Movies', group: 'Browse'},
@@ -168,7 +178,7 @@ const EDGES = [
   {from: 'Home', to: 'History', trigger: 'click', shape: 'Recently Played See All', label: 'See all Recently Played'},
   {from: 'Home', to: 'AllPlaylistsScreen', trigger: 'click', shape: 'Pinned Playlists See All', label: 'See all Pinned Playlists'},
   {from: 'Home', to: 'Bookmarks', trigger: 'click', shape: 'Bookmarks See All', label: 'See all Bookmarks'},
-  {from: 'Home', to: 'PodcastsScreen', trigger: 'click', shape: 'Followed Podcasts See All', label: 'See all Followed Podcasts'},
+  {from: 'Home', to: 'FollowedPodcasts', trigger: 'click', shape: 'Followed Podcasts See All', label: 'See all Followed Podcasts'},
   {from: 'Home', to: 'PodcastDetail', trigger: 'click', shape: 'Followed podcast card 1 artwork', family: 'Followed podcast card 1', label: 'podcast'},
   {from: 'Home', to: 'GenreScreen', trigger: 'click', shape: 'Genre Jazz bg', family: 'Genre Jazz', label: 'genre'},
   {from: 'Home', to: 'PlaylistDetail', trigger: 'click', shape: 'Pinned playlist tile 1 cover', family: 'Pinned playlist tile 1', label: 'playlist'},
@@ -196,42 +206,59 @@ const EDGES = [
   {from: 'Library', to: 'FolderLinkingWizard', trigger: 'click', shape: 'Link Folder', label: 'Link Folder'},
 
   // ── Profile ──
-  {from: 'Profile', to: 'History', trigger: 'click', shape: 'Profile History', label: 'History'},
-  {from: 'Profile', to: 'Stats', trigger: 'click', shape: 'Profile Stats', label: 'Stats'},
-  {from: 'Profile', to: 'Bookmarks', trigger: 'click', shape: 'Profile Bookmarks', label: 'Bookmarks'},
-  {from: 'Profile', to: 'AllPlaylistsScreen', trigger: 'click', shape: 'Profile Playlists', label: 'Playlists'},
-  {from: 'Profile', to: 'PodcastsScreen', trigger: 'click', shape: 'Profile Followed Podcasts', label: 'Followed Podcasts'},
-  {from: 'Profile', to: 'Downloads', trigger: 'click', shape: 'Profile Downloads', label: 'Downloads'},
-  {from: 'Profile', to: 'LinkedFolders', trigger: 'click', shape: 'Profile Local Media', label: 'Local Media'},
-  {from: 'Profile', to: 'Settings', trigger: 'click', shape: 'Profile Settings', label: 'Settings'},
-  {from: 'Profile', to: 'Login', trigger: 'click', shape: 'Profile Sign out', label: 'Sign out'},
+  //
+  // The RC1 Profile board (md/PROFILE_RC1_REFACTOR.md §9.2). The rows are
+  // the user's own things, and the counts ride on the rows as trailing text.
+  //
+  // TWO EDGES CHANGED on 2026-11-11, both because the old edge pointed at
+  // the wrong screen:
+  //
+  //   • "Followed podcasts" went to `PodcastsScreen` — the CATALOGUE, a
+  //     category filter and a search box over the Podcast Index. The app
+  //     has its own page for the feeds the user follows
+  //     (`src/navigation/types.ts:88-96`), and Home's rail already points
+  //     there. The Profile now points there too.
+  //   • "Local files" went to `LinkedFolders` (the manage-folders page).
+  //     Home's Local Files card goes to `Library`, which IS the device
+  //     library; the Profile's row says the same thing, so it goes to the
+  //     same place.
+  {from: 'Profile', to: 'History', trigger: 'click', shape: 'Profile History label', label: 'History'},
+  {from: 'Profile', to: 'Stats', trigger: 'click', shape: 'Profile Stats label', label: 'Playback statistics'},
+  {from: 'Profile', to: 'Bookmarks', trigger: 'click', shape: 'Profile Bookmarks label', label: 'Bookmarks'},
+  {from: 'Profile', to: 'AllPlaylistsScreen', trigger: 'click', shape: 'Profile Playlists label', label: 'Playlists'},
+  {from: 'Profile', to: 'FollowedPodcasts', trigger: 'click', shape: 'Profile Followed Podcasts label', label: 'Followed podcasts'},
+  {from: 'Profile', to: 'Downloads', trigger: 'click', shape: 'Profile Downloads label', label: 'Downloads'},
+  {from: 'Profile', to: 'Library', trigger: 'click', shape: 'Profile Local Media label', label: 'Local files'},
+  // The gear in the header — the ONE door to Settings on the account page,
+  // the way YouTube, Spotify, Apple Music, Plex and Tencent Video all do it.
+  {from: 'Profile', to: 'Settings', trigger: 'click', shape: 'Profile right glyph', label: 'Settings'},
+  {from: 'Profile', to: 'Login', trigger: 'click', shape: 'Profile Sign out label', label: 'Sign out'},
 
   // ── Settings ──
-  {from: 'Settings', to: 'MoviesScreen', trigger: 'click', shape: 'Settings Movies', label: 'Movies'},
-  {from: 'Settings', to: 'PodcastsScreen', trigger: 'click', shape: 'Settings Podcasts', label: 'Podcasts'},
-  {from: 'Settings', to: 'MusicScreen', trigger: 'click', shape: 'Settings Music', label: 'Music'},
-  {from: 'Settings', to: 'LiveTVScreen', trigger: 'click', shape: 'Settings Live TV', label: 'Live TV'},
-  {from: 'Settings', to: 'RadioScreen', trigger: 'click', shape: 'Settings Live Radio', label: 'Live Radio'},
-  {from: 'Settings', to: 'AudiobooksScreen', trigger: 'click', shape: 'Settings Audiobooks', label: 'Audiobooks'},
-  {from: 'Settings', to: 'ArchiveScreen', trigger: 'click', shape: 'Settings Archives', label: 'Archives'},
-  {from: 'Settings', to: 'AudioSettings', trigger: 'click', shape: 'Settings Audio Settings', label: 'Audio Settings'},
-  {from: 'Settings', to: 'About', trigger: 'click', shape: 'Settings About Simba', label: 'About Simba'},
-  {from: 'Settings', to: 'Credits', trigger: 'click', shape: 'Settings Credits', label: 'Credits'},
-  {from: 'Settings', to: 'Changelog', trigger: 'click', shape: 'Settings Changelog', label: 'Changelog'},
-  {from: 'Settings', to: 'Help', trigger: 'click', shape: 'Settings Help', label: 'Help'},
-  {from: 'Settings', to: 'Licenses', trigger: 'click', shape: 'Settings Licenses', label: 'Licenses'},
-  {from: 'Settings', to: 'LinkedFolders', trigger: 'click', shape: 'Settings Linked Folders', label: 'Linked Folders'},
-  {from: 'Settings', to: 'Profile', trigger: 'click', shape: 'Settings account card', label: 'View Profile'},
+  //
+  // The Discover section is GONE (decision D-C, 2026-11-11): all seven of
+  // its rows duplicated cards that already sit on Home's Explore Contents
+  // rail. The account card is gone too — it drew the Profile's identity
+  // block again, and tapping it opened the Profile.
+  {from: 'Settings', to: 'AudioSettings', trigger: 'click', shape: 'Settings Audio Settings label', label: 'Audio settings'},
+  {from: 'Settings', to: 'About', trigger: 'click', shape: 'Settings About Simba label', label: 'About Simba'},
+  {from: 'Settings', to: 'Credits', trigger: 'click', shape: 'Settings Credits label', label: 'Credits'},
+  {from: 'Settings', to: 'Changelog', trigger: 'click', shape: 'Settings Changelog label', label: 'Changelog'},
+  {from: 'Settings', to: 'Help', trigger: 'click', shape: 'Settings Help label', label: 'Help'},
+  {from: 'Settings', to: 'Licenses', trigger: 'click', shape: 'Settings Licenses label', label: 'Open source licences'},
+  {from: 'Settings', to: 'LinkedFolders', trigger: 'click', shape: 'Settings Linked Folders label', label: 'Linked folders'},
+  {from: 'Settings', to: 'Privacy', trigger: 'click', shape: 'Settings Privacy label', label: 'Privacy policy'},
+  {from: 'Settings', to: 'Terms', trigger: 'click', shape: 'Settings Terms label', label: 'Terms of use'},
 
   // ── The settings stack's own pages ──
   {from: 'AudioSettings', to: 'Equalizer', trigger: 'click', shape: 'Audio Settings Preset', label: 'Preset'},
   {from: 'LinkedFolders', to: 'FolderLinkingWizard', trigger: 'click', shape: 'Add Folder', label: 'Add Folder'},
   {from: 'FolderLinkingWizard', to: 'Library', trigger: 'click', shape: 'Go to Library', label: 'Go to Library'},
-  {from: 'About', to: 'Changelog', trigger: 'click', shape: 'About Changelog', label: 'Changelog'},
-  {from: 'About', to: 'Credits', trigger: 'click', shape: 'About Credits', label: 'Credits'},
-  {from: 'About', to: 'Licenses', trigger: 'click', shape: 'About Licenses', label: 'Open Source Licenses'},
-  {from: 'About', to: 'Privacy', trigger: 'click', shape: 'About Privacy', label: 'Privacy Policy'},
-  {from: 'About', to: 'Terms', trigger: 'click', shape: 'About Terms', label: 'Terms of Service'},
+  {from: 'About', to: 'Changelog', trigger: 'click', shape: 'About Changelog label', label: 'Changelog'},
+  {from: 'About', to: 'Credits', trigger: 'click', shape: 'About Credits label', label: 'Credits'},
+  {from: 'About', to: 'Licenses', trigger: 'click', shape: 'About Licenses label', label: 'Open source licences'},
+  {from: 'About', to: 'Privacy', trigger: 'click', shape: 'About Privacy label', label: 'Privacy policy'},
+  {from: 'About', to: 'Terms', trigger: 'click', shape: 'About Terms label', label: 'Terms of use'},
 
   // ── The Login screen's legal links ──
   {from: 'Login', to: 'Privacy', trigger: 'click', shape: 'Privacy Policy', label: 'Privacy Policy'},
@@ -372,7 +399,7 @@ const V2_EDGES = [
   {from: 'Home', to: 'History', trigger: 'click', shape: 'V2 Recently Played action', label: 'See all Recently Played'},
   {from: 'Home', to: 'AllPlaylistsScreen', trigger: 'click', shape: 'V2 Pinned Playlists action', label: 'See all Pinned Playlists'},
   {from: 'Home', to: 'Bookmarks', trigger: 'click', shape: 'V2 Bookmarks action', label: 'See all Bookmarks'},
-  {from: 'Home', to: 'PodcastsScreen', trigger: 'click', shape: 'V2 Followed Podcasts action', label: 'See all Followed Podcasts'},
+  {from: 'Home', to: 'FollowedPodcasts', trigger: 'click', shape: 'V2 Followed Podcasts action', label: 'See all Followed Podcasts'},
   {from: 'Home', to: 'PodcastDetail', trigger: 'click', shape: 'V2 Followed Podcasts card 1 artwork', family: 'V2 Followed Podcasts card 1', label: 'podcast'},
   {from: 'Home', to: 'PlaylistDetail', trigger: 'click', shape: 'V2 Pinned Playlists tile 1 cover', family: 'V2 Pinned Playlists tile 1', label: 'playlist'},
   // The Queue — the one edge the app does not make in one tap. See

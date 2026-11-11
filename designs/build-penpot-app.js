@@ -55,6 +55,15 @@ const {ROUTES, EDGES, V2_EDGES, placeholderBoard} = require('./penpot/app-boards
 const {homeBoard} = require('./penpot/home');
 const {homeV2Board} = require('./penpot/home-v2');
 const {splashBoard} = require('./penpot/splash');
+const {
+  profileBoard,
+  settingsBoard,
+  aboutBoard,
+  helpBoard,
+  legalBoard,
+  creditsBoard,
+  statsBoard,
+} = require('./penpot/profile');
 const {SCREEN_W, SCREEN_H} = require('./penpot/kit');
 
 const OUT = path.join(__dirname, '.build');
@@ -194,15 +203,50 @@ for (const theme of ['light', 'dark']) {
   });
 }
 
+// The RC1 account + internal pages — DRAWN, not placeholders.
+//
+// These eight screens are the ones the RC1 wave rebuilds: the Profile, the
+// Settings page, and the six internal pages that were broken or lying (the
+// About page's collapsed link list, the Help page's six answers to controls
+// that do not exist, the legal pages' hardcoded gold slab, the Credits page's
+// Redux claim). The drawing is `designs/penpot/profile.js`.
+//
+// BOTH themes for every one of them: the pages are a family, and a family
+// that only exists in the light theme is half a family.
+const RC1_PAGES = [
+  {route: 'Profile', draw: profileBoard},
+  {route: 'Settings', draw: settingsBoard},
+  {route: 'About', draw: aboutBoard},
+  {route: 'Help', draw: helpBoard},
+  {route: 'Privacy', draw: theme => legalBoard(theme, 'privacy')},
+  {route: 'Terms', draw: theme => legalBoard(theme, 'terms')},
+  {route: 'Credits', draw: creditsBoard},
+  {route: 'Stats', draw: statsBoard},
+];
+for (const page of RC1_PAGES) {
+  for (const theme of ['light', 'dark']) {
+    const drawn = page.draw(theme);
+    boards.push({
+      name: boardName(page.route, theme),
+      w: drawn.width,
+      h: drawn.height,
+      fill: (theme === 'dark' ? spec.darkColors : spec.colors).background.primary,
+      shapes: drawn.shapes,
+    });
+  }
+}
+
 // Every other route — a placeholder, in the light theme. The dark variants
 // of the other screens come with their own page pass.
 //
 // `Home` is skipped (it is drawn) and `Login` is skipped (the login pass
 // drew it as the two orb boards).
+const RC1_ROUTES = new Set(RC1_PAGES.map(p => p.route));
 for (const route of ROUTES) {
   if (route.route === 'Home') continue;
   if (route.route === 'Login') continue;
   if (route.route === 'Splash') continue;
+  if (RC1_ROUTES.has(route.route)) continue;
   addPlaceholder(route.route, 'light');
 }
 
@@ -241,6 +285,14 @@ const DESIGNED = new Set([
   boardName('Home', 'light'),
   boardName('Home', 'dark'),
 ]);
+
+// The RC1 account + internal pages are drawn, so their connectors point at
+// a SHAPE on the board rather than at the whole board.
+for (const page of RC1_PAGES) {
+  for (const theme of ['light', 'dark']) {
+    DESIGNED.add(boardName(page.route, theme));
+  }
+}
 
 /** A connector from one board to another. */
 function link(from, to, trigger, extra = {}) {
