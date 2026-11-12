@@ -172,7 +172,7 @@ export const LicensesScreen: React.FC<Props> = () => {
         colors={[colors.background.primary, colors.background.elevated]}
         style={StyleSheet.absoluteFill}
       />
-      <InternalHeader title="Open Source Licenses" titleVariant="displaySerif" />
+      <InternalHeader title="Open Source Licenses" />
       <Animated.View style={[styles.root, {opacity: fadeAnim}]}>
         <ScrollView
           style={styles.scroll}

@@ -105,12 +105,31 @@ export const SubsectionTitle: React.FC<SubsectionTitleProps> = React.memo(
     // rail titles, brand-cohesive with the wordmark. The
     // `displaySerif` AppText variant already sets the Cormorant
     // family, so we only need to override size + style.
+    //
+    // 2026-11-12: the weight is 400, NOT the token's 700.
+    //
+    // The Cormorant family ships three faces — regular, bold and
+    // italic — and the weight selects the file
+    // (`src/constants/fontFamily.ts`): 700 + italic asks for
+    // `Cormorant Garamond_bold_italic.ttf`, which DOES NOT SHIP.
+    // React Native then falls back silently, and the fallback is
+    // not the same face it measured with: the label was MEASURED
+    // with one typeface and DRAWN with another, so the drawn text
+    // was wider than its own box and the LAST CHARACTER was cut
+    // off — "Librar", "Accoun". It happened on every divider in
+    // the app (Home's "Your Library", the Profile's groups, the
+    // About page's "More").
+    //
+    // 400 + italic asks for `Cormorant Garamond_italic.ttf`, which
+    // ships, and is the same face the brand lockup's tagline uses
+    // (`src/constants/brand.ts`, `LOCKUP_TAGLINE`).
     const displaySerifOverride: TextStyle = {
       fontFamily: FONT_FAMILY.cormorant.italic,
+      fontWeight: '400',
       fontSize: 18,
       lineHeight: 24,
       fontStyle: 'italic',
-      letterSpacing: 0.3,
+      letterSpacing: 0,
     };
 
     return (

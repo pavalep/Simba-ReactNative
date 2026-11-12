@@ -7,6 +7,16 @@ import {AppText} from '../../core/AppText/AppText';
 interface SettingsRowProps {
   label: string;
   description?: string | React.ReactNode;
+  /**
+   * A glyph in front of the label — the About page's link rows.
+   *
+   * The About board draws its links as icon, label, chevron: an 18 dp
+   * gold glyph in the 16 dp gutter, then the label 12 dp after it
+   * (`designs/penpot/profile.js`, the `row()` helper). The Profile's
+   * rows carry no icon, so this is optional and nobody else uses it
+   * yet.
+   */
+  leading?: React.ReactNode;
   trailing?: React.ReactNode;
   onPress?: () => void;
   /**
@@ -33,6 +43,7 @@ export const SettingsRow: React.FC<SettingsRowProps> = React.memo<SettingsRowPro
   ({
     label,
     description,
+    leading,
     trailing,
     onPress,
     accessibilityLabel,
@@ -42,6 +53,7 @@ export const SettingsRow: React.FC<SettingsRowProps> = React.memo<SettingsRowPro
 
     const content = (
       <View style={[styles.root, {borderBottomColor: colors.border.subtle}]}>
+        {leading && <View style={styles.leading}>{leading}</View>}
         <View style={styles.textCol}>
           <AppText variant="body2" color={labelColor}>
             {label}
@@ -86,6 +98,9 @@ const styles = StyleSheet.create({
   },
   textCol: {
     flex: 1,
+    marginRight: spacing.md,
+  },
+  leading: {
     marginRight: spacing.md,
   },
   trailing: {

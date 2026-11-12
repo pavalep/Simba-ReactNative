@@ -1,13 +1,48 @@
-import React, {useMemo, useRef, useCallback, useEffect, useState} from 'react';
+// ────────────────────────────────────────────────────────────────
+// Simba Player — About Screen (RC1)
+//
+// The design this implements is the `About / light` and `About / dark`
+// boards in Penpot (page `SIMBA`), drawn by `designs/penpot/profile.js`.
+//
+// WHAT WAS WRONG HERE (2026-11-12)
+// ───────────────────────────────
+//
+// 1. **The link list was a column of unlabelled icons.** The list was
+//    a `FlatList` inside a `alignItems: 'center'` column, and each row
+//    declared `width: '100%'` — a circular constraint. The list had no
+//    width of its own, so it shrink-wrapped to its content; the label's
+//    `flex: 1` then resolved to zero and the row was 32 dp of icon.
+//    The rows are now the app's own `SettingsRow`: full width, icon,
+//    label, chevron.
+//
+// 2. **The version was a hard-coded lie.** The page said "Version
+//    1.0.0" while the Android build is `1.1.0 (2)`. The version comes
+//    from `src/constants/appVersion.ts` now, and a test checks that
+//    constant against `android/app/build.gradle`.
+//
+// 3. **"Built with" named Redux Toolkit.** The app has used Zustand
+//    and MMKV since V17 — `package.json` has no `redux` at all. The
+//    chips come from `src/constants/techStack.ts`, the same owner the
+//    Credits page reads.
+//
+// 4. **There were TWO resets.** The Profile carries "Reset preferences"
+//    and the About page carried a red "Reset all settings". The Profile
+//    owns the reset (`md/CONTENT_OWNERSHIP.md`), so the About page's
+//    is gone; the linked folders are unlinked from the Profile's own
+//    "Linked folders" page.
+//
+// See `md/ABOUT_PAGE_FIX.md`.
+// ────────────────────────────────────────────────────────────────
+
+import React, {useMemo, useRef, useCallback, useEffect} from 'react';
 import {
   View,
-  TouchableOpacity,
   StyleSheet,
   Image,
   Linking,
   Animated,
   Share,
-  FlatList,
+  ScrollView,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import {SafeAreaView} from 'react-native-safe-area-context';
@@ -17,14 +52,16 @@ import {useAccessibility} from '../../../hooks/useAccessibility';
 import {spacing, radius} from '../../../theme/tokens';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
-import {ConfirmDialog} from '../../../components/core/Dialog/ConfirmDialog';
+import {SettingsRow} from '../../../components/utility/SettingsRow/SettingsRow';
+import {SubsectionTitle} from '../../../components/utility/SubsectionTitle/SubsectionTitle';
 import {useAnimatedEntrance} from '../../../hooks/useAnimatedEntrance';
 import {AboutScreenProps} from '../types';
 import {svgPaths} from '../../../constants/svgPaths';
 import {SimbaStatusBar} from '../../../components/StatusBar';
 import {InternalHeader} from '../../../components/layout/InternalHeader/InternalHeader';
 import textContent from '../related/textContent';
-import {useSettingsStore} from '../../../state';
+import {APP_VERSION_LABEL} from '../../../constants/appVersion';
+import {BUILT_WITH_CHIPS} from '../../../constants/techStack';
 
 type Props = AboutScreenProps;
 
@@ -46,77 +83,119 @@ interface LinkItem {
    */
   route?: string;
   url?: string;
-  icon: 'listMusic' | 'list' | 'folder' | 'settings' | 'music' | 'video';
+  /**
+   * The row's glyph — the app's own icon set, one per row.
+   *
+   * These are the nine the About board draws (`designs/penpot/
+   * profile.js`, `aboutBoard`): a history clock for the changelog, an
+   * award for the credits, a book for the licences, a lock for the
+   * privacy policy, an info mark for the terms, a trophy for the store
+   * rating, a share glyph for the share row, an alert circle for the
+   * bug report and a megaphone for the contact row. Before this pass
+   * the list drew a music note for three different rows and a gear for
+   * three more — the icon said nothing.
+   */
+  icon:
+    | 'history'
+    | 'award'
+    | 'book'
+    | 'lock'
+    | 'info'
+    | 'trophy'
+    | 'share'
+    | 'alertCircle'
+    | 'megaphone';
 }
 
+/**
+ * The two rows that leave the app.
+ *
+ * Both URLs were WRONG until 2026-11-12 and were already recorded as
+ * defects in `md/PROFILE_RC1_REFACTOR.md` §7:
+ *
+ *   • the store link said `com.simbaplayer`, but the app's
+ *     `applicationId` is `com.simba.player` (`android/app/build.gradle`)
+ *     — so the row opened a different app's listing, or none;
+ *   • the bug report said `github.com/diegopvlk/Cine/issues`, which is
+ *     a different project entirely — the app's repo is
+ *     `pavalep/Simba-ReactNative`.
+ */
 const PLAY_STORE_URL =
-  'https://play.google.com/store/apps/details?id=com.simbaplayer';
-const GITHUB_ISSUES_URL = 'https://github.com/diegopvlk/Cine/issues';
+  'https://play.google.com/store/apps/details?id=com.simba.player';
+const GITHUB_ISSUES_URL = 'https://github.com/pavalep/Simba-ReactNative/issues';
 
 const LINK_ITEMS: LinkItem[] = [
   {
     label: textContent.changelog,
     action: 'navigate',
     route: 'Changelog',
-    icon: 'listMusic',
+    icon: 'history',
   },
   {
     label: textContent.credits,
     description: 'Contributors and libraries used',
     action: 'navigate',
     route: 'Credits',
-    icon: 'list',
+    icon: 'award',
   },
   {
     label: textContent.openSourceLicenses,
     action: 'navigate',
     route: 'Licenses',
-    icon: 'folder',
+    icon: 'book',
   },
   {
     label: textContent.privacyPolicy,
     // 51.2: in-app Privacy screen instead of an external URL
     action: 'navigate',
     route: 'Privacy',
-    icon: 'settings',
+    icon: 'lock',
   },
   {
     label: textContent.termsOfService,
     // 51.2: in-app Terms screen instead of an external URL
     action: 'navigate',
     route: 'Terms',
-    icon: 'settings',
+    icon: 'info',
   },
   {
     label: textContent.rateOnPlayStore,
     action: 'url',
     url: PLAY_STORE_URL,
-    icon: 'music',
+    icon: 'trophy',
   },
   {
     label: textContent.shareApp,
     description: 'Send Simba Player to a friend',
     action: 'share',
-    icon: 'music',
+    icon: 'share',
   },
   {
     label: textContent.reportBug,
     action: 'url',
     url: GITHUB_ISSUES_URL,
-    icon: 'video',
+    icon: 'alertCircle',
   },
   {
     label: textContent.contactFeedback,
     action: 'contact',
     url: 'mailto:support@simbaplayer.app?subject=Simba%20Player%20Feedback',
-    icon: 'settings',
+    icon: 'megaphone',
   },
 ];
 
-/** 25.2: tech stack shown in the "Built with" section. */
-const BUILT_WITH = ['React Native', 'TypeScript', 'MPV', 'Redux Toolkit'];
-
 const SHARE_MESSAGE = `Simba Player — your media, your way. Watch videos, listen to music, and build playlists with a gorgeous player. ${PLAY_STORE_URL}`;
+
+/**
+ * The chevron of a row that opens something.
+ *
+ * The app's own 14 px chevron, flush with the 16 dp gutter — the same
+ * one the Profile's rows carry.
+ */
+const Chevron: React.FC = () => {
+  const {colors} = useTheme();
+  return <SvgIcon name="chevronRight" size={14} color={colors.text.tertiary} />;
+};
 
 export const AboutScreen: React.FC<Props> = ({navigation}) => {
   const {colors, isDark} = useTheme();
@@ -124,7 +203,6 @@ export const AboutScreen: React.FC<Props> = ({navigation}) => {
   // The app's ONE bottom-chrome rule: the safe area, or the
   // mini-player dock if one is up, plus a spacing step.
   const bottomChromeInset = useBottomChromeInset();
-  const [resetVisible, setResetVisible] = useState(false);
 
   // ── Animations ───────────────────────────────────────────
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -163,14 +241,21 @@ export const AboutScreen: React.FC<Props> = ({navigation}) => {
         root: {
           flex: 1,
         },
-        content: {
+        scroll: {
           flex: 1,
+        },
+        // The lockup — the logo, the name, the tagline, the version.
+        // It is centered, and the rows below it are NOT: a row's
+        // hairline runs the full width of the screen and its label
+        // sits 16 dp in, which is the app's own row grammar.
+        lockup: {
           alignItems: 'center',
           paddingHorizontal: spacing.xl,
+          marginTop: spacing.lg,
         },
-        logoSection: {
+        lockupText: {
           alignItems: 'center',
-          marginTop: spacing.xl,
+          paddingHorizontal: spacing.xl,
         },
         logo: {
           width: 72,
@@ -179,24 +264,12 @@ export const AboutScreen: React.FC<Props> = ({navigation}) => {
         },
         appName: {
           marginTop: spacing.md,
-          marginBottom: spacing.xs,
         },
-        tagline: {
-          marginBottom: spacing.sm,
-        },
-        versionRow: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          marginBottom: spacing.md,
-        },
-        divider: {
-          width: '40%',
-          height: StyleSheet.hairlineWidth,
-          backgroundColor: colors.border.subtle,
-          marginVertical: spacing.md,
-        },
+        // The "Built with" card — the app's elevated surface, 16 dp
+        // in from each edge, with the chips wrapped inside it.
         builtWithCard: {
-          width: '100%',
+          marginHorizontal: spacing.lg,
+          marginTop: spacing.lg,
           flexDirection: 'row',
           flexWrap: 'wrap',
           justifyContent: 'center',
@@ -204,7 +277,6 @@ export const AboutScreen: React.FC<Props> = ({navigation}) => {
           backgroundColor: colors.background.elevated,
           borderRadius: radius.md,
           padding: spacing.md,
-          marginBottom: spacing.md,
         },
         techChip: {
           flexDirection: 'row',
@@ -214,38 +286,13 @@ export const AboutScreen: React.FC<Props> = ({navigation}) => {
           paddingVertical: spacing.xs,
           borderRadius: radius.sm,
         },
-        linkItem: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
+        builtWithLabel: {
           width: '100%',
-          paddingVertical: spacing.md,
-          paddingHorizontal: spacing.lg,
-          borderRadius: radius.md,
-          marginBottom: spacing.xs,
-          minHeight: 52,
-        },
-        linkIcon: {
-          marginRight: spacing.sm,
-        },
-        linkLabel: {
-          flex: 1,
-        },
-        linkDescription: {
-          flex: 1,
-          marginTop: 2,
-        },
-        footer: {
-          alignItems: 'center',
-          paddingBottom: bottomChromeInset,
-          paddingTop: spacing.md,
-        },
-        resetButton: {
-          paddingVertical: spacing.md,
-          paddingHorizontal: spacing.xxl,
+          textAlign: 'center',
+          marginBottom: 4,
         },
       }),
-    [colors, bottomChromeInset],
+    [colors],
   );
 
   const handleLinkPress = useCallback(
@@ -281,11 +328,6 @@ export const AboutScreen: React.FC<Props> = ({navigation}) => {
     [navigation],
   );
 
-  const handleConfirmReset = useCallback(() => {
-    setResetVisible(false);
-    useSettingsStore.getState().reset();
-  }, []);
-
   return (
     <View style={styles.root}>
       <SimbaStatusBar variant="home" />
@@ -294,113 +336,75 @@ export const AboutScreen: React.FC<Props> = ({navigation}) => {
         style={StyleSheet.absoluteFill}
       />
       <SafeAreaView style={styles.root} edges={['top']}>
-        <InternalHeader title={textContent.headerTitle} titleVariant="displaySerif" />
-        <Animated.View style={[styles.content, {opacity: fadeAnim}]}>
-          {/* Logo with bounce animation */}
-          <Animated.View
-            style={[styles.logoSection, {transform: [{scale: scaleAnim}]}]}>
-            <Image
-              source={isDark ? svgPaths.appLogoDark : svgPaths.appLogoLight}
-              style={styles.logo}
-            />
-          </Animated.View>
+        <InternalHeader title={textContent.headerTitle} />
+        <Animated.View style={[styles.scroll, {opacity: fadeAnim}]}>
+          <ScrollView
+            contentContainerStyle={{paddingBottom: bottomChromeInset + spacing.xl}}
+            showsVerticalScrollIndicator={false}>
+            {/* The lockup */}
+            <Animated.View
+              style={[styles.lockup, {transform: [{scale: scaleAnim}]}]}>
+              <Image
+                source={isDark ? svgPaths.appLogoDark : svgPaths.appLogoLight}
+                style={styles.logo}
+              />
+            </Animated.View>
 
-          <AppText variant="h3" color="accent" style={styles.appName}>
-            {textContent.appName}
-          </AppText>
+            <View style={styles.lockupText}>
+              <AppText variant="h3" color="accent" style={styles.appName}>
+                {textContent.appName}
+              </AppText>
 
-          <AppText variant="body2" color="tertiary" style={styles.tagline}>
-            {textContent.tagline}
-          </AppText>
+              <AppText variant="body2" color="tertiary">
+                {textContent.tagline}
+              </AppText>
 
-          <View style={styles.versionRow}>
-            <AppText variant="caption" color="secondary">
-              {textContent.version}
-            </AppText>
-          </View>
+              {/* The version — the app's own build, not a guess. */}
+              <AppText variant="caption" color="secondary">
+                {APP_VERSION_LABEL}
+              </AppText>
+            </View>
 
-          {/* 25.2: Built with */}
-          <View style={styles.builtWithCard}>
-            <AppText
-              variant="caption"
-              color="tertiary"
-              style={{width: '100%', textAlign: 'center', marginBottom: 4}}>
-              Built with
-            </AppText>
-            {BUILT_WITH.map(tech => (
-              <View
-                key={tech}
-                style={[
-                  styles.techChip,
-                  {backgroundColor: colors.background.primary},
-                ]}>
-                <AppText variant="caption" color="accent">
-                  {tech}
-                </AppText>
-              </View>
-            ))}
-          </View>
-
-          <View style={styles.divider} />
-
-          {/* 59.1: virtualized link items (25.10 staggered entrance) */}
-          <FlatList
-            data={LINK_ITEMS}
-            keyExtractor={item => item.label}
-            renderItem={({item, index: idx}) => (
-              <Animated.View style={[styles.linkItem, entrance.styles[idx]]}>
-                <TouchableOpacity
-                  activeOpacity={0.7}
-                  onPress={() => handleLinkPress(item)}
-                  style={[StyleSheet.absoluteFill, {flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.lg}]}
-                  accessibilityRole="button"
-                  accessibilityLabel={item.label}>
-                  <SvgIcon
-                    name={item.icon}
-                    size={18}
-                    color={colors.accent.gold}
-                    style={styles.linkIcon}
-                  />
-                  <AppText variant="body1" color="primary" style={styles.linkLabel}>
-                    {item.label}
+            {/* 25.2: Built with — the app's OWN stack. */}
+            <View style={styles.builtWithCard}>
+              <AppText
+                variant="caption"
+                color="tertiary"
+                style={styles.builtWithLabel}>
+                Built with
+              </AppText>
+              {BUILT_WITH_CHIPS.map(tech => (
+                <View
+                  key={tech}
+                  style={[
+                    styles.techChip,
+                    {backgroundColor: colors.background.primary},
+                  ]}>
+                  <AppText variant="caption" color="accent">
+                    {tech}
                   </AppText>
-                  <SvgIcon
-                    name="chevronRight"
-                    size={16}
-                    color={colors.text.tertiary}
-                  />
-                </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+
+            {/* The links. */}
+            <SubsectionTitle label={textContent.moreLinks} variant="displaySerif" />
+            {LINK_ITEMS.map((item, idx) => (
+              <Animated.View key={item.label} style={entrance.styles[idx]}>
+                <SettingsRow
+                  label={item.label}
+                  description={item.description}
+                  leading={
+                    <SvgIcon name={item.icon} size={18} color={colors.accent.gold} />
+                  }
+                  trailing={<Chevron />}
+                  onPress={() => handleLinkPress(item)}
+                />
               </Animated.View>
-            )}
-            scrollEnabled={false}
-            initialNumToRender={LINK_ITEMS.length}
-          />
+            ))}
+          </ScrollView>
         </Animated.View>
-
-        {/* Footer with reset button (25.9: dialog, not raw Alert) */}
-        <View style={styles.footer}>
-          <TouchableOpacity
-            onPress={() => setResetVisible(true)}
-            style={styles.resetButton}
-            accessibilityRole="button"
-            accessibilityLabel={textContent.resetAllSettings}>
-            <AppText variant="body1" color="error">
-              {textContent.resetAllSettings}
-            </AppText>
-          </TouchableOpacity>
-        </View>
       </SafeAreaView>
-
-      <ConfirmDialog
-        visible={resetVisible}
-        title={textContent.resetAlertTitle}
-        message={textContent.resetAlertMessage}
-        confirmLabel={textContent.reset}
-        cancelLabel={textContent.cancel}
-        destructive
-        onConfirm={handleConfirmReset}
-        onCancel={() => setResetVisible(false)}
-      />
     </View>
   );
 };

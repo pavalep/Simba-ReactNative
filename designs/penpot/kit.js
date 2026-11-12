@@ -364,7 +364,11 @@ function kit(themeName) {
         italic: true,
         size: 18,
         lineHeight: 24,
-        letterSpacing: 0.3,
+        // The app's divider label is `letterSpacing: 0` — a positive
+        // tracking is what pushed the label's LAST GLYPH out of its own
+        // measured box in the app (see `md/ABOUT_PAGE_FIX.md` §2.7).
+        // The board draws what the app draws.
+        letterSpacing: 0,
         fill: t.dividerGold,
       }),
       rect(right, {

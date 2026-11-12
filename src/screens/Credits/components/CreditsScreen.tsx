@@ -13,57 +13,10 @@ import {AppText} from '../../../components/core/AppText/AppText';
 import {InternalHeader} from '../../../components/layout/InternalHeader/InternalHeader';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
 import {useAnimatedEntrance} from '../../../hooks/useAnimatedEntrance';
+import {TECH_STACK} from '../../../constants/techStack';
 import type {CreditsScreenProps} from '../../../navigation/types';
 
 type Props = CreditsScreenProps;
-
-interface CreditGroup {
-  title: string;
-  items: string[];
-}
-
-/** 25.3: grouped by type — media engine, framework, state, UI, tooling. */
-const CREDIT_GROUPS: CreditGroup[] = [
-  {
-    title: 'Media Engine',
-    items: [
-      'MPV — video/audio playback (LGPL-2.1+)',
-      'libmpv bindings for React Native',
-      'FFmpeg — demuxing and decoding',
-    ],
-  },
-  {
-    title: 'Framework',
-    items: [
-      'React Native (MIT)',
-      'TypeScript',
-      'React 19',
-    ],
-  },
-  {
-    title: 'State & Data',
-    items: [
-      'Redux Toolkit',
-      'redux-persist',
-      'AsyncStorage',
-    ],
-  },
-  {
-    title: 'Navigation & UI',
-    items: [
-      'React Navigation',
-      'react-native-linear-gradient',
-      'react-native-svg',
-      'react-native-safe-area-context',
-    ],
-  },
-  {
-    title: 'Tooling',
-    items: [
-      'react-native-haptic-feedback',
-    ],
-  },
-];
 
 /** Contributors — team + community acknowledgements. */
 const CONTRIBUTORS = [
@@ -75,7 +28,7 @@ const CONTRIBUTORS = [
 
 export const CreditsScreen: React.FC<Props> = () => {
   const {colors} = useTheme();
-  const entrance = useAnimatedEntrance(CREDIT_GROUPS.length + 1, {
+  const entrance = useAnimatedEntrance(TECH_STACK.length + 1, {
     staggerDelay: 80,
     direction: 'up',
   });
@@ -99,7 +52,6 @@ export const CreditsScreen: React.FC<Props> = () => {
         },
         sectionTitle: {
           marginBottom: spacing.sm,
-          fontWeight: '700',
         },
         bulletItem: {
           flexDirection: 'row',
@@ -135,7 +87,7 @@ export const CreditsScreen: React.FC<Props> = () => {
         colors={[colors.background.primary, colors.background.elevated]}
         style={StyleSheet.absoluteFill}
       />
-      <InternalHeader title="Credits" titleVariant="displaySerif" />
+      <InternalHeader title="Credits" />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={{paddingBottom: spacing.xxxl}}
@@ -169,9 +121,13 @@ export const CreditsScreen: React.FC<Props> = () => {
           </View>
         </Animated.View>
 
-        {/* Libraries grouped by type (25.3) — 59.1: virtualized */}
+        {/* Libraries grouped by type — the app's OWN stack. The list
+            is owned by `src/constants/techStack.ts`, the same owner
+            the About page's "Built with" card reads. It said Redux
+            Toolkit and redux-persist until 2026-11-12; the app has
+            used Zustand and MMKV since V17. */}
         <FlatList
-          data={CREDIT_GROUPS}
+          data={TECH_STACK}
           keyExtractor={group => group.title}
           renderItem={({item: group, index: gi}) => (
             <Animated.View style={entrance.styles[gi + 1]}>
@@ -180,8 +136,8 @@ export const CreditsScreen: React.FC<Props> = () => {
                   {group.title}
                 </AppText>
                 <FlatList
-                  data={group.items}
-                  keyExtractor={item => item}
+                  data={group.entries}
+                  keyExtractor={entry => entry.label}
                   renderItem={({item}) => (
                     <View style={styles.bulletItem}>
                       <SvgIcon
@@ -194,21 +150,21 @@ export const CreditsScreen: React.FC<Props> = () => {
                         variant="body2"
                         color="secondary"
                         style={styles.bulletText}>
-                        {item}
+                        {item.label}
                       </AppText>
                     </View>
                   )}
                   scrollEnabled={false}
-                  initialNumToRender={group.items.length}
+                  initialNumToRender={group.entries.length}
                 />
               </View>
             </Animated.View>
           )}
           scrollEnabled={false}
-          initialNumToRender={CREDIT_GROUPS.length}
+          initialNumToRender={TECH_STACK.length}
         />
 
-        <Animated.View style={[entrance.styles[CREDIT_GROUPS.length]]}>
+        <Animated.View style={[entrance.styles[TECH_STACK.length]]}>
           <AppText
             variant="caption"
             color="tertiary"

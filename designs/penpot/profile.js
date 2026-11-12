@@ -65,17 +65,22 @@ const {kit, SCREEN_W, spacing, radius} = require('./kit');
 /**
  * The InternalHeader's own metrics (`InternalHeader.tsx:102-158`).
  *
- * The header's height is the 36 dp button plus the 12 dp padding either
- * side — the 48/56 title is an ABSOLUTE overlay, so it does not push the
- * row taller. That is why the title on the About board bleeds over the
- * header's hairline: the app draws it that way.
+ * The header's height is the 36 dp circular back button plus the 12 dp
+ * padding either side — the title is an ABSOLUTE overlay, so it does not
+ * push the row taller. That is why the title on the About board bleeds
+ * over the header's hairline: the app draws it that way.
+ *
+ * The title is Manrope SemiBold 22 px — ONE title style for every
+ * internal page. Seven of them used to draw a 48 px Cormorant Garamond
+ * Bold instead; the owner called that "too much big" on 2026-11-12 and
+ * the Profile's small title is the reference.
  */
 const HEADER = {
   padX: spacing.sm, // 8
   padY: spacing.md, // 12
   button: 36,
-  titleSize: 48,
-  titleLine: 56,
+  titleSize: 22,
+  titleLine: 28,
 };
 const HEADER_H = HEADER.padY * 2 + HEADER.button; // 60
 
@@ -126,18 +131,18 @@ function profileKit(themeName) {
         h: 20,
         media: iconKey('chevronLeft'),
       }),
-      // The title — Cormorant Garamond Bold 48/56, centred on the FULL
-      // header width (`InternalHeader.tsx:78-88`). The title overlay's
-      // `paddingHorizontal: 96` is what truncated "Privacy P…"; the boards
-      // draw the title at its natural width and the code wave fixes the
-      // overlay (md/PROFILE_RC1_REFACTOR.md, CF-05).
+      // The title — Manrope SemiBold 22/28, centred on the FULL header
+      // width (`InternalHeader.tsx:78-88`). The title overlay's
+      // `paddingHorizontal: 96` is what truncated "Privacy P…"; the
+      // boards draw the title at its natural width and the code wave
+      // fixes the overlay (md/PROFILE_RC1_REFACTOR.md, CF-05).
       k.text(name + ' title', title, {
         x: {center: SCREEN_W / 2},
         y: HEADER.padY + (HEADER.button - HEADER.titleLine) / 2,
-        family: 'Cormorant Garamond',
-        weight: 700,
+        family: 'Manrope SemiBold',
         size: HEADER.titleSize,
         lineHeight: HEADER.titleLine,
+        letterSpacing: 0.2,
         fill: c.text.primary,
       }),
     ];
@@ -406,7 +411,10 @@ function profileKit(themeName) {
         italic: true,
         size: 18,
         lineHeight: 24,
-        letterSpacing: 0.3,
+        // The app's divider label is `letterSpacing: 0` — a positive
+        // tracking is what pushed the label's LAST GLYPH out of its own
+        // measured box in the app (see `md/ABOUT_PAGE_FIX.md` §2.7).
+        letterSpacing: 0,
         fill: k.theme.dividerGold,
       }),
       k.text(actionShapeName || name + ' action', action, {
@@ -665,6 +673,15 @@ function profileBoard(themeName) {
  *
  * The facts are TRUE: the version is the native build's, and "Built with"
  * names the state library the app actually uses.
+ *
+ * 2026-11-12: the board caught up with the code. The row labels are the
+ * TITLES of the pages they open ("Terms of Use", not "Terms of use"), the
+ * "Built with" chips are the app's real stack in the app's own order,
+ * the chip card's height is computed from the rows the chips make (six
+ * chips wrap to two rows, and the old fixed 74 dp card cut the second
+ * one off), the two rows that carry a description carry it here too, and
+ * the red "Reset all settings" at the foot is GONE — the Profile owns
+ * the reset. See `md/ABOUT_PAGE_FIX.md`.
  */
 function aboutBoard(themeName) {
   const P = profileKit(themeName);
@@ -698,8 +715,7 @@ function aboutBoard(themeName) {
     k.text('About app name', 'Simba Player', {
       x: {center: SCREEN_W / 2},
       y,
-      family: 'Inter',
-      weight: 700,
+      family: 'Inter SemiBold',
       size: 20,
       lineHeight: 28,
       fill: c.accent.gold,
@@ -712,12 +728,12 @@ function aboutBoard(themeName) {
       y,
       family: 'Inter',
       weight: 400,
-      size: 13,
-      lineHeight: 18,
+      size: 15,
+      lineHeight: 22,
       fill: c.text.tertiary,
     }),
   );
-  y += 18;
+  y += 22;
   shapes.push(
     k.text('About version', 'Version 1.1.0 (2)', {
       x: {center: SCREEN_W / 2},
@@ -731,98 +747,159 @@ function aboutBoard(themeName) {
   );
   y += 18 + spacing.lg;
 
-  // "Built with" — the app's OWN stack. The old list said "Redux Toolkit",
-  // which the app has not used since V17.
+  // "Built with" — the app's OWN stack. The old list said "Redux
+  // Toolkit", which the app has not used since V17. The chips now come
+  // from `src/constants/techStack.ts` — the same owner the Credits page
+  // reads: React Native, TypeScript, MPV, Zustand, MMKV, React
+  // Navigation.
+  //
+  // The chips WRAP, so the card's height is COMPUTED from the rows they
+  // make. The old card was a fixed 74 dp, which was one row of chips;
+  // six chips make two rows, and a fixed height would have cut the
+  // second one off.
+  const CHIPS = [
+    'React Native',
+    'TypeScript',
+    'MPV',
+    'Zustand',
+    'MMKV',
+    'React Navigation',
+  ];
+  // The chip's own metrics — the app's `techChip` style: 8 dp of
+  // horizontal padding around the caption (13/18), 4 dp above and below.
+  const CHIP_PAD = spacing.md; // 12 — the card's padding
+  const CHIP_GAP = spacing.sm; // 8 — the gap between chips
+  const CHIP_H = 26; // 18 (the caption's line) + 4 + 4
+  const CHIP_TEXT = 7.2; // Inter 13 px, the average advance per character
+  const inner = SCREEN_W - ROW.padX * 2 - CHIP_PAD * 2;
+  const chipRows = [];
+  let rowChips = [];
+  let rowW = 0;
+  for (const chip of CHIPS) {
+    const w = chip.length * CHIP_TEXT + 16;
+    const add = rowChips.length ? CHIP_GAP + w : w;
+    if (rowChips.length && rowW + add > inner) {
+      chipRows.push({chips: rowChips, width: rowW});
+      rowChips = [chip];
+      rowW = w;
+    } else {
+      rowChips.push(chip);
+      rowW += add;
+    }
+  }
+  if (rowChips.length) chipRows.push({chips: rowChips, width: rowW});
+  // The label, then the chip rows, then the card's padding.
+  //
+  // The 8 dp between the label and the chips is the card's own FLEX GAP —
+  // the label is a flex child of the wrapping row, so the gap applies
+  // between it and the first chip as well. It was missing here, and the
+  // device measurement (2026-11-12) put the chip row 8 dp lower than
+  // this drawing did.
+  const cardH =
+    CHIP_PAD +
+    18 +
+    4 +
+    CHIP_GAP +
+    chipRows.length * CHIP_H +
+    (chipRows.length - 1) * CHIP_GAP +
+    CHIP_PAD;
+
   shapes.push(
     k.rect('About built with card', {
       x: ROW.padX,
       y,
       w: SCREEN_W - ROW.padX * 2,
-      h: 74,
+      h: cardH,
       radius: radius.md,
       fill: c.background.elevated,
     }),
     k.text('About built with label', 'Built with', {
       x: {center: SCREEN_W / 2},
-      y: y + 10,
+      y: y + CHIP_PAD,
       family: 'Inter',
       weight: 400,
-      size: 11,
-      lineHeight: 16,
-      letterSpacing: 0.5,
+      size: 13,
+      lineHeight: 18,
       fill: c.text.tertiary,
     }),
   );
-  {
-    const chips = ['React Native', 'TypeScript', 'MPV', 'Zustand', 'MMKV', 'React Navigation'];
-    let cx = ROW.padX + 12;
-    let cy = y + 34;
-    for (const chip of chips) {
-      const w = chip.length * 6.2 + 16;
-      if (cx + w > SCREEN_W - ROW.padX - 12) {
-        cx = ROW.padX + 12;
-        cy += 26;
-      }
+  // Each row of chips is centred in the card — the app's
+  // `justifyContent: 'center'` on the wrapping row.
+  //
+  // The FIRST chip row starts one CHIP_GAP below the label: the card is
+  // a flex row with `gap: spacing.sm`, and the label is one of its flex
+  // children, so the gap applies between it and the first row too.
+  // (Measured on the device, 2026-11-12: the chip row's top sits
+  // 41.8 dp below the card's top — 12 (padding) + 18 (the label) + 4
+  // (the label's marginBottom) + 8 (the flex gap).)
+  chipRows.forEach((row, ri) => {
+    const cy =
+      y + CHIP_PAD + 18 + 4 + CHIP_GAP + ri * (CHIP_H + CHIP_GAP);
+    let cx = ROW.padX + CHIP_PAD + (inner - row.width) / 2;
+    for (const chip of row.chips) {
+      const w = chip.length * CHIP_TEXT + 16;
       shapes.push(
         k.rect('About chip ' + chip, {
           x: cx,
           y: cy,
           w,
-          h: 22,
+          h: CHIP_H,
           radius: radius.sm,
           fill: c.background.primary,
         }),
         k.text('About chip text ' + chip, chip, {
           x: cx + 8,
-          y: cy + 3,
+          y: cy + 4,
           family: 'Inter',
           weight: 400,
-          size: 11,
-          lineHeight: 16,
+          size: 13,
+          lineHeight: 18,
           fill: c.accent.gold,
         }),
       );
-      cx += w + 8;
+      cx += w + CHIP_GAP;
     }
-  }
-  y += 74 + spacing.lg;
+  });
+  // The gap between the card and the divider is the divider's OWN:
+  // `SubsectionTitle`'s root carries `marginTop: spacing.sm` (8) and
+  // `paddingVertical: spacing.md` (12) — 20 dp from the card's bottom
+  // edge to the label's text box.
+  y += cardH + spacing.sm;
 
   // ── the links, full width ─────────────────────────────────────────────
-  y += spacing.lg;
   shapes.push(...k.divider('About links', 'More', y));
   y += 48;
 
+  // The label of each row is the TITLE of the page it opens — the Terms
+  // screen says "Terms of Use", so the row says "Terms of Use" too.
   const LINKS = [
-    ['About Changelog', 'Changelog', 'history'],
-    ['About Credits', 'Credits', 'award'],
-    ['About Licenses', 'Open source licences', 'book'],
-    ['About Privacy', 'Privacy policy', 'lock'],
-    ['About Terms', 'Terms of use', 'info'],
-    ['About Rate', 'Rate on Play Store', 'trophy'],
-    ['About Share', 'Share app', 'share'],
-    ['About Report', 'Report a bug', 'alertCircle'],
-    ['About Contact', 'Contact feedback', 'megaphone'],
+    ['About Changelog', 'Changelog', 'history', null],
+    [
+      'About Credits',
+      'Credits',
+      'award',
+      'Contributors and libraries used',
+    ],
+    ['About Licenses', 'Open Source Licenses', 'book', null],
+    ['About Privacy', 'Privacy Policy', 'lock', null],
+    ['About Terms', 'Terms of Use', 'info', null],
+    ['About Rate', 'Rate on Play Store', 'trophy', null],
+    ['About Share', 'Share App', 'share', 'Send Simba Player to a friend'],
+    ['About Report', 'Report Bug', 'alertCircle', null],
+    ['About Contact', 'Contact / Feedback', 'megaphone', null],
   ];
-  for (const [name, label, icon] of LINKS) {
-    const out = P.row(name, {y, label, icon});
+  for (const [name, label, icon, description] of LINKS) {
+    const out = P.row(name, {y, label, icon, description});
     shapes.push(...out);
     y += out.rowHeight;
   }
 
-  y += spacing.lg;
-  shapes.push(
-    k.text('About reset', 'Reset all settings', {
-      x: {center: SCREEN_W / 2},
-      y,
-      family: 'Inter',
-      weight: 400,
-      size: 15,
-      lineHeight: 22,
-      fill: c.semantic.error,
-    }),
-  );
-  y += 22 + spacing.xl;
+  // There is NO reset at the foot of this page. It used to carry a red
+  // "Reset all settings" — a second door to the action the Profile owns
+  // as "Reset preferences" (`md/CONTENT_OWNERSHIP.md`). One owner, one
+  // row.
 
+  y += spacing.xl;
   return {width: SCREEN_W, height: y, shapes};
 }
 

@@ -250,9 +250,9 @@ const EDGES = [
   {from: 'FolderLinkingWizard', to: 'Library', trigger: 'click', shape: 'Go to Library', label: 'Go to Library'},
   {from: 'About', to: 'Changelog', trigger: 'click', shape: 'About Changelog label', label: 'Changelog'},
   {from: 'About', to: 'Credits', trigger: 'click', shape: 'About Credits label', label: 'Credits'},
-  {from: 'About', to: 'Licenses', trigger: 'click', shape: 'About Licenses label', label: 'Open source licences'},
-  {from: 'About', to: 'Privacy', trigger: 'click', shape: 'About Privacy label', label: 'Privacy policy'},
-  {from: 'About', to: 'Terms', trigger: 'click', shape: 'About Terms label', label: 'Terms of use'},
+  {from: 'About', to: 'Licenses', trigger: 'click', shape: 'About Licenses label', label: 'Open Source Licenses'},
+  {from: 'About', to: 'Privacy', trigger: 'click', shape: 'About Privacy label', label: 'Privacy Policy'},
+  {from: 'About', to: 'Terms', trigger: 'click', shape: 'About Terms label', label: 'Terms of Use'},
 
   // ── The Login screen's legal links ──
   {from: 'Login', to: 'Privacy', trigger: 'click', shape: 'Privacy Policy', label: 'Privacy Policy'},
