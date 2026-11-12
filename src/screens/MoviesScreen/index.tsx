@@ -1,6 +1,6 @@
 import React from 'react';
 import type {RootStackScreenProps} from '../../navigation/types';
-import {BrowseLayout} from './components/BrowseLayout';
+import {BrowseLayout} from '../_shared/BrowseLayout';
 import {MoviesDataProvider} from './components/MoviesDataProvider';
 import {renderMoviesContent} from './components/MoviesContent';
 import {useSectionOptions} from '../../hooks/useSectionOptions';

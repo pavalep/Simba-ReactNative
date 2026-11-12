@@ -276,7 +276,13 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
 
   const handlePlaylistPress = useCallback(
     (playlistId: string) => {
-      navigation.dispatch(CommonActions.navigate({name: 'PlaylistDetail', params: {playlistId}}));
+      // The STRING form of `CommonActions.navigate` — its object form is
+      // deprecated in React Navigation 7 and logged a warning on every
+      // tap ("Passing an object as the argument to 'navigate' is
+      // deprecated").
+      navigation.dispatch(
+        CommonActions.navigate('PlaylistDetail', {playlistId}),
+      );
     },
     [navigation],
   );
@@ -307,7 +313,9 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
         navigation.navigate('Library');
         return;
       }
-      navigation.dispatch(CommonActions.navigate({name: routeName}));
+      // The STRING form — the object form is deprecated in React
+      // Navigation 7 and warned on every tap.
+      navigation.dispatch(CommonActions.navigate(routeName as string));
     },
     [navigation],
   );

@@ -16,9 +16,11 @@ export const createPodcastsScreenStyles = (colors: ColorTokens) =>
       flex: 1,
     },
     listContent: {
-      // Same 16px edge padding as the old SectionContent list contract
-      // (grid ↔ list toggle never drifts the outer margin rhythm).
-      paddingHorizontal: spacing.md,
+      // The page's one gutter — 16 dp, the same as the search field and
+      // the chip strip above it. The comment here used to claim 16
+      // while the code said 12 (spacing.md), so the rows sat 4 dp
+      // inside the field above them.
+      paddingHorizontal: spacing.lg,
     },
     listSlotGrow: {
       // Let the empty/error slot fill the viewport so Placeholder's

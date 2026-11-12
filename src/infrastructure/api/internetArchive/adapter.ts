@@ -38,16 +38,56 @@ import type {
 
 // ─── Raw wire types (file-local per V18 type contract §2) ──────────────
 
+/**
+ * A field on an Internet Archive document.
+ *
+ * IA's API is a METADATA API: a document can carry the same field more
+ * than once, and when it does the search API answers with an ARRAY
+ * rather than a string. Measured on the live endpoint (2026-11-12),
+ * page 2 of the app's own movies query carries
+ *
+ *   title: ["The Three Stooges - \"Color Craziness\"",
+ *            "\"Color Craziness\" - The Three Stooges"]
+ *
+ * The wire type used to say `string`, so the array went straight into
+ * the domain object and the first `.trim()` on it threw
+ * "undefined is not a function" — which took the WHOLE 40-row page
+ * down, not just the one item. `creator`, `year`, `runtime`,
+ * `description` and `image_url` are multi-valued the same way.
+ */
+type IAField = string | string[];
+
+/**
+ * Read an IA field as a single string.
+ *
+ * The rule is IA's own: a multi-valued field answers with the values in
+ * importance order, so the FIRST non-empty one is the primary value.
+ * A number or a boolean is coerced; anything else is ''.
+ */
+export function firstString(value: unknown): string {
+  if (typeof value === 'string') return value;
+  if (Array.isArray(value)) {
+    const first = value.find(
+      entry => typeof entry === 'string' && entry.length > 0,
+    );
+    return typeof first === 'string' ? first : '';
+  }
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+  return '';
+}
+
 interface IAResultRaw {
   identifier: string;
-  title: string;
-  description: string;
-  creator: string;
-  year: string;
-  runtime: string;
+  title: IAField;
+  description: IAField;
+  creator: IAField;
+  year: IAField;
+  runtime: IAField;
   avg_rating: number;
   download_count: number;
-  image_url: string;
+  image_url: IAField;
 }
 
 interface IASearchResponse {
@@ -59,14 +99,14 @@ interface IASearchResponse {
 
 interface IAVideoResultRaw {
   identifier: string;
-  title: string;
-  description: string;
-  creator: string;
-  year: string;
-  runtime: string;
+  title: IAField;
+  description: IAField;
+  creator: IAField;
+  year: IAField;
+  runtime: IAField;
   avg_rating: number;
   download_count: number;
-  image_url: string;
+  image_url: IAField;
 }
 
 interface IAVideoSearchResponse {
@@ -79,10 +119,10 @@ interface IAVideoSearchResponse {
 interface IAMetadataResponse {
   metadata: {
     identifier: string;
-    title: string;
-    description: string;
-    creator: string;
-    year: string;
+    title: IAField;
+    description: IAField;
+    creator: IAField;
+    year: IAField;
     /**
      * V6 2.3.2: Internet Archive mediatype (e.g. "movies", "audio",
      * "texts"). Lets us refuse to hand non-movie items to the player.
@@ -99,9 +139,9 @@ interface IAMetadataResponse {
     name: string;
     source: string;
     format: string;
-    title?: string;
+    title?: IAField;
     track?: string;
-    length?: string;
+    length?: IAField;
     /**
      * Size in bytes, as a decimal string. Used to pick a streamable file
      * rather than merely the first acceptable one — on archive.org the
@@ -324,14 +364,14 @@ export const internetArchiveItemResultFromRaw = (
   }
   return {
     identifier: r.identifier,
-    title: normalizeArchiveTitle(r.title || ''),
-    description: r.description || '',
-    creator: r.creator || '',
-    year: r.year || '',
-    runtime: r.runtime || '',
+    title: normalizeArchiveTitle(firstString(r.title)),
+    description: firstString(r.description),
+    creator: firstString(r.creator),
+    year: firstString(r.year),
+    runtime: firstString(r.runtime),
     avgRating: r.avg_rating || 0,
     downloadCount: r.download_count || 0,
-    imageUrl: r.image_url || imageUrlFor(r.identifier),
+    imageUrl: firstString(r.image_url) || imageUrlFor(r.identifier),
     streamingUrl: directoryUrlFor(r.identifier),
     downloadUrls: [],
   };
@@ -402,11 +442,11 @@ export const internetArchiveItemDetailsFromRaw = (
   );
   return {
     identifier: md.identifier,
-    title: normalizeArchiveTitle(md.title),
-    description: md.description || '',
-    creator: md.creator || '',
-    year: md.year || '',
-    runtime: audioFiles.find(f => f.length)?.length || '',
+    title: normalizeArchiveTitle(firstString(md.title)),
+    description: firstString(md.description),
+    creator: firstString(md.creator),
+    year: firstString(md.year),
+    runtime: firstString(audioFiles.find(f => f.length)?.length),
     avgRating: 0,
     downloadCount: 0,
     imageUrl: imageUrlFor(md.identifier),
@@ -447,11 +487,11 @@ export const internetArchiveVideoResultFromRaw = (
   }
   return {
     identifier: r.identifier,
-    title: normalizeArchiveTitle(r.title || ''),
-    description: r.description || '',
-    creator: r.creator || '',
-    year: r.year || '',
-    duration: parseRuntime(r.runtime ?? ''),
+    title: normalizeArchiveTitle(firstString(r.title)),
+    description: firstString(r.description),
+    creator: firstString(r.creator),
+    year: firstString(r.year),
+    duration: parseRuntime(firstString(r.runtime)),
     avgRating: r.avg_rating || 0,
     downloadCount: r.download_count || 0,
     // V6 2.3.2: thumbnail URL — `https://archive.org/services/img/{id}`.
@@ -588,10 +628,10 @@ export const internetArchiveVideoDetailsFromRaw = (
 
   return {
     identifier: md.identifier,
-    title: normalizeArchiveTitle(md.title),
-    description: md.description || '',
-    creator: md.creator || '',
-    year: md.year || '',
+    title: normalizeArchiveTitle(firstString(md.title)),
+    description: firstString(md.description),
+    creator: firstString(md.creator),
+    year: firstString(md.year),
     duration: 0,
     avgRating: 0,
     downloadCount: 0,
@@ -627,10 +667,11 @@ export const archiveTracksFromRaw = (
       return {
         name: f.name,
         title: normalizeArchiveTitle(
-          f.title || f.name.replace(/\.[a-z0-9]+$/i, '').replace(/_/g, ' '),
+          firstString(f.title) ||
+            f.name.replace(/\.[a-z0-9]+$/i, '').replace(/_/g, ' '),
         ),
         url: fileUrlFor(identifier, f.name),
-        lengthSeconds: parseRuntime(f.length ?? ''),
+        lengthSeconds: parseRuntime(firstString(f.length)),
         format: f.format,
         trackNumber: isNaN(trackNum) ? i + 1 : trackNum,
       };

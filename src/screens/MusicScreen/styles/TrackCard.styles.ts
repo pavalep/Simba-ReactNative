@@ -5,6 +5,7 @@
 
 import {StyleSheet} from 'react-native';
 import {radius, spacing} from '../../../theme/tokens';
+import {FONT_FAMILY} from '../../../constants/fontFamily';
 
 export const createTrackCardStyles = () =>
   StyleSheet.create({
@@ -39,7 +40,12 @@ export const createTrackCardStyles = () =>
       gap: 1,
     },
     trackName: {
-      fontWeight: '600',
+      // The weight lives in the FAMILY key, not in a `fontWeight` prop:
+      // `fontWeight: '600'` on the family `Inter` asks Android for
+      // `fonts/Inter.ttf` (the rule in `constants/fontFamily.ts` drops
+      // the suffix below weight 700), so the SemiBold face was
+      // unreachable and the title was drawn in Inter REGULAR.
+      fontFamily: FONT_FAMILY.inter.semibold,
       lineHeight: 18,
     },
     trackRight: {

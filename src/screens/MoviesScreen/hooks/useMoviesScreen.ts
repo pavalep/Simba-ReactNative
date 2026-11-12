@@ -1,32 +1,34 @@
 // ─── Movies Screen Hook ─────────────────────────────────────────────────
-// V18.6.2c: rewritten as a pure function of (categoryIds, searchTerm,
-// sortKey). The pre-V18 implementation was 320 lines with a per-scope
-// `Map<key, ScopeState>`, `seqRef` for stale-request cancellation,
-// `guardRef` for in-flight dedup, `lastLoadMoreAtRef` for the scroll
-// throttle, and a 3-branch (initial / more / retry) page handler.
-// The V18-ideal version is ~100 lines.
+// The Movies list is the Internet Archive's movie collection, and the
+// Archive paginates it properly: `rows` + `page` + `sort[]`.
 //
-// The active (categoryIds, searchTerm, sortKey) tuple becomes a
-// single TanStack queryKey. Every combination is its own cache
-// entry; revisiting a combination shows its cached list instantly.
-// "Stale-request cancellation" is TanStack's own dedup — the
-// queryKey changes when the inputs change, the in-flight query
-// is cancelled, the new one fires. "In-flight dedup" is TanStack's
-// per-key dedup.
+// It used to be fetched in ONE shot with `limit: FULL_LIMIT (500)` and
+// then sliced client-side. That had three consequences:
 //
-// The hook returns the active scope's data + a refetch action.
-// The "loadMore" is now client-side: we slice the FULL list (or
-// filtered subset) in a useMemo and grow the display count as
-// the user scrolls. (The IA advancedsearch API doesn't paginate
-// the way we want — the page param drives the offset but the
-// per-category filter is a single combined query — so a single
-// fetch per scope is the right shape.)
+//   1. the list stopped SILENTLY at 500 items while the source had
+//      30,884 — the user scrolled to the end and the grid simply ended,
+//      with nothing on screen to say why;
+//   2. "You're all caught up" — the footer's end-of-list line — was
+//      UNREACHABLE, because it fires when `items.length >= numFound`
+//      and 500 is never 30,884;
+//   3. the footer's "Loading more…" branch was dead code, because
+//      `isLoadingMore` was hard-coded `false` (there was no loading —
+//      the slice grew instantly).
 //
-// The public surface (UseMoviesScreenReturn) is preserved as
-// much as possible so MoviesDataProvider can keep its API.
+// The hook now pages the source with `useInfiniteApiQuery`, the same
+// pattern the Podcasts screen uses (`usePodcastsScreen.ts`).
+//
+// THE CACHE KEY IS THE QUERY
+// --------------------------
+// The key used to be the CATEGORY IDS SORTED, while the query was built
+// from the ids in the order they arrived — so two orderings of the same
+// ids shared one cache entry but asked the server two different
+// questions. The ids are now sorted ONCE, and the same sorted list
+// builds both the query and the key, so the key and the question can
+// never disagree.
 
-import {useCallback, useEffect, useMemo, useState} from 'react';
-import {useApiQuery} from '../../../hooks/useApiQuery';
+import {useCallback, useMemo} from 'react';
+import {useInfiniteApiQuery} from '../../../hooks/useApiQuery';
 import {MOVIE_CATEGORIES, withJunkFilter} from '../../../constants/movieCategories';
 import {searchInternetArchiveVideos} from '../../../infrastructure/api/internetArchive/adapter';
 import type {
@@ -34,11 +36,23 @@ import type {
   PaginatedResult,
 } from '../../../types/api';
 
-const PAGE_SIZE = 20;
-const FULL_LIMIT = 500; // IA advancedsearch is one-shot; we slice client-side
+/** Items per page. Two grid rows of the two-column mosaic. */
+const PAGE_SIZE = 40;
+
+/**
+ * The Internet Archive's paging limit.
+ *
+ * Measured on 2026-11-12 against the live endpoint: with `rows=40`,
+ * page 250 (10,000 items) answers normally and **page 251 answers
+ * HTTP 507 Insufficient Storage**. The Archive will not page past
+ * 10,000 rows, so the hook stops there instead of asking for a page
+ * the server will refuse — and the footer says what that means.
+ */
+const IA_MAX_RETRIEVABLE = 10_000;
 
 export interface MovieScopeState {
   items: InternetArchiveVideoResult[];
+  /** The source's total for the current query (not the loaded count). */
   numFound: number;
   hasLoaded: boolean;
   isLoading: boolean;
@@ -46,7 +60,7 @@ export interface MovieScopeState {
   error: string | null;
   categoryIds: string[];
   term: string;
-  /** True if there are more items in the source beyond the displayed slice. */
+  /** True if there are more items to fetch. */
   hasMore: boolean;
 }
 
@@ -59,7 +73,7 @@ export interface UseMoviesScreenParams {
 export interface UseMoviesScreenReturn {
   /** Scope data for the active inputs. */
   data: MovieScopeState;
-  /** Increment the display count (client-side slice). */
+  /** Fetch the next page (used by infinite scroll). */
   loadMore: () => void;
   /** Refetch the active scope. */
   refetch: () => void;
@@ -67,16 +81,12 @@ export interface UseMoviesScreenReturn {
 
 // ─── helpers ────────────────────────────────────────────────────────────
 
-/** Stable cache key component — sorted ids ensure (a, b) and (b, a)
- *  hit the same cache entry. */
-function sortedKey(categoryIds: readonly string[]): string {
-  return [...categoryIds].sort().join(',');
-}
-
-/** Build the IA query string for one or more categories. Each category
- *  carries its own `subject(...)` clause; we OR them so the result
- *  set is the UNION of all selected categories. Empty selection
- *  = "All". */
+/**
+ * Build the IA query string for one or more categories. Each category
+ * carries its own `subject(...)` clause; we OR them so the result
+ * set is the UNION of all selected categories. Empty selection
+ * = "All".
+ */
 function buildCombinedQuery(categoryIds: readonly string[]): string {
   if (categoryIds.length === 0) {
     return MOVIE_CATEGORIES.find(c => c.id === 'all')?.query
@@ -93,26 +103,36 @@ function buildCombinedQuery(categoryIds: readonly string[]): string {
   return clauses.map(c => `(${c})`).join(' OR ');
 }
 
-/** Map sort key (UI) to IA's `sort[]` parameter. undefined = IA
- *  default. All real sorting is delegated to IA so pagination
- *  appends in the correct order. */
-function sortParamFor(sortKey?: string): string | undefined {
+/**
+ * Map sort key (UI) to IA's `sort[]` parameter.
+ *
+ * **undefined = the default, and the default is `downloads desc`** —
+ * "Most popular".
+ *
+ * The Internet Archive's own order is RECENCY (the newest uploads
+ * first), and the newest uploads under a subject tag are the long tail
+ * of user uploads, not films. Measured on 2026-11-12 against the live
+ * endpoint with the app's exact query: the Documentaries category
+ * returned **38 television news segments out of its first 40 items**
+ * in the archive's natural order, and **0** under `downloads desc`,
+ * where it leads with Ken Burns, The World at War and PBS Nova. Comedy
+ * (0/40), Western (0/40) and Silent Films (0/40) tell the same story.
+ *
+ * The keys are exactly the ones the Movies sheet offers
+ * (`src/screens/MoviesScreen/related/browseConfig.ts`). The mappings
+ * for `oldest`, `za` and `rating` used to live here as well; nothing
+ * could ever produce them, so they were dead branches.
+ */
+function sortParamFor(sortKey?: string): string {
   switch (sortKey) {
-    case 'popular':
-      return 'downloads desc';
     case 'newest':
       return 'date desc';
-    case 'oldest':
-      return 'date asc';
     case 'az':
       return 'title asc';
-    case 'za':
-      return 'title desc';
-    case 'rating':
-      return 'avg_rating desc';
+    case 'popular':
     case undefined:
     default:
-      return undefined;
+      return 'downloads desc';
   }
 }
 
@@ -122,7 +142,7 @@ function errorMessage(err: unknown): string | null {
   return String(err);
 }
 
-// ─── hook ──────────────────────────────────────────────────────────────
+// ─── hook ───────────────────────────────────────────────────────────────
 
 export function useMoviesScreen({
   categoryIds,
@@ -130,43 +150,57 @@ export function useMoviesScreen({
   sortKey,
 }: UseMoviesScreenParams): UseMoviesScreenReturn {
   const trimmed = searchTerm.trim();
-  const cacheKey = sortedKey(categoryIds);
-  const [displayCount, setDisplayCount] = useState(PAGE_SIZE);
 
-  // The single source of truth for the active scope. Every
-  // (sortedCategories, searchTerm, sortKey) tuple is its own
-  // TanStack cache entry.
-  const q = useApiQuery<PaginatedResult<InternetArchiveVideoResult>>({
-    queryKey: ['ia', 'movies', cacheKey, trimmed, sortKey ?? ''],
-    queryFn: () => {
-      const categoryQuery = buildCombinedQuery(categoryIds);
-      const termFilter = trimmed
-        ? ` AND title:(${trimmed.replace(/"/g, '')})`
-        : '';
-      const scopedQuery = withJunkFilter(`${categoryQuery}${termFilter}`);
-      return searchInternetArchiveVideos(scopedQuery, {
-        limit: FULL_LIMIT,
-        page: 1,
+  // The ids are sorted ONCE and the sorted list builds both the query
+  // and the cache key. OR is commutative, so this changes nothing the
+  // server sees — it only makes the key and the question identical.
+  const sortedIds = useMemo(
+    () => [...categoryIds].sort(),
+    [categoryIds],
+  );
+
+  const query = useMemo(() => {
+    const categoryQuery = buildCombinedQuery(sortedIds);
+    const termFilter = trimmed
+      ? ` AND title:(${trimmed.replace(/"/g, '')})`
+      : '';
+    return withJunkFilter(`${categoryQuery}${termFilter}`);
+  }, [sortedIds, trimmed]);
+
+  const q = useInfiniteApiQuery<PaginatedResult<InternetArchiveVideoResult>>({
+    // The query string IS the scope: one cache entry per question. The
+    // EFFECTIVE sort is the key, not the raw choice, so the default
+    // order and an explicit "Most popular" share one cache entry
+    // instead of fetching the same page twice.
+    queryKey: ['ia', 'movies', query, sortParamFor(sortKey)],
+    initialPageParam: 1,
+    queryFn: ({pageParam}) =>
+      searchInternetArchiveVideos(query, {
+        limit: PAGE_SIZE,
+        page: pageParam as number,
         sort: sortParamFor(sortKey),
-      });
+      }),
+    getNextPageParam: (lastPage, pages, lastPageParam) => {
+      // A short page means the source has nothing more.
+      if (lastPage.items.length < PAGE_SIZE) return undefined;
+      const loaded = pages.reduce((sum, page) => sum + page.items.length, 0);
+      // Everything the source has.
+      if (loaded >= lastPage.numFound) return undefined;
+      // The Archive's own paging limit — asking for the next page here
+      // would earn an HTTP 507.
+      if (loaded >= IA_MAX_RETRIEVABLE) return undefined;
+      return (lastPageParam as number) + 1;
     },
     staleTime: 60_000,
   });
 
-  // Reset the display count when the scope changes.
-  // (Done in render via useState's initializer is hard with
-  // dynamic inputs; use an effect to reset on key change.)
-  useEffect(() => {
-    setDisplayCount(PAGE_SIZE);
-  }, [cacheKey, trimmed, sortKey]);
-
-  const allItems = q.data?.items ?? [];
-  const numFound = q.data?.numFound ?? 0;
+  const pages = q.data?.pages ?? [];
   const items = useMemo(
-    () => allItems.slice(0, displayCount),
-    [allItems, displayCount],
+    () => pages.flatMap(page => page.items),
+    [pages],
   );
-  const hasMore = allItems.length > displayCount;
+  const numFound = pages[0]?.numFound ?? 0;
+  const hasMore = q.hasNextPage ?? false;
 
   const data: MovieScopeState = useMemo(
     () => ({
@@ -174,19 +208,25 @@ export function useMoviesScreen({
       numFound,
       hasLoaded: !!q.data || !!q.error,
       isLoading: q.isFetching,
-      isLoadingMore: false, // client-side slicing has no separate loading-more state
+      isLoadingMore: q.isFetchingNextPage,
       error: errorMessage(q.error),
-      categoryIds: [...categoryIds],
+      categoryIds: [...sortedIds],
       term: trimmed,
       hasMore,
     }),
-    [items, numFound, q.data, q.error, q.isFetching, categoryIds, trimmed, hasMore],
+    [items, numFound, q.data, q.error, q.isFetching, q.isFetchingNextPage, sortedIds, trimmed, hasMore],
   );
 
   const loadMore = useCallback(() => {
-    if (!hasMore) return;
-    setDisplayCount(c => c + PAGE_SIZE);
-  }, [hasMore]);
+    if (q.isFetchingNextPage) return;
+    if (q.hasNextPage) {
+      void q.fetchNextPage();
+      return;
+    }
+    // No next page but the last one failed: refetch so the footer can
+    // offer a retry that actually retries.
+    if (q.error) void q.refetch();
+  }, [q]);
 
   const refetch = useCallback(() => {
     void q.refetch();

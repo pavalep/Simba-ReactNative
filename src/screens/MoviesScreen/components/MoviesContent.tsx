@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {FlatList, RefreshControl, View} from 'react-native';
 import {FAB_SIZE} from '../../../components/core/Fab/Fab';
 import {MediaActionsSheet} from '../../../components/sheets/MediaActionsSheet/MediaActionsSheet';
@@ -61,11 +61,26 @@ export const MoviesContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => {
     setSearchTerm(ctx.query);
   }, [ctx.query, setSearchTerm]);
 
-  const {items, numFound, hasLoaded, isLoading, isLoadingMore, error} = data;
-  const reachedEnd =
-    hasLoaded && !error && numFound > 0 && items.length >= numFound;
+  const {items, numFound, hasLoaded, isLoading, isLoadingMore, error, hasMore} = data;
+  // The list ends when the source has nothing more to give. The
+  // footer's own copy distinguishes "that is everything" from "the
+  // archive refuses to page further".
+  const reachedEnd = hasLoaded && !error && !hasMore;
 
-  const category = MOVIE_CATEGORIES.find(c => c.id === categoryIds[0]);
+  // The placeholder cover is the CATEGORY's own cover, shown while the
+  // item's real artwork loads (and if it fails). It only makes sense
+  // when the whole list is ONE category: with two categories selected
+  // the cover would stand in for films it does not belong to.
+  const category = useMemo(
+    () =>
+      categoryIds.length === 1
+        ? MOVIE_CATEGORIES.find(c => c.id === categoryIds[0])
+        : undefined,
+    [categoryIds],
+  );
+
+  // Set by the first touch-scroll — see the `onEndReached` guard below.
+  const userDraggedRef = useRef(false);
   const [hasMounted, setHasMounted] = useState(false);
   useEffect(() => {
     setHasMounted(true);
@@ -272,10 +287,21 @@ export const MoviesContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => {
             hasLoaded={hasLoaded}
             error={error}
             reachedEnd={reachedEnd}
+            shown={items.length}
+            total={numFound}
             onLoadMore={loadMore}
           />
         }
-        onEndReached={loadMore}
+        onEndReached={() => {
+          // The drag guard: a scope whose whole result set fits on one
+          // screen fires `onEndReached` the moment the list mounts, and
+          // the page nobody asked for is a wasted request. Any
+          // touch-scroll sets the flag first.
+          if (userDraggedRef.current) loadMore();
+        }}
+        onScrollBeginDrag={() => {
+          userDraggedRef.current = true;
+        }}
         onEndReachedThreshold={0.35}
         removeClippedSubviews={false}
         showsVerticalScrollIndicator={false}

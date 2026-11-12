@@ -13,7 +13,9 @@ export const createMusicScreenStyles = () =>
       flex: 1,
     },
     listContent: {
-      paddingHorizontal: spacing.md,
+      // The page's one gutter — 16 dp, the same as the search field and
+      // the chip strip above it.
+      paddingHorizontal: spacing.lg,
     },
     listSlotGrow: {
       flexGrow: 1,

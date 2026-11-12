@@ -63,6 +63,16 @@ export interface FilterSheetGroup {
    * groups (sort / view).
    */
   collapsedRowLimit?: number;
+  /**
+   * The option that is applied when the group has NO explicit
+   * selection.
+   *
+   * It is drawn as the current state (gold) so the sheet says what is
+   * actually applied, and it does NOT count towards the sheet's
+   * "RESET FILTERS" footer: resetting a group that is already at its
+   * default changes nothing, so the footer must not offer it.
+   */
+  defaultKey?: string;
   rows: FilterSheetRow[];
 }
 
@@ -134,6 +144,12 @@ const GroupChipRow: React.FC<{
   group: FilterSheetGroup;
   isFirstGroup: boolean;
   selectedKeys: string[];
+  /** The group's EXPLICIT selection — the raw `value` entry, without
+   *  the group's default folded in. The press logic uses this one:
+   *  a group that is merely at its default has no explicit selection,
+   *  so tapping its default chip SELECTS it explicitly (and the
+   *  parent's chip strip shows it) instead of clearing nothing. */
+  explicitKeys: string[];
   /** Rows actually rendered — the collapsed subset when the group is
    *  collapsible and not expanded. */
   visibleRows: FilterSheetRow[];
@@ -147,6 +163,7 @@ const GroupChipRow: React.FC<{
     group,
     isFirstGroup,
     selectedKeys,
+    explicitKeys,
     visibleRows,
     onChange,
     collapsible,
@@ -166,17 +183,18 @@ const GroupChipRow: React.FC<{
         }
         if (multi) {
           // Toggle: include or exclude `rowKey` from the current array.
-          const next = selectedKeys.includes(rowKey)
-            ? selectedKeys.filter(k => k !== rowKey)
-            : [...selectedKeys, rowKey];
+          const next = explicitKeys.includes(rowKey)
+            ? explicitKeys.filter(k => k !== rowKey)
+            : [...explicitKeys, rowKey];
           onChange(next);
         } else {
-          // Single-select: tapping the active chip clears; otherwise
-          // replaces the current array with the new key.
-          onChange(selectedKeys[0] === rowKey ? [] : [rowKey]);
+          // Single-select: tapping the EXPLICITLY selected chip clears
+          // it (the group falls back to its default); otherwise the
+          // current array is replaced with the new key.
+          onChange(explicitKeys[0] === rowKey ? [] : [rowKey]);
         }
       },
-      [group.multiSelect, selectedKeys, onChange],
+      [group.multiSelect, explicitKeys, onChange],
     );
 
     return (
@@ -240,22 +258,37 @@ export const FilterSheet: React.FC<FilterSheetProps> = React.memo(
     // than `collapsedRowLimit`. It renders expanded when the user tapped
     // "SHOW MORE" OR when a SELECTED chip sits below the fold (deep-link
     // presets) — otherwise it would hide an active selection.
+    //
+    // The group's DEFAULT option is folded into the selected keys when
+    // the group has no explicit selection, so the sheet shows what is
+    // actually applied. `hasActive` above reads the raw `value`, so a
+    // group that is merely at its default never raises the "RESET
+    // FILTERS" footer.
     const groupViews = useMemo(
       () =>
         groups.map(group => {
           const limit = group.collapsedRowLimit ?? 0;
           const collapsible = limit > 0 && group.rows.length > limit;
           const hiddenRows = collapsible ? group.rows.slice(limit) : [];
+          const explicit = value[group.id] ?? [];
           const hiddenSelected = hiddenRows.some(
             r =>
-              r.key !== '' && (value[group.id] ?? []).includes(r.key),
+              r.key !== '' && (explicit.length > 0 ? explicit : [group.defaultKey ?? '']).includes(r.key),
           );
+          const selectedKeys =
+            explicit.length > 0
+              ? explicit
+              : group.defaultKey
+              ? [group.defaultKey]
+              : [];
           const expanded =
             collapsible && (hiddenSelected || !!expandedGroups[group.id]);
           return {
             group,
             collapsible,
             expanded,
+            selectedKeys,
+            explicitKeys: explicit,
             visibleRows: collapsible && !expanded
               ? group.rows.slice(0, limit)
               : group.rows,
@@ -265,6 +298,15 @@ export const FilterSheet: React.FC<FilterSheetProps> = React.memo(
     );
 
     const anyExpanded = groupViews.some(g => g.expanded);
+
+    // The sheet is presented with `insetAdjustment="never"` (see
+    // `BottomSheet`), so the native sheet does NOT lift itself above the
+    // system gesture bar — the consumer's last child has to carry the
+    // bottom inset. The RESET footer does, but the BODY did not, so with
+    // no active filter (no footer) the last chip row was drawn under the
+    // gesture pill. The body therefore carries the inset whenever the
+    // footer is not there to carry it.
+    const footerShown = !!onReset && hasActive;
 
     const handleToggleGroup = useCallback((id: string) => {
       setExpandedGroups(prev => ({...prev, [id]: !prev[id]}));
@@ -298,10 +340,18 @@ export const FilterSheet: React.FC<FilterSheetProps> = React.memo(
         <ScrollView
           ref={bodyRef}
           style={styles.scroll}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[
+            styles.scrollContent,
+            {
+              // The footer carries the bottom inset itself (it is the
+              // last thing on screen), so the body adds none.
+              paddingBottom: footerShown ? 0 : insets.bottom + spacing.sm,
+            },
+          ]}
           showsVerticalScrollIndicator={false}
           bounces={false}>
-          {groupViews.map(({group, collapsible, expanded, visibleRows}, idx) => (
+          {groupViews.map(
+            ({group, collapsible, expanded, selectedKeys, explicitKeys, visibleRows}, idx) => (
             <React.Fragment key={group.id}>
               {idx > 0 ? (
                 <View
@@ -314,7 +364,8 @@ export const FilterSheet: React.FC<FilterSheetProps> = React.memo(
               <GroupChipRow
                 group={group}
                 isFirstGroup={idx === 0}
-                selectedKeys={value[group.id] ?? []}
+                selectedKeys={selectedKeys}
+                explicitKeys={explicitKeys}
                 visibleRows={visibleRows}
                 onChange={keys => onChange(group.id, keys)}
                 collapsible={collapsible}
@@ -323,41 +374,50 @@ export const FilterSheet: React.FC<FilterSheetProps> = React.memo(
               />
             </React.Fragment>
           ))}
-        </ScrollView>
 
-        {onReset && hasActive ? (
-          <>
-            <View
-              style={[
-                styles.footerDivider,
-                {backgroundColor: colors.border.subtle},
-              ]}
-            />
-            <View
-              style={[
-                styles.footer,
-                {paddingBottom: insets.bottom + spacing.lg},
-              ]}>
-              <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={onReset}
-                accessibilityRole="button"
-                accessibilityLabel="Reset filters"
+          {/* The RESET FILTERS footer lives INSIDE the scrollable body.
+              It used to be a SIBLING of the body, pinned under it — and
+              the body takes the sheet's whole height, so a group opened
+              with SHOW MORE (the Podcasts sheet has 100+ categories, the
+              Movies sheet 21) pushed the footer off the bottom of the
+              sheet entirely and RESET became unreachable. As the body's
+              last item it is always reachable: in the collapsed sheet
+              it sits under the chips, and in the expanded sheet it is
+              the end of the scroll. */}
+          {footerShown ? (
+            <>
+              <View
                 style={[
-                  styles.resetButton,
-                  {
-                    backgroundColor: colors.accent.goldDim,
-                    borderColor: colors.accent.gold,
-                  },
+                  styles.footerDivider,
+                  {backgroundColor: colors.border.subtle},
+                ]}
+              />
+              <View
+                style={[
+                  styles.footer,
+                  {paddingBottom: insets.bottom + spacing.lg},
                 ]}>
-                <AppText
-                  style={[styles.resetText, {color: colors.accent.gold}]}>
-                  RESET FILTERS
-                </AppText>
-              </TouchableOpacity>
-            </View>
-          </>
-        ) : null}
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={onReset}
+                  accessibilityRole="button"
+                  accessibilityLabel="Reset filters"
+                  style={[
+                    styles.resetButton,
+                    {
+                      backgroundColor: colors.accent.goldDim,
+                      borderColor: colors.accent.gold,
+                    },
+                  ]}>
+                  <AppText
+                    style={[styles.resetText, {color: colors.accent.gold}]}>
+                    RESET FILTERS
+                  </AppText>
+                </TouchableOpacity>
+              </View>
+            </>
+          ) : null}
+        </ScrollView>
       </BottomSheet>
     );
   },

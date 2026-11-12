@@ -8,15 +8,26 @@
 import {MUSIC_CATEGORIES} from '../../../constants/musicCategories';
 import type {SectionBrowseConfig} from '../types';
 
+/**
+ * The Genre group — multi-select (the selected genres OR together).
+ *
+ * `collapsedRowLimit: 6` is the sheet's one rule across the three
+ * browse screens: the sheet shows six chips and a SHOW MORE toggle, so
+ * the panel stays a panel instead of running past the screen.
+ *
+ * The rows carry no icon: the filter sheet draws text pills, and the
+ * genre icons were being copied into the option model and then thrown
+ * away by the sheet.
+ */
 function musicFilterGroup() {
   return {
     id: 'filter',
     title: 'Genre',
     multiSelect: true,
+    collapsedRowLimit: 6,
     options: MUSIC_CATEGORIES.filter(g => g.id !== 'all').map(g => ({
       key: String(g.id),
       label: g.name,
-      icon: g.icon,
     })),
   };
 }

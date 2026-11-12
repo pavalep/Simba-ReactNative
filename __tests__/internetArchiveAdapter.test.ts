@@ -29,6 +29,7 @@ import {
   archiveImageUrl,
   archiveIdentifierFromUrl,
   parseRuntime,
+  firstString,
 } from '../src/infrastructure/api/internetArchive/adapter';
 
 describe('internetArchiveItemResultFromRaw', () => {
@@ -546,6 +547,84 @@ describe('pure helpers', () => {
 
     it('returns 0 on non-numeric input', () => {
       expect(parseRuntime('not a time')).toBe(0);
+    });
+  });
+
+  // ── Multi-valued fields (B9) ───────────────────────────────────────
+  //
+  // IA is a METADATA API: a document can carry the same field twice,
+  // and the search API then answers with an ARRAY instead of a string.
+  // Measured on the live endpoint (2026-11-12), page 2 of the app's
+  // own movies query carries
+  //
+  //   title: ["The Three Stooges - \"Color Craziness\"",
+  //            "\"Color Craziness\" - The Three Stooges"]
+  //
+  // Before the fix that array went into the domain object untouched and
+  // the first `.trim()` on it threw "undefined is not a function" —
+  // which took the WHOLE 40-row page down. The Movies list could never
+  // page past its first 40 rows.
+  describe('multi-valued IA fields', () => {
+    it('firstString keeps a plain string', () => {
+      expect(firstString('Hello')).toBe('Hello');
+    });
+
+    it('firstString takes the first non-empty entry of an array', () => {
+      expect(firstString(['First', 'Second'])).toBe('First');
+    });
+
+    it('firstString skips empty entries in an array', () => {
+      expect(firstString(['', 'Second'])).toBe('Second');
+    });
+
+    it('firstString coerces a number', () => {
+      expect(firstString(1964)).toBe('1964');
+    });
+
+    it('firstString returns empty string for null/undefined', () => {
+      expect(firstString(null)).toBe('');
+      expect(firstString(undefined)).toBe('');
+    });
+
+    it('maps an array title to the first title', () => {
+      const mapped = internetArchiveVideoResultFromRaw({
+        identifier: 'ThreeStoogesColorCraziness',
+        title: [
+          'The Three Stooges - "Color Craziness"',
+          '"Color Craziness" - The Three Stooges',
+        ],
+      });
+      expect(mapped.title).toBe('The Three Stooges - "Color Craziness"');
+    });
+
+    it('maps array creator / year / description to their first values', () => {
+      const mapped = internetArchiveItemResultFromRaw({
+        identifier: 'MultiValued',
+        title: 'A Title',
+        creator: ['First Creator', 'Second Creator'],
+        year: ['1964', '1965'],
+        description: ['First description', 'Second description'],
+      });
+      expect(mapped.creator).toBe('First Creator');
+      expect(mapped.year).toBe('1964');
+      expect(mapped.description).toBe('First description');
+    });
+
+    it('keeps the WHOLE page when one item has a multi-valued title', () => {
+      const docs: Array<{identifier: string; title: string | string[]}> =
+        Array.from({length: 40}, (_, i) => ({
+          identifier: `Item${i}`,
+          title: `Title ${i}`,
+        }));
+      docs[28] = {
+        identifier: 'Item28',
+        title: ['The Three Stooges - "Color Craziness"', 'Second title'],
+      };
+      const page = internetArchiveVideoResultsFromRaw({
+        response: {docs, numFound: 40},
+      });
+      expect(page.items).toHaveLength(40);
+      expect(page.items[28].title).toBe('The Three Stooges - "Color Craziness"');
     });
   });
 });

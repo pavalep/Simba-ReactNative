@@ -24,6 +24,17 @@ export interface OptionGroup {
   title: string;
   multiSelect?: boolean;
   collapsedRowLimit?: number;
+  /**
+   * The option that is applied when the group has NO explicit
+   * selection.
+   *
+   * The sheet draws this option as the current state (gold) so the
+   * user can see what is applied, and it does NOT count as an active
+   * filter — resetting a group that is already at its default would
+   * change nothing, so the "RESET FILTERS" footer must not appear for
+   * it.
+   */
+  defaultKey?: string;
   options: OptionItem[];
 }
 

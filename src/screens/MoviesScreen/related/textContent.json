@@ -6,7 +6,8 @@
   "footer": {
     "loadingMore": "Loading more…",
     "loadMoreRetry": "Couldn't load more — tap to retry",
-    "caughtUp": "You're all caught up"
+    "caughtUp": "You're all caught up",
+    "windowEnd": "Showing {shown} of {total} movies — the archive stops paging here"
   },
   "states": {
     "errorOfflineTitle": "You're offline",

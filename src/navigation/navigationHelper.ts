@@ -1,4 +1,4 @@
-import {createNavigationContainerRef} from '@react-navigation/native';
+import {CommonActions, createNavigationContainerRef} from '@react-navigation/native';
 import {RootStackParamList} from './types';
 
 export const navigationRef = createNavigationContainerRef<RootStackParamList>();
@@ -24,6 +24,23 @@ export const navigationRef = createNavigationContainerRef<RootStackParamList>();
  * deep conditional that's impossible to satisfy from a
  * generic `RootStackParamList`. The pre-W22 `as any` is
  * no longer needed.
+ *
+ * 2026-11-12 (WAVE B9): the options-object form is DEPRECATED in
+ * React Navigation 7 — every call logged
+ * "Passing an object as the argument to 'navigate' is deprecated.
+ * Use 'navigate(name, params, options)' instead." The warning fired
+ * on the user's console on every navigation through this helper (the
+ * Home → Movies card is one of them).
+ *
+ * The warning comes from `CommonActions.navigate` itself: its OBJECT
+ * branch is the deprecated one, and its STRING branch
+ * (`navigate(name, params, options)`) is the supported form. So the
+ * call is dispatched with the string form — the same action, without
+ * the deprecation. The upstream type is a plain `(name: string,
+ * params?: object, options?)` signature, so no escape is needed
+ * beyond the name/params widening the generic `RootStackParamList`
+ * cannot express. The helper's rest-arg tuple still checks the params
+ * at every call site, so nothing is lost.
  */
 export function navigate<RouteName extends keyof RootStackParamList>(
   name: RouteName,
@@ -32,7 +49,12 @@ export function navigate<RouteName extends keyof RootStackParamList>(
     : [params: RootStackParamList[RouteName]]
 ): void {
   if (!navigationRef.isReady()) return;
-  navigationRef.navigate({name, params: args[0]} as never);
+  navigationRef.dispatch(
+    CommonActions.navigate(
+      name as string,
+      args[0] as object | undefined,
+    ),
+  );
 }
 
 export function goBack() {

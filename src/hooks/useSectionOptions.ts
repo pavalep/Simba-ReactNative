@@ -16,8 +16,6 @@ import type {
   SectionOptionsMerged,
 } from '../screens/_shared/sectionOptions';
 
-const DEFAULT_VIEW = 'grid';
-
 const FILTER_SEED_PARAMS = [
   'genre',
   'categoryId',
@@ -29,7 +27,24 @@ const FILTER_SEED_PARAMS = [
 export interface SectionOptionsState {
   filters: Record<string, string[]>;
   sort?: string;
-  view: string;
+  /**
+   * The view mode — `undefined` unless the screen's config actually
+   * declares a `view` group.
+   *
+   * It used to default to `'grid'` for every screen, which had two
+   * consequences and neither of them was intended:
+   *
+   *   1. the filter sheet's value always carried `view: ['grid']`, so
+   *      the sheet's "RESET FILTERS" footer — which appears when
+   *      anything is active — was **permanently visible** on every
+   *      browse screen, even with no filter and no sort chosen;
+   *   2. the Movies sheet offered a "View: Grid / List" group that
+   *      **nothing read**: the grid is hard-coded `numColumns={2}`.
+   *
+   * The group is now declared only where it is used, and the state
+   * follows the config.
+   */
+  view?: string;
 }
 
 export interface SectionOptionsApi {
@@ -45,9 +60,9 @@ export function useSectionOptions(
   config: SectionBrowseConfigOptions,
   routeParams?: Readonly<Record<string, unknown>>,
 ): SectionOptionsApi {
-  const defaultView =
-    config.options?.groups?.find(g => g.id === 'view')?.options?.[0]?.key ??
-    DEFAULT_VIEW;
+  // The view mode exists only where the config declares a `view` group.
+  const viewGroup = config.options?.groups?.find(g => g.id === 'view');
+  const defaultView = viewGroup?.options?.[0]?.key;
 
   const seedFilterKey = useMemo<string | undefined>(() => {
     if (!routeParams) return undefined;
@@ -56,7 +71,15 @@ export function useSectionOptions(
     const validKeys = new Set(filterOptions.map(o => o.key));
     for (const param of FILTER_SEED_PARAMS) {
       const value = (routeParams as Record<string, unknown>)[param];
-      if (typeof value === 'string' && validKeys.has(value)) return value;
+      // The route param and the filter key are both the category's id,
+      // but not always in the same TYPE: `PodcastsScreen` declares
+      // `categoryId?: number` while its filter keys are strings ('1',
+      // '10', …). Comparing only strings made the seeding unreachable
+      // for every numeric route — the param was declared and then
+      // ignored.
+      if (typeof value !== 'string' && typeof value !== 'number') continue;
+      const key = String(value);
+      if (validKeys.has(key)) return key;
     }
     return undefined;
   }, [routeParams, config.options]);

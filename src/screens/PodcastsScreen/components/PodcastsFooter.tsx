@@ -18,6 +18,8 @@ interface Props {
   error: string | null;
   /** Terminal state — no more pages to fetch. */
   reachedEnd: boolean;
+  /** Whether the list has any rows at all. */
+  hasItems: boolean;
   onLoadMore: () => void;
 }
 
@@ -26,6 +28,7 @@ export const PodcastsFooter: React.FC<Props> = ({
   hasLoaded,
   error,
   reachedEnd,
+  hasItems,
   onLoadMore,
 }) => {
   const {colors} = useTheme();
@@ -50,7 +53,11 @@ export const PodcastsFooter: React.FC<Props> = ({
             {text.footer.loadMoreRetry}
           </AppText>
         </TouchableOpacity>
-      ) : reachedEnd ? (
+      ) : reachedEnd && hasItems ? (
+        // Only when there IS a list. An empty result set already says
+        // "No podcasts match your search." above it, and telling an
+        // empty list that you are "all caught up" underneath is a second
+        // end-of-list line saying nothing.
         <AppText variant="caption" color="secondary" style={styles.footerText}>
           {text.footer.caughtUp}
         </AppText>

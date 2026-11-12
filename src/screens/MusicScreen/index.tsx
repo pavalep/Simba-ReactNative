@@ -1,6 +1,6 @@
 import React, {type ReactNode} from 'react';
 import type {RootStackScreenProps} from '../../navigation/types';
-import {BrowseLayout} from './components/BrowseLayout';
+import {BrowseLayout} from '../_shared/BrowseLayout';
 import {MusicDataProvider} from './components/MusicDataProvider';
 import {MusicContent} from './components/MusicContent';
 import {useSectionOptions} from '../../hooks/useSectionOptions';

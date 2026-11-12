@@ -1,6 +1,6 @@
 import React, {useMemo} from 'react';
 import type {RootStackScreenProps} from '../../navigation/types';
-import {BrowseLayout} from './components/BrowseLayout';
+import {BrowseLayout} from '../_shared/BrowseLayout';
 import {
   createPodcastsContentRenderer,
   PodcastsDataProvider,
@@ -37,6 +37,14 @@ export const PodcastsScreen: React.FC<RootStackScreenProps<'PodcastsScreen'>> = 
         config={config}
         optionsApi={optionsApi}
         routeParams={params}
+        // The Podcast Index cannot answer a search term AND a category
+        // at the same time, so the scope is one or the other and never
+        // both: a term clears the category, and a category picked while
+        // a term is on screen clears the term. The LAST thing the user
+        // chose is the one that applies, and the chip strip always says
+        // what the source is really answering.
+        autoClearFilterOnSearch
+        autoClearSearchOnFilter
       />
     </PodcastsDataProvider>
   );

@@ -12,16 +12,28 @@ import {
 } from '../../../constants/podcastCategories';
 import type {SectionBrowseConfig} from '../types';
 
+/**
+ * The Category group — single-select (the Podcast Index's category
+ * endpoints take `cat` but no `q`, so one category at a time).
+ *
+ * `collapsedRowLimit: 6` is the sheet's one rule across the three
+ * browse screens: the sheet shows six chips and a SHOW MORE toggle, so
+ * the panel stays a panel instead of running past the screen.
+ *
+ * The rows carry no icon: the filter sheet draws text pills, and the
+ * category icons were being copied into the option model and then
+ * thrown away by the sheet.
+ */
 function podcastFilterGroup(categories: PodcastCategory[]) {
   return {
     id: 'filter',
     title: 'Category',
+    collapsedRowLimit: 6,
     options: categories
       .filter(category => category.id !== 'all')
       .map(category => ({
         key: String(category.id),
         label: category.name,
-        icon: category.icon,
       })),
   };
 }
