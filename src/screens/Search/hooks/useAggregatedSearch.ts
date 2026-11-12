@@ -16,7 +16,7 @@
 import {useEffect, useState} from 'react';
 import {useApiQueries} from '../../../hooks/useApiQuery';
 import {searchAudiobooks} from '../../../infrastructure/api/librivox/adapter';
-import {getAllIPTVChannels} from '../../../infrastructure/api/iptv/adapter';
+import {searchIPTVChannels} from '../../../infrastructure/api/iptv/adapter';
 import {searchJamendoTracks} from '../../../infrastructure/api/jamendo/adapter';
 import {searchInternetArchiveAudio} from '../../../infrastructure/api/internetArchive/adapter';
 import {searchAudiusTracks} from '../../../infrastructure/api/audius/adapter';
@@ -37,22 +37,40 @@ export interface AggregatedSearch {
 }
 
 /**
+ * How many channels one IPTV search answers with.
+ *
+ * The other four sources each ask their API for six. The IPTV adapter
+ * filters the first 500 channels client-side and returns every match,
+ * so the count is applied to the RESULT here — the one place that owns
+ * it.
+ */
+const IPTV_RESULT_LIMIT = 6;
+
+/**
  * Run a debounced search across the 5 free-content APIs.
  *
  * @param query        The search term. Empty string = no remote
  *                     queries fire; the `trending` list is fetched
  *                     from Jamendo instead.
- * @param debounceMs   Optional debounce in ms. The V18.6 ideal
- *                     pushes debouncing up to the SearchBar (it
- *                     already has `onDebouncedChange` per V18.11.1).
- *                     This parameter is kept for backwards
- *                     compatibility — the screen may or may not
- *                     debounce upstream. New code should pass 0
- *                     here and debounce in the SearchBar.
+ * @param debounceMs   Optional debounce in ms.
+ *
+ *                     2026-11-12 (SEARCH_PAGE_REDESIGN): the default
+ *                     was 450 ms, and the caller passed an ALREADY
+ *                     debounced query — `useSearch` settles at 300 ms
+ *                     and this hook then waited another 450 ms, so the
+ *                     remote results answered **750 ms** after the last
+ *                     keystroke while the local ones answered at 300 ms.
+ *                     The page answered at two different times.
+ *
+ *                     The default is now **0**: the query arrives
+ *                     settled, and the hook's own debounce is a
+ *                     duplicate of the one upstream. A caller that
+ *                     passes a RAW query still gets the debounce by
+ *                     passing the milliseconds explicitly.
  */
 export function useAggregatedSearch(
   query: string,
-  debounceMs: number = 450,
+  debounceMs: number = 0,
 ): AggregatedSearch {
   // ── Debounce (UI-level concern; ideally pushed to the SearchBar) ──
   const [debouncedQuery, setDebouncedQuery] = useState(query.trim());
@@ -83,14 +101,27 @@ export function useAggregatedSearch(
         staleTime: 60_000,
       },
       {
-        queryKey: ['iptv', 'all', debouncedQuery, 6] as const,
-        // IPTV-org has no search endpoint — the API returns the
-        // full channel list and we slice client-side. The
-        // debounced query is part of the cache key so a different
-        // query still hits a fresh fetch, but the IPTV group is
-        // always the same "first 6 channels" slice (the consumer
-        // filters by `debouncedQuery` at the render layer).
-        queryFn: () => getAllIPTVChannels({limit: 6}),
+        queryKey: ['iptv', 'search', debouncedQuery, IPTV_RESULT_LIMIT] as const,
+        // IPTV-org has no search endpoint — the API returns the full
+        // channel list and it is filtered client-side.
+        //
+        // 2026-11-12 (SEARCH_PAGE_REDESIGN): this used to call
+        // `getAllIPTVChannels({limit: 6})`, which returns the FIRST SIX
+        // CHANNELS OF THE WHOLE IPTV-ORG LIST, whatever was typed. The
+        // comment below used to claim "the consumer filters by
+        // `debouncedQuery` at the render layer" — and no consumer did.
+        // So a search for "music" answered with six unrelated TV
+        // channels under a "TV" heading.
+        //
+        // `searchIPTVChannels` is the adapter that does the filtering,
+        // and it existed and was unused. It filters the first 500
+        // channels by name / country / category and returns EVERY match
+        // — its own `limit` applies to the fetch, not to the result —
+        // so the result is sliced here, at the one place that owns it.
+        queryFn: () =>
+          searchIPTVChannels(debouncedQuery, {limit: IPTV_RESULT_LIMIT}).then(
+            list => list.slice(0, IPTV_RESULT_LIMIT),
+          ),
         enabled,
         staleTime: 60_000,
       },

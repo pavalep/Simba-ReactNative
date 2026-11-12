@@ -34,6 +34,19 @@ export interface DownloadButtonProps {
 
   size?: number;
   style?: ViewStyle;
+  /**
+   * `disc` (default) — the 40 dp circle: an elevated fill with a hairline
+   * border, the app's own download badge.
+   *
+   * `bare` — the glyph alone, with no fill, no border and no disc.
+   *
+   * 2026-11-12 (SEARCH_PAGE_REDESIGN): the Search page's rows are
+   * unboxed hairline rows — the Profile's grammar — and a 40 dp circle
+   * sitting on one of them was one of the "unwanted circles" the owner
+   * called out. The disc stays the default, so every other caller is
+   * untouched.
+   */
+  variant?: 'disc' | 'bare';
 }
 
 const TRACK_WIDTH = 28;
@@ -47,11 +60,13 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({
   provider,
   size = 20,
   style,
+  variant = 'disc',
 }) => {
   const {colors} = useTheme();
   const record = useDownloadByUri(uri);
   useDownloadsSync();
   const {medium} = useHaptics();
+  const isBare = variant === 'bare';
 
   const handlePress = useCallback(() => {
     if (!record || record.status === 'idle') {
@@ -126,7 +141,12 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({
 
   return (
     <TouchableOpacity
-      style={[styles.btn, {borderColor: colors.border.subtle, backgroundColor: colors.background.elevated}, style]}
+      style={[
+        isBare
+          ? styles.btnBare
+          : [styles.btn, {borderColor: colors.border.subtle, backgroundColor: colors.background.elevated}],
+        style,
+      ]}
       onPress={handlePress}
       activeOpacity={0.7}
       hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}
@@ -134,11 +154,19 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({
       accessibilityLabel={accessibilityLabel}>
       <SvgIcon name={icon} size={size} color={color} />
       {(record?.status === 'downloading' || record?.status === 'paused') && (
-        <View style={[styles.progressTrack, {backgroundColor: colors.border.subtle}]}>
+        <View
+          style={[
+            styles.progressTrack,
+            {backgroundColor: colors.border.subtle},
+            isBare
+              ? {bottom: 0, left: 4, width: size}
+              : null,
+          ]}>
           <View
             style={[
               styles.progressFill,
               {backgroundColor: colors.accent.gold, transform: [{scaleX: progress}]},
+              isBare ? {width: size} : null,
             ]}
           />
         </View>
@@ -156,6 +184,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
+  },
+  // The bare variant: the glyph and nothing else. The padding keeps a
+  // 20 px glyph at a 28 px touch target without drawing a disc.
+  btnBare: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+    paddingVertical: 4,
   },
   progressTrack: {
     position: 'absolute',

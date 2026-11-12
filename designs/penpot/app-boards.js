@@ -283,12 +283,21 @@ const EDGES = [
   {from: 'LiveTVScreen', to: 'LiveTVFavoritesScreen', trigger: 'click', shape: 'Live TV heart', label: 'favourites'},
 
   // ── Search ──
-  {from: 'Search', to: 'ArtistDetail', trigger: 'click', shape: 'Search artist result', label: 'artist'},
-  {from: 'Search', to: 'AlbumDetail', trigger: 'click', shape: 'Search album result', label: 'album'},
-  {from: 'Search', to: 'PlaylistDetail', trigger: 'click', shape: 'Search playlist result', label: 'playlist'},
-  {from: 'Search', to: 'FolderBrowser', trigger: 'click', shape: 'Search folder result', label: 'folder'},
-  {from: 'Search', to: 'AudiobookDetail', trigger: 'click', shape: 'Search audiobook result', label: 'audiobook'},
-  {from: 'Search', to: 'ArchiveItemDetail', trigger: 'click', shape: 'Search archive result', label: 'archive'},
+  //
+  // The Search page's results board carries a row for each of these six
+  // destinations, and the SHAPE names are the row's own names — the title
+  // shape is the exact name, and the row's artwork, caption, trailing
+  // control and hairline carry the same prefix. The `family` is what makes
+  // the WHOLE row the target (rule P10): the Play viewer gives the click
+  // to the topmost shape under the pointer and does not fall through, so a
+  // connector on the title alone would be dead on the artwork and on the
+  // chevron.
+  {from: 'Search', to: 'ArtistDetail', trigger: 'click', shape: 'Search artist result', family: 'Search artist result', label: 'artist'},
+  {from: 'Search', to: 'AlbumDetail', trigger: 'click', shape: 'Search album result', family: 'Search album result', label: 'album'},
+  {from: 'Search', to: 'PlaylistDetail', trigger: 'click', shape: 'Search playlist result', family: 'Search playlist result', label: 'playlist'},
+  {from: 'Search', to: 'FolderBrowser', trigger: 'click', shape: 'Search folder result', family: 'Search folder result', label: 'folder'},
+  {from: 'Search', to: 'AudiobookDetail', trigger: 'click', shape: 'Search audiobook result', family: 'Search audiobook result', label: 'audiobook'},
+  {from: 'Search', to: 'ArchiveItemDetail', trigger: 'click', shape: 'Search archive result', family: 'Search archive result', label: 'archive'},
 
   // ── The player and downloads ──
   {from: 'Queue', to: 'Library', trigger: 'click', shape: 'Queue Go back', label: 'Go back'},

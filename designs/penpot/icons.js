@@ -78,18 +78,47 @@ if (CHEVRON_LIGHT !== '#BABABB' || CHEVRON_DARK !== '#555557') {
   );
 }
 
+/**
+ * THE SECONDARY TEXT COMPOSITE
+ * ---------------------------
+ * The Search page's rows draw a BARE download glyph and a clear button in
+ * `text.secondary` (rgba(26,26,28,0.55) light / rgba(237,237,237,0.55)
+ * dark) — the same flattening the chevron needs, one step stronger.
+ *
+ *   light, over #FFFFFF  (255,255,255):
+ *     R = 0.55*26 + 0.45*255 = 14.3  + 114.75 = 129.05 -> 129 = 0x81
+ *     G = 0.55*26 + 0.45*255 = 14.3  + 114.75 = 129.05 -> 129 = 0x81
+ *     B = 0.55*28 + 0.45*255 = 15.4  + 114.75 = 130.15 -> 130 = 0x82  => #818182
+ *
+ *   dark, over #141416  (20,20,22):
+ *     R = 0.55*237 + 0.45*20 = 130.35 + 9.0  = 139.35 -> 139 = 0x8B
+ *     G = 0.55*237 + 0.45*20 = 130.35 + 9.0  = 139.35 -> 139 = 0x8B
+ *     B = 0.55*237 + 0.45*22 = 130.35 + 9.9  = 140.25 -> 140 = 0x8C  => #8B8B8C
+ */
+const SECONDARY_LIGHT = compositeOver('#1A1A1C', 0.55, '#FFFFFF');
+const SECONDARY_DARK = compositeOver('#EDEDED', 0.55, '#141416');
+if (SECONDARY_LIGHT !== '#818182' || SECONDARY_DARK !== '#8B8B8C') {
+  throw new Error(
+    `Secondary composite drifted: light=${SECONDARY_LIGHT} dark=${SECONDARY_DARK}`
+  );
+}
+
 /** Theme palettes — values taken from src/theme/tokens.ts. */
 const PALETTE = {
   light: {
     gold: '#B8922E', // lightColors.accent.gold
     ink: '#1A1A1C', // lightColors.text.primary
     chevron: CHEVRON_LIGHT,
+    tertiary: CHEVRON_LIGHT, // lightColors.text.tertiary
+    secondary: SECONDARY_LIGHT, // lightColors.text.secondary
     onMedia: '#FFFFFF',
   },
   dark: {
     gold: '#C9A84C', // darkColors.accent.gold
     ink: '#EDEDED', // darkColors.text.primary
     chevron: CHEVRON_DARK,
+    tertiary: CHEVRON_DARK, // darkColors.text.tertiary
+    secondary: SECONDARY_DARK, // darkColors.text.secondary
     onMedia: '#FFFFFF',
   },
 };
@@ -167,6 +196,30 @@ const ICONS = [
   // The gear in the Profile header — the ONE door to Settings on the
   // account page (`ui_settings.svg`, the app's own settings glyph).
   { name: 'settings', file: 'ui_settings.svg', size: 18, light: 'gold', dark: 'gold' },
+
+  // ── The Search page's glyphs (2026-11-12) ─────────────────────────────
+  //
+  // The Search page is a list of results, and every control on it is the
+  // app's own: the magnifier inside the field, the clear button, the bare
+  // download glyph on a downloadable row, the sliders on the FAB that
+  // opens the filter sheet, and the folder mark on a folder result.
+  //
+  // The magnifier comes in TWO tints because the field's focus is the
+  // page's one focus cue (`md/SEARCH_PAGE_REDESIGN.md` §3.5): the glyph
+  // turns gold when the field has the focus, and the field's own BORDER
+  // stays `border.subtle` → `border.emphasis`. The field is 44 dp tall and
+  // the glyph is the app's own 18 px (`SearchBar.tsx:109`).
+  { name: 'searchField', file: 'ic_search.svg', size: 18, light: 'tertiary', dark: 'tertiary' },
+  { name: 'searchFocus', file: 'ic_search.svg', size: 18, light: 'gold', dark: 'gold' },
+  // The clear button — 16 px, `text.secondary` (`SearchBar.tsx:133`).
+  { name: 'close', file: 'ic_close.svg', size: 16, light: 'secondary', dark: 'secondary' },
+  // The BARE download glyph — 20 px, `text.secondary`, with no disc
+  // (`DownloadButton.tsx:87`, minus the 40 dp disc the redesign drops).
+  { name: 'download', file: 'ic_download.svg', size: 20, light: 'secondary', dark: 'secondary' },
+  // The FAB's glyph — 24 px in `text.inverse`, on the gold disc
+  // (`Fab.tsx:82,119`). This is the app's ONE floating action button and
+  // it is what opens the filter sheet.
+  { name: 'sliders', file: 'ic_sliders.svg', size: 24, light: '#1A1A1C', dark: '#0A0A0C' },
 ];
 
 function resolveColor(spec, theme) {

@@ -4,16 +4,29 @@
 // TagChips, Live TV CategoryChips, Archive quick searches, Audiobooks
 // genre chips — so every section renders the same pill language.
 //
-// Visual contract (v10.3 — inverted-neutral):
+// Visual contract (2026-11-12 — themed, one owner):
 //   • pill radius (radius.pill), tight padding
 //   • ACTIVE   = gold fill + inverse text + gold border   (Music/Audiobooks/
 //                Search-filters precedent — the "accent background" state)
-//   • INACTIVE = WHITE fill + dark text + light border  (v10.3 — the user
-//                read the previous elevated-on-dark as "obviously big"
-//                because dark bg + warm elevated fill melted together;
-//                switching to a clean white pill makes the inactive set
-//                feel like a tappable, neutral chooser rather than a
-//                chunky block).
+//   • INACTIVE = `background.elevated` fill + `border.subtle` border +
+//                `text.secondary` label — the app's own surfaces.
+//
+// 2026-11-12 (SEARCH_PAGE_REDESIGN): the inactive chip was a hard-coded
+// WHITE pill — literal `'#FFFFFF'`, `'rgba(0, 0, 0, 0.08)'` and `'#1A1A1A'`,
+// NOT theme tokens. Those are the LIGHT theme's values, so the chip was a
+// white block on the dark theme too — the loudest thing on the Search
+// screen (eight of them, in a row) and the reason the owner called the
+// page "fancy" and "not the design we are following". The colours now
+// come from the theme, so the chip is quiet on both themes and the
+// component has ONE owner for its colours.
+//
+// The chip's TYPEFACE follows the house rule as well: the weight lives in
+// the FAMILY key (`FONT_FAMILY.inter.semibold`), not in a `fontWeight`
+// prop. `fontWeight: '600'` on the family `Inter` asks Android for
+// `fonts/Inter.ttf` (the rule in `constants/fontFamily.ts` drops the
+// suffix below weight 700), so the shipped `Inter SemiBold.ttf` was
+// unreachable and the chip was rendering in REGULAR.
+//
 //   • compact typography — caption-sized, semibold, never larger
 //   • optional leading icon (Archive) and trailing count badge (Radio
 //     stations / Live TV channels) on the chip's right edge
@@ -38,6 +51,7 @@ import {
 } from 'react-native';
 import {useTheme} from '../../../theme';
 import {radius, spacing} from '../../../theme/tokens';
+import {FONT_FAMILY} from '../../../constants/fontFamily';
 import {AppText} from '../../core/AppText/AppText';
 import {SvgIcon, type SvgIconName} from '../SvgIcon';
 
@@ -112,11 +126,12 @@ export const FilterChips: React.FC<FilterChipsProps> = React.memo(
                     borderColor: colors.accent.gold,
                   }
                 : {
-                    // v10.3: clean white pill — neutral, tappable, never
-                    // confused with active gold. On dark backgrounds the
-                    // previous `elevated` fill read as warm-and-chunky.
-                    backgroundColor: '#FFFFFF',
-                    borderColor: 'rgba(0, 0, 0, 0.08)',
+                    // 2026-11-12 (SEARCH_PAGE_REDESIGN): the inactive chip
+                    // was a hard-coded WHITE pill (see the header). It is now
+                    // the app's own elevated surface with a hairline border —
+                    // quiet on the dark theme, still a pill on the light one.
+                    backgroundColor: colors.background.elevated,
+                    borderColor: colors.border.subtle,
                   },
             ]}>
             {item.icon ? (
@@ -131,7 +146,7 @@ export const FilterChips: React.FC<FilterChipsProps> = React.memo(
               style={[
                 styles.chipText,
                 {
-                  color: active ? colors.text.inverse : '#1A1A1A',
+                  color: active ? colors.text.inverse : colors.text.secondary,
                 },
               ]}>
               {item.label}
@@ -205,9 +220,15 @@ const styles = StyleSheet.create({
     // height was reading too chunky because the chip itself was tall.
     // With the tight padding above the text now reads compact, like a
     // GitHub-style topic pill.
+    //
+    // 2026-11-12: the semibold is now in the FAMILY key, not in a
+    // `fontWeight` prop. `fontWeight: '600'` on the family `Inter` asks
+    // Android for `fonts/Inter.ttf` (the rule in `constants/fontFamily.ts`
+    // drops the suffix below weight 700) — so `Inter SemiBold.ttf`, which
+    // DOES ship, was unreachable and the chip was drawing in REGULAR.
+    fontFamily: FONT_FAMILY.inter.semibold,
     fontSize: 11,
     lineHeight: 13,
-    fontWeight: '600',
   },
   countBadge: {
     minWidth: 20,

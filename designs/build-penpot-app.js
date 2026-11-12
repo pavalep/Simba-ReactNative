@@ -63,6 +63,12 @@ const {
   creditsBoard,
   statsBoard,
 } = require('./penpot/profile');
+const {
+  searchEmptyBoard,
+  searchResultsBoard,
+  searchNoResultsBoard,
+  searchFiltersBoard,
+} = require('./penpot/search');
 const {SCREEN_W, SCREEN_H} = require('./penpot/kit');
 
 const OUT = path.join(__dirname, '.build');
@@ -102,7 +108,8 @@ const LOGIN_BOARD = 'Login / light — orb rest';
 
 function boardFor(route, theme) {
   if (route === 'Login') return LOGIN_BOARD;
-  return boardName(route, theme);
+  const state = ROUTE_ENTRY_STATES[route];
+  return state ? boardName(route, theme) + ' — ' + state : boardName(route, theme);
 }
 
 // ── the boards ─────────────────────────────────────────────────────────────
@@ -238,6 +245,38 @@ for (const page of RC1_PAGES) {
   }
 }
 
+// The Search page — DRAWN, in four states, in both themes.
+//
+// The page has four states, and the board carries all of them: the page as
+// it opens (empty), the page with a query and its results, the page with a
+// query and no results, and the results with the filter sheet over them
+// (`md/SEARCH_PAGE_REDESIGN.md` §3).
+//
+// The boards are named after the STATE, the way the Home boards are
+// ("Home / light — viewport"), so "Search / light" is free to mean the
+// screen itself and the old placeholder of that name can be removed.
+//
+// The app's own edges leave the Search screen through six result rows, and
+// they leave it from the RESULTS board — that is where the six rows are.
+const SEARCH_STATES = [
+  {state: 'empty', draw: searchEmptyBoard},
+  {state: 'results', draw: searchResultsBoard},
+  {state: 'no results', draw: searchNoResultsBoard},
+  {state: 'filters', draw: searchFiltersBoard},
+];
+for (const page of SEARCH_STATES) {
+  for (const theme of ['light', 'dark']) {
+    const drawn = page.draw(theme);
+    boards.push({
+      name: boardName('Search', theme) + ' — ' + page.state,
+      w: drawn.width,
+      h: drawn.height,
+      fill: (theme === 'dark' ? spec.darkColors : spec.colors).background.primary,
+      shapes: drawn.shapes,
+    });
+  }
+}
+
 // Every other route — a placeholder, in the light theme. The dark variants
 // of the other screens come with their own page pass.
 //
@@ -248,6 +287,7 @@ for (const route of ROUTES) {
   if (route.route === 'Home') continue;
   if (route.route === 'Login') continue;
   if (route.route === 'Splash') continue;
+  if (route.route === 'Search') continue;
   if (RC1_ROUTES.has(route.route)) continue;
   addPlaceholder(route.route, 'light');
 }
@@ -288,12 +328,44 @@ const DESIGNED = new Set([
   boardName('Home', 'dark'),
 ]);
 
+/**
+ * The route whose boards are named after their STATE.
+ *
+ * The Search page has four states, so its boards are "Search / light —
+ * results" and not "Search / light" — and the app's own edges leave the
+ * Search screen from the RESULTS board, where the six result rows are.
+ */
+const ROUTE_STATES = {Search: 'results'};
+
+/**
+ * The state a route's edge ARRIVES at.
+ *
+ * The Search page opens on its EMPTY state — the recent searches and the
+ * trending rows — because the page does NOT autofocus and it is a browse
+ * page first (`md/SEARCH_PAGE_REDESIGN.md` §3.5). So the Home's search
+ * button goes to the empty board, and the six result rows leave from the
+ * results board.
+ */
+const ROUTE_ENTRY_STATES = {Search: 'empty'};
+
+/** The board a route's edge leaves from. */
+function boardOf(route, theme) {
+  const state = ROUTE_STATES[route];
+  return state ? boardName(route, theme) + ' — ' + state : boardName(route, theme);
+}
+
 // The RC1 account + internal pages are drawn, so their connectors point at
 // a SHAPE on the board rather than at the whole board.
 for (const page of RC1_PAGES) {
   for (const theme of ['light', 'dark']) {
     DESIGNED.add(boardName(page.route, theme));
   }
+}
+
+// The Search page's results board is drawn too — the six result rows are
+// the connectors' targets.
+for (const theme of ['light', 'dark']) {
+  DESIGNED.add(boardOf('Search', theme));
 }
 
 /** A connector from one board to another. */
@@ -364,7 +436,7 @@ for (const edge of EDGES) {
   if (edge.from === 'Splash') continue; // already wired above
   if (edge.to === 'NowPlaying') continue; // the app renders that screen as null
   for (const theme of ['light', 'dark']) {
-    const fromName = boardName(edge.from, theme);
+    const fromName = boardOf(edge.from, theme);
     if (!boards.some(b => b.name === fromName)) continue;
     link(fromName, boardFor(edge.to, 'light'), edge.trigger, {
       // A shape-level connector needs the shape to exist. On a
@@ -847,6 +919,9 @@ for (const plan of PLAN.boards) {
 
   const shapes = {};
   const order = [];
+  // The rects whose width follows a MEASURED text — resolved after the
+  // layout has settled, not here.
+  const lateWidths = [];
 
   // pass 1 — the texts, so Penpot can measure them
   for (const s of plan.shapes) {
@@ -899,9 +974,18 @@ for (const plan of PLAN.boards) {
       const r = penpot.createRectangle();
       r.name = s.name;
       let w = s.w;
+      let late = null;
       if (typeof w === 'object') {
-        const t = shapes[w.text];
-        w = Math.max(w.min, (t ? t.width : 0) + w.extra);
+        // EVERY width that follows a text is a LATE width.
+        //
+        // The old form (text/min/extra) resolved the text's width
+        // INLINE — at that moment the canvas had not measured the text yet,
+        // so it read 1 and the shape was created at (1 + extra) or at its
+        // minimum. The form is kept for the generators, but it is resolved
+        // the same way as the explicit "measured" one: after the layout
+        // has settled, in the loop above.
+        late = w;
+        w = Math.max(1, w.min || 0);
       }
       r.resize(w, s.h);
       r.fills = fillsOf(s.fill);
@@ -922,6 +1006,7 @@ for (const plan of PLAN.boards) {
       }
       board.appendChild(r);
       shapes[s.name] = r;
+      if (late) lateWidths.push({name: s.name, spec: late, h: s.h});
     } else if (s.kind === 'image') {
       const md = media[s.media];
       if (!md) throw new Error('no media for ' + s.media + ' (' + s.name + ')');
@@ -938,6 +1023,95 @@ for (const plan of PLAN.boards) {
   }
 
   await settle(3000);
+
+  // ── the widths that follow a MEASURED text ─────────────────────────────
+  //
+  // A rect whose width follows a text ("the pill is as wide as its label",
+  // "the rule is as wide as the item") cannot be sized when it is created:
+  // the canvas has not laid the text out yet.
+  //
+  // THE MEASUREMENT IS NOT AVAILABLE ON THE FIRST WAIT
+  // --------------------------------------------------
+  // Measured on a test board (2026-11-12): a text run reports a width of
+  // **1** after the first layout wait, and its real width (14 dp for "All"
+  // at Inter 13) only after a later one. A width taken from that first
+  // reading is the placeholder plus the padding, and it STICKS — the Search
+  // page's scope underline came out 25 dp wide instead of the label's 16 +
+  // its 16, and the filter sheet's chips came out 28 dp wide with their
+  // labels running out of the pill.
+  //
+  // So the measurement is taken in a LOOP: settle, read, resize — over and
+  // over until the text's width stops moving. A reading of 1 means "not
+  // measured yet", and a pass that sees one is skipped rather than baked
+  // in.
+  //
+  // TWO SHAPES, ONE REMAINDER
+  // ------------------------
+  // "container" is for the shapes that are FLEXED in the app: the two rules
+  // of the Cormorant divider, which are "flex: 1" and share what the label
+  // and the action leave behind. Their width is not the label's width plus
+  // something — it is the REMAINDER of a fixed container, split between
+  // them:
+  //
+  //   w = (container - extra - labelWidth - alsoWidth) / split
+  //
+  // "extra" is the fixed padding the app puts around the texts (the
+  // label's own wrap and the action's), "also" is the second text whose
+  // width is subtracted, and "split" is how many shapes share the
+  // remainder.
+  let lateUnmeasured = false;
+  for (let pass = 0; pass < 5; pass++) {
+    await settle(1500);
+    let changed = false;
+    lateUnmeasured = false;
+    for (const late of lateWidths) {
+      const spec = late.spec;
+      const t = shapes[spec.text];
+      const textW = t ? t.width : 0;
+      const otherW = spec.also
+        ? shapes[spec.also]
+          ? shapes[spec.also].width
+          : 0
+        : 0;
+      // A width of 1 is Penpot's "not measured yet", not a measurement.
+      if (textW <= 1 || (spec.also && otherW <= 1)) {
+        lateUnmeasured = true;
+        continue;
+      }
+      let w;
+      if (spec.container != null) {
+        w = (spec.container - (spec.extra || 0) - textW - otherW) / (spec.split || 1);
+      } else {
+        w = textW + (spec.extra || 0);
+      }
+      w = Math.max(spec.min || 0, w);
+      const sh = shapes[late.name];
+      if (!sh) continue;
+      if (Math.abs(sh.width - w) > 0.5) {
+        try {
+          sh.resize(w, late.h);
+          changed = true;
+        } catch (e) {
+          report.errors.push(
+            'resize failed for ' + late.name + ': ' + String(e).slice(0, 160),
+          );
+        }
+      }
+    }
+    if (!changed && !lateUnmeasured) break;
+  }
+
+  // The canvas never measured the texts (a suspended tab, a canvas that
+  // stopped laying out). The widths are then the placeholder plus the
+  // padding — wrong, but bounded and visible, and the build reports it
+  // rather than pretending it measured something.
+  if (lateUnmeasured) {
+    report.errors.push(
+      'the canvas did not measure every text run; ' +
+        lateWidths.length +
+        ' width(s) follow an unmeasured label',
+    );
+  }
 
   // ── the horizontal positions ───────────────────────────────────────────
   //  a) the chains — a shape that hangs off the one before it
@@ -1407,6 +1581,11 @@ buildBatches.forEach((group, i) => {
       // new plan does not own them and would otherwise leave them behind.
       'Settings / light',
       'Settings / dark',
+      // The Search PLACEHOLDER — the page is drawn now, in four states, and
+      // the boards carry the state's name ("Search / light — results" and
+      // its three siblings). The placeholder of the bare name is not part
+      // of the map any more, so it is removed by NAME.
+      'Search / light',
     ],
   });
   written.push(writePayload('penpot-app-build-' + (i + 1) + '.json', buildCode.replace('__PLAN__', JSON.stringify(plan))));

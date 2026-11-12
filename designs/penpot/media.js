@@ -81,6 +81,15 @@ const ASSETS = {
   'ph.pod2': {file: 'placeholders/audio/concert.jpg', box: [264, 264]},
   'ph.pod3': {file: 'placeholders/audio/studio.jpg', box: [264, 264]},
 
+  // ── the search rows' artwork (40x40 dp) ────────────────────────────
+  //
+  // The Search page's rows are 40x40 (`md/SEARCH_PAGE_REDESIGN.md` §3.2),
+  // and the resizer centre-crops to the box, so these are the app's own
+  // placeholder photographs cropped square — the same pictures the app
+  // draws in a list row.
+  'ph.row1': {file: 'placeholders/audio/vinyl.jpg', box: [80, 80]},
+  'ph.row2': {file: 'placeholders/audio/piano.jpg', box: [80, 80]},
+
   // ── the playlist cover collage ──
   // `PlaylistCover` draws the playlist's first four items as a 2x2 collage
   // with a hairline border between the cells (`PlaylistCover.tsx:136-158`).

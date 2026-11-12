@@ -1,9 +1,9 @@
 /**
- * `ResultTile` — the search tile's thumbnail URI.
+ * `SearchResultRow` — the artwork URI.
  *
  * ## The defect this pins
  *
- * The tile built its image URI as
+ * The search tile used to build its image URI as
  *
  * ```ts
  * 'file://' + item.thumbnailPath + '?t=' + encodeURIComponent(lastPlayedAt)
@@ -17,8 +17,16 @@
  *
  * `MediaRailCard` has always handled this correctly with
  * `toRenderableImageUri`. The search tile had its own inline version, and
- * that version was wrong. This test pins the tile to the helper, so the two
- * cannot drift again.
+ * that version was wrong.
+ *
+ * ## Why the tile is gone but the contract is not
+ *
+ * 2026-11-12 (SEARCH_PAGE_REDESIGN): the tile — a poster card in a
+ * 2-column grid, one of four row grammars on the page — was deleted, and
+ * every result now draws the one row (`SearchResultRow`). The URI
+ * contract is still worth pinning, and it now lives in the app's own
+ * owner (`utils/mediaUri`), so this test asserts that the ROW asks that
+ * owner for the URI rather than building one itself.
  *
  * ## What is mocked, and why
  *
@@ -32,8 +40,7 @@
 import React from 'react';
 import {render} from '@testing-library/react-native';
 import {ThemeProvider} from '../../../src/theme';
-import {ResultTile} from '../../../src/screens/Search/components/ResultTile';
-import type {SearchResultItem} from '../../../src/hooks/useSearch';
+import {SearchResultRow} from '../../../src/screens/Search/components/SearchResultRow';
 
 jest.mock('../../../src/components/sheets/MediaActionsSheet/useQueueActions', () => ({
   useQueueActions: () => ({playNext: jest.fn(), addToQueue: jest.fn()}),
@@ -73,24 +80,12 @@ function findByType(node: HostNode | null, type: string): HostNode | null {
   return null;
 }
 
-async function renderTile(overrides: Partial<SearchResultItem> = {}) {
-  const item: SearchResultItem = {
-    id: 'rifle',
-    title: 'The Rifle',
-    group: 'videos',
-    relevanceScore: 100,
-    lastPlayedAt: PLAYED_AT,
-    ...overrides,
-  };
-
+async function renderRow(
+  props: Partial<React.ComponentProps<typeof SearchResultRow>> = {},
+) {
   const result = await render(
     <ThemeProvider>
-      <ResultTile
-        item={item}
-        tileWidth={120}
-        query="rifle"
-        onPress={jest.fn()}
-      />
+      <SearchResultRow title="The Rifle" onPress={jest.fn()} {...props} />
     </ThemeProvider>,
   );
 
@@ -98,11 +93,14 @@ async function renderTile(overrides: Partial<SearchResultItem> = {}) {
   return {result, image: findByType(tree, 'Image')};
 }
 
-describe('ResultTile — the thumbnail URI', () => {
+describe('SearchResultRow — the artwork URI', () => {
   it('leaves a REMOTE catalogue URL alone', async () => {
-    // The regression. `file://https://…` names no file, so the tile fell
+    // The regression. `file://https://…` names no file, so the row fell
     // back to its placeholder glyph for every remote thumbnail.
-    const {image} = await renderTile({thumbnailPath: REMOTE_ART});
+    const {image} = await renderRow({
+      artwork: REMOTE_ART,
+      cacheToken: PLAYED_AT,
+    });
 
     expect(image).not.toBeNull();
     const uri = (image!.props!.source as {uri: string}).uri;
@@ -111,14 +109,20 @@ describe('ResultTile — the thumbnail URI', () => {
   });
 
   it('gives a LOCAL captured frame the file:// scheme', async () => {
-    const {image} = await renderTile({thumbnailPath: LOCAL_FRAME});
+    const {image} = await renderRow({
+      artwork: LOCAL_FRAME,
+      cacheToken: PLAYED_AT,
+    });
 
     const uri = (image!.props!.source as {uri: string}).uri;
     expect(uri).toBe(`file://${LOCAL_FRAME}?t=${TOKEN}`);
   });
 
   it('does not double-prefix a path that already carries a scheme', async () => {
-    const {image} = await renderTile({thumbnailPath: 'file:///data/a.jpg'});
+    const {image} = await renderRow({
+      artwork: 'file:///data/a.jpg',
+      cacheToken: PLAYED_AT,
+    });
 
     const uri = (image!.props!.source as {uri: string}).uri;
     expect(uri).toBe(`file:///data/a.jpg?t=${TOKEN}`);
@@ -126,8 +130,9 @@ describe('ResultTile — the thumbnail URI', () => {
   });
 
   it('uses & when the remote URL already carries a query', async () => {
-    const {image} = await renderTile({
-      thumbnailPath: 'https://example.test/a.jpg?w=200',
+    const {image} = await renderRow({
+      artwork: 'https://example.test/a.jpg?w=200',
+      cacheToken: PLAYED_AT,
     });
 
     const uri = (image!.props!.source as {uri: string}).uri;
@@ -137,14 +142,21 @@ describe('ResultTile — the thumbnail URI', () => {
   it('renders no image at all when there is no thumbnail', async () => {
     // A control whose handler is a fallback renders nothing — the
     // placeholder glyph, not an image pointing at an empty URI.
-    const {image} = await renderTile({thumbnailPath: undefined});
+    const {image} = await renderRow({artwork: undefined});
 
     expect(image).toBeNull();
   });
 
   it('renders no image when the thumbnail path is an empty string', async () => {
-    const {image} = await renderTile({thumbnailPath: ''});
+    const {image} = await renderRow({artwork: ''});
 
     expect(image).toBeNull();
+  });
+
+  it('draws no cache token when the result has no date', async () => {
+    const {image} = await renderRow({artwork: REMOTE_ART});
+
+    const uri = (image!.props!.source as {uri: string}).uri;
+    expect(uri).toBe(REMOTE_ART);
   });
 });

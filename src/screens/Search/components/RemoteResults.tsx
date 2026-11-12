@@ -1,183 +1,59 @@
-// ─── Remote Results ─────────────────────────────────────────────────────
-// P40.5/40.6: per-source result sections from the aggregator. Each source
-// renders its own rows with the correct destination, its own skeleton
-// while loading, and its own compact empty state — one failed API never
-// blanks the page (aggregator isolates errors per source).
+// ─── RemoteResults ───────────────────────────────────────────────────────
+// The REMOTE result groups — the five free-content APIs.
+//
+// 2026-11-12 (SEARCH_PAGE_REDESIGN) — four changes:
+//
+// 1. **THE SECTION TITLES ARE THE APP'S.** They were `displaySans` with
+//    `fontWeight: '700'`, and `displaySans` is **Manrope SemiBold 22**.
+//    Asking for weight 700 asks Android for `Manrope SemiBold_bold.ttf`,
+//    which DOES NOT SHIP (`android/app/src/main/assets/fonts/` has
+//    `Manrope-SemiBold.ttf` and `Manrope_bold.ttf`, and no
+//    `Manrope SemiBold_bold.ttf`). React Native then falls back
+//    SILENTLY, and the glyph that is drawn is not the face that was
+//    measured. The titles are now `SubsectionTitle` — the gold Cormorant
+//    italic chapter break the Profile and the About page use, and the
+//    same component the local groups use.
+//
+// 2. **THE PODCASTS AND RADIO SECTIONS ARE GONE.** Their result arrays
+//    are hard-coded `[]` (`useAggregatedSearch.ts` — Podcast Index needs
+//    SHA1 auth, Radio Browser needs a name-based query), so those two
+//    sections could only ever draw a SKELETON. They were two blocks of
+//    screen in the design that the app could not draw. The two adapters
+//    are still to be built; until they are, the sections are not drawn.
+//
+// 3. **THE ROW IS THE ONE ROW.** `MediaRow` was a near-copy of
+//    `StreamingRow` with a different padding, a different radius and no
+//    hairline, and its trailing edge was a 32 dp GOLD DISC. Every result
+//    on the page now draws `SearchResultRow` — the Profile page's
+//    `SettingsRow` anatomy — with the download as a bare glyph.
+//
+// 4. **THE FILTERS REACH THIS LIST.** The scope, the media-kind filter
+//    and the sort are applied in `utils/searchFilters.ts`, to BOTH the
+//    local results and these. Before this, the filter sheet's controls
+//    only reached the local results, so on a query whose results came
+//    from the APIs the sheet did nothing at all (device proof in
+//    `md/SEARCH_PAGE_REDESIGN.md` §2.1).
+//
+// TWO THINGS ARE NOT DRAWN HERE
+// ─────────────────────────────
+// • An empty section. The page says "nothing found" once, in one
+//   grammar, rather than once per source.
+// • A loading state. The page's own results area owns the one loading
+//   treatment (`Placeholder`), so the five sources cannot each draw
+//   their own skeleton — that was five grey bars racing each other.
 
 import React from 'react';
-import {View, FlatList, TouchableOpacity, StyleSheet} from 'react-native';
-import {MediaImage} from '../../../components/utility/MediaImage';
-import {useTheme} from '../../../theme';
-import {radius, spacing} from '../../../theme/tokens';
-import {AppText} from '../../../components/core/AppText/AppText';
-import {SvgIcon, IconName} from '../../../components/utility/SvgIcon';
-import {DownloadButton} from '../../../components/core/DownloadButton/DownloadButton';
-import type {AggregatedSearchResults} from '../../../types/api';
+import {View} from 'react-native';
+import {SubsectionTitle} from '../../../components/utility/SubsectionTitle/SubsectionTitle';
 import type {
+  AggregatedSearchResults,
   AudiobookResult,
   AudiusTrackResult,
   InternetArchiveItemResult,
   IPTVChannelResult,
   JamendoTrackResult,
 } from '../../../types/api';
-import type {SearchSource} from './SourceFilterChips';
-import type {MediaSource} from '../../../types/media';
-
-// ── Compact per-source row ──
-
-const rowStyles = StyleSheet.create({
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: radius.md,
-    marginBottom: 6,
-    gap: 12,
-  },
-  art: {
-    width: 44,
-    height: 44,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  info: {
-    flex: 1,
-  },
-  trailing: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
-
-interface MediaRowProps {
-  title: string;
-  subtitle: string;
-  imageUrl: string;
-  icon: IconName;
-  trailing: 'play' | 'chevron';
-  /** 49.5: optional offline download action (renders DownloadButton). */
-  download?: {uri: string; title: string; mediaType?: 'audio' | 'video'; source?: MediaSource};
-  onPress: () => void;
-}
-
-const MediaRow: React.FC<MediaRowProps> = React.memo(
-  ({title, subtitle, imageUrl, icon, trailing, download, onPress}) => {
-    const {colors} = useTheme();
-    return (
-      <TouchableOpacity
-        style={[
-          rowStyles.card,
-          {backgroundColor: colors.background.elevated},
-        ]}
-        activeOpacity={0.7}
-        onPress={onPress}
-        accessibilityRole="button">
-        {imageUrl ? (
-          <MediaImage
-            source={imageUrl}
-            style={rowStyles.art}
-            resizeMode="cover"
-          />
-        ) : (
-          <View style={[rowStyles.art, {backgroundColor: colors.accent.goldDim}]}>
-            <SvgIcon name={icon} size={20} color={colors.accent.gold} />
-          </View>
-        )}
-        <View style={rowStyles.info}>
-          <AppText variant="body2" color="primary" numberOfLines={1}>
-            {title}
-          </AppText>
-          <AppText variant="caption" color="tertiary" numberOfLines={1}>
-            {subtitle}
-          </AppText>
-        </View>
-        {download ? (
-          <DownloadButton
-            uri={download.uri}
-            title={download.title}
-            mediaType={download.mediaType}
-            source={download.source ?? 'api'}
-            size={16}
-          />
-        ) : (
-          <View style={[rowStyles.trailing, {backgroundColor: colors.accent.goldDim}]}>
-            <SvgIcon
-              name={trailing === 'play' ? 'play' : 'chevronRight'}
-              size={14}
-              color={colors.accent.gold}
-            />
-          </View>
-        )}
-      </TouchableOpacity>
-    );
-  },
-);
-
-// ── Section wrapper + skeleton ──
-
-const sectionStyles = StyleSheet.create({
-  section: {
-    marginTop: spacing.lg,
-  },
-  title: {
-    fontWeight: '700',
-    marginBottom: spacing.sm,
-    paddingHorizontal: spacing.md,
-  },
-  skeletonRow: {
-    height: 56,
-    borderRadius: radius.md,
-    marginBottom: 6,
-    marginHorizontal: spacing.md,
-  },
-  emptyBox: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-  },
-});
-
-const SkeletonRows: React.FC<{count?: number}> = React.memo(({count = 2}) => {
-  const {colors} = useTheme();
-  const skeletonData = React.useMemo(
-    () => Array.from({length: count}, (_, i) => i),
-    [count],
-  );
-  return (
-    <FlatList
-      data={skeletonData}
-      keyExtractor={item => `skeleton-${item}`}
-      renderItem={() => (
-        <View
-          style={[
-            sectionStyles.skeletonRow,
-            {backgroundColor: colors.background.elevated},
-          ]}
-        />
-      )}
-      scrollEnabled={false}
-      initialNumToRender={count}
-    />
-  );
-});
-
-const Section: React.FC<{label: string; children: React.ReactNode}> = ({
-  label,
-  children,
-}) => (
-  <View style={sectionStyles.section}>
-    <AppText variant="displaySans" color="primary" style={sectionStyles.title}>
-      {label}
-    </AppText>
-    {children}
-  </View>
-);
-
-// ── Main component ──
+import {SearchResultRow} from './SearchResultRow';
 
 export interface RemoteResultsHandlers {
   onPlayTrack: (track: JamendoTrackResult) => void;
@@ -189,214 +65,119 @@ export interface RemoteResultsHandlers {
 
 interface RemoteResultsProps {
   results: AggregatedSearchResults;
-  isLoading: boolean;
-  source: SearchSource;
   handlers: RemoteResultsHandlers;
 }
 
-export const RemoteResults: React.FC<RemoteResultsProps> = React.memo(
-  ({results, isLoading, source, handlers}) => {
-    if (source === 'local') return null;
-    const showAll = source === 'all';
-    const showMusic = showAll || source === 'music';
-    const showPodcasts = showAll || source === 'podcasts';
-    const showRadio = showAll || source === 'radio';
-    const showTv = showAll || source === 'tv';
-    const showAudiobooks = showAll || source === 'audiobooks';
-    const showArchive = showAll || source === 'archive';
+/** One result group: the gold divider, then its rows. */
+const Section: React.FC<{label: string; children: React.ReactNode}> = ({
+  label,
+  children,
+}) => (
+  <View>
+    <SubsectionTitle label={label} variant="displaySerif" />
+    {children}
+  </View>
+);
 
+export const RemoteResults: React.FC<RemoteResultsProps> = React.memo(
+  ({results, handlers}) => {
     const hasMusic =
       results.jamendoTracks.length + results.audiusTracks.length > 0;
-    const hasPodcasts = results.podcasts.length > 0;
-    const hasRadio = results.radioStations.length > 0;
     const hasTv = results.iptvChannels.length > 0;
     const hasAudiobooks = results.audiobooks.length > 0;
     const hasArchive = results.internetArchiveItems.length > 0;
 
+    if (!hasMusic && !hasTv && !hasAudiobooks && !hasArchive) {
+      return null;
+    }
+
     return (
-      <>
-        {showMusic && (hasMusic || isLoading) ? (
+      <View>
+        {hasMusic ? (
           <Section label="Music">
-            {isLoading ? (
-              <SkeletonRows />
-            ) : (
-              <>
-                <FlatList
-                  data={results.jamendoTracks}
-                keyExtractor={item => `jamendo-${item.id}`}
-                renderItem={({item}) => (
-                  <MediaRow
-                    title={item.name}
-                    subtitle={item.artistName}
-                    imageUrl={item.imageUrl}
-                    icon="music"
-                    trailing="play"
-                    download={{uri: item.audioUrl, title: item.name, mediaType: 'audio', source: 'api'}}
-                    onPress={() => handlers.onPlayTrack(item)}
-                  />
-                )}
-                scrollEnabled={false}
-                initialNumToRender={results.jamendoTracks.length}
+            {results.jamendoTracks.map(item => (
+              <SearchResultRow
+                key={`jamendo-${item.id}`}
+                title={item.name}
+                subtitle={item.artistName}
+                artwork={item.imageUrl}
+                icon="music"
+                trailing="download"
+                download={{
+                  uri: item.audioUrl,
+                  title: item.name,
+                  mediaType: 'audio',
+                  source: 'api',
+                }}
+                onPress={() => handlers.onPlayTrack(item)}
               />
-              <FlatList
-                data={results.audiusTracks}
-                keyExtractor={item => `audius-${item.id}`}
-                renderItem={({item}) => (
-                  <MediaRow
-                    title={item.title}
-                    subtitle={item.artistName}
-                    imageUrl={item.artworkUrl}
-                    icon="music"
-                    trailing="play"
-                    download={{uri: item.streamUrl, title: item.title, mediaType: 'audio', source: 'api'}}
-                    onPress={() => handlers.onPlayAudius(item)}
-                  />
-                )}
-                scrollEnabled={false}
-                initialNumToRender={results.audiusTracks.length}
+            ))}
+            {results.audiusTracks.map(item => (
+              <SearchResultRow
+                key={`audius-${item.id}`}
+                title={item.title}
+                subtitle={item.artistName}
+                artwork={item.artworkUrl}
+                icon="music"
+                trailing="download"
+                download={{
+                  uri: item.streamUrl,
+                  title: item.title,
+                  mediaType: 'audio',
+                  source: 'api',
+                }}
+                onPress={() => handlers.onPlayAudius(item)}
               />
-            </>
-            )}
-          </Section>
-        ) : source === 'music' && !hasMusic && !isLoading ? (
-          <Section label="Music">
-            <View style={sectionStyles.emptyBox}>
-              <AppText variant="caption" color="tertiary">
-                No music results found
-              </AppText>
-            </View>
+            ))}
           </Section>
         ) : null}
 
-        {showPodcasts && (hasPodcasts || isLoading) ? (
-          <Section label="Podcasts">
-            {/* Podcast Index needs SHA1 auth — aggregator leaves it empty */}
-            {isLoading ? <SkeletonRows /> : null}
-          </Section>
-        ) : source === 'podcasts' && !hasPodcasts && !isLoading ? (
-          <Section label="Podcasts">
-            <View style={sectionStyles.emptyBox}>
-              <AppText variant="caption" color="tertiary">
-                No podcasts found
-              </AppText>
-            </View>
-          </Section>
-        ) : null}
-
-        {showRadio && (hasRadio || isLoading) ? (
-          <Section label="Radio">
-            {/* Radio Browser needs name-based query — aggregator leaves it empty */}
-            {isLoading ? <SkeletonRows /> : null}
-          </Section>
-        ) : source === 'radio' && !hasRadio && !isLoading ? (
-          <Section label="Radio">
-            <View style={sectionStyles.emptyBox}>
-              <AppText variant="caption" color="tertiary">
-                No radio stations found
-              </AppText>
-            </View>
-          </Section>
-        ) : null}
-
-        {showTv && (hasTv || isLoading) ? (
+        {hasTv ? (
           <Section label="TV">
-            {isLoading ? (
-              <SkeletonRows />
-            ) : (
-              <FlatList
-                data={results.iptvChannels}
-                keyExtractor={item => `tv-${item.id}`}
-                renderItem={({item}) => (
-                  <MediaRow
-                    title={item.name}
-                    subtitle={`${item.country} · ${item.category}`}
-                    imageUrl={item.image}
-                    icon="video"
-                    trailing="play"
-                    onPress={() => handlers.onOpenChannel(item)}
-                  />
-                )}
-                scrollEnabled={false}
-                initialNumToRender={results.iptvChannels.length}
+            {results.iptvChannels.map(item => (
+              <SearchResultRow
+                key={`tv-${item.id}`}
+                title={item.name}
+                subtitle={`${item.country} · ${item.category}`}
+                artwork={item.image}
+                icon="tv"
+                onPress={() => handlers.onOpenChannel(item)}
               />
-            )}
-          </Section>
-        ) : source === 'tv' && !hasTv && !isLoading ? (
-          <Section label="TV">
-            <View style={sectionStyles.emptyBox}>
-              <AppText variant="caption" color="tertiary">
-                No TV channels found
-              </AppText>
-            </View>
+            ))}
           </Section>
         ) : null}
 
-        {showAudiobooks && (hasAudiobooks || isLoading) ? (
+        {hasAudiobooks ? (
           <Section label="Audiobooks">
-            {isLoading ? (
-              <SkeletonRows />
-            ) : (
-              <FlatList
-                data={results.audiobooks}
-                keyExtractor={item => `book-${item.id}`}
-                renderItem={({item}) => (
-                  <MediaRow
-                    title={item.title}
-                    subtitle={item.author}
-                    imageUrl=""
-                    icon="listMusic"
-                    trailing="chevron"
-                    onPress={() => handlers.onOpenAudiobook(item)}
-                  />
-                )}
-                scrollEnabled={false}
-                initialNumToRender={results.audiobooks.length}
+            {results.audiobooks.map(item => (
+              <SearchResultRow
+                key={`book-${item.id}`}
+                title={item.title}
+                subtitle={item.author}
+                icon="book"
+                trailing="chevron"
+                onPress={() => handlers.onOpenAudiobook(item)}
               />
-            )}
-          </Section>
-        ) : source === 'audiobooks' && !hasAudiobooks && !isLoading ? (
-          <Section label="Audiobooks">
-            <View style={sectionStyles.emptyBox}>
-              <AppText variant="caption" color="tertiary">
-                No audiobooks found
-              </AppText>
-            </View>
+            ))}
           </Section>
         ) : null}
 
-        {showArchive && (hasArchive || isLoading) ? (
+        {hasArchive ? (
           <Section label="Archive">
-            {isLoading ? (
-              <SkeletonRows />
-            ) : (
-              <FlatList
-                data={results.internetArchiveItems}
-                keyExtractor={item => `archive-${item.identifier}`}
-                renderItem={({item}) => (
-                  <MediaRow
-                    title={item.title}
-                    subtitle={item.creator}
-                    imageUrl={item.imageUrl}
-                    icon="folderFill"
-                    trailing="chevron"
-                    onPress={() => handlers.onOpenArchive(item)}
-                  />
-                )}
-                scrollEnabled={false}
-                initialNumToRender={results.internetArchiveItems.length}
+            {results.internetArchiveItems.map(item => (
+              <SearchResultRow
+                key={`archive-${item.identifier}`}
+                title={item.title}
+                subtitle={item.creator}
+                artwork={item.imageUrl}
+                icon="archive"
+                trailing="chevron"
+                onPress={() => handlers.onOpenArchive(item)}
               />
-            )}
-          </Section>
-        ) : source === 'archive' && !hasArchive && !isLoading ? (
-          <Section label="Archive">
-            <View style={sectionStyles.emptyBox}>
-              <AppText variant="caption" color="tertiary">
-                No archive items found
-              </AppText>
-            </View>
+            ))}
           </Section>
         ) : null}
-      </>
+      </View>
     );
   },
 );

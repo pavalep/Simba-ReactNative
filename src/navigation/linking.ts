@@ -44,7 +44,18 @@ function parseGenreInitialTab(value: string): 'local' | 'streaming' | undefined 
 }
 
 export const linking: LinkingOptions<RootStackParamList> = {
-  prefixes: ['simbaplayer://', 'https://simbaplayer.app'],
+  // 2026-11-12: `https://simbaplayer.app` is GONE as a prefix. There is
+  // no such website — the project has no web presence — so declaring it
+  // was two lies at once: the app claimed URLs on a domain it does not
+  // own (which would hijack them from whoever does), and a link built
+  // from it resolved to nothing.
+  //
+  // The scheme is the only prefix now. On Android the app must also
+  // DECLARE the scheme in its manifest to receive the intent at all —
+  // `android/app/src/main/AndroidManifest.xml` carries the
+  // `simbaplayer` intent-filter on `MainActivity` (that was missing,
+  // which is why no `simbaplayer://` link ever opened the app).
+  prefixes: ['simbaplayer://'],
   config: {
     initialRouteName: 'Home',
     screens: {

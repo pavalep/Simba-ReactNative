@@ -1,13 +1,24 @@
 import {Share} from 'react-native';
+import {PROJECT_URL} from '../constants/links';
 
 /**
  * P56 (56.1) — Share-link generation.
  *
- * Builds simbaplayer:// deep links (plus an https://simbaplayer.app fallback)
- * so a shared item opens the right screen when the receiver has the app,
- * and still resolves to a usable link otherwise.
+ * Builds simbaplayer:// deep links so a shared item opens the right
+ * screen when the receiver has the app, plus the project's GitHub as
+ * the link that always resolves.
  *
  * The route → path table mirrors src/navigation/linking.ts — keep in sync.
+ *
+ * 2026-11-12: the web fallback used to be `https://simbaplayer.app/<path>`.
+ * **There is no such website**, so a shared link sent a recipient to a
+ * domain that does not exist — a dead link in the share sheet. The
+ * fallback is now the project's GitHub, which is where the app lives.
+ * There is no per-item web URL to point at until the project has a
+ * website of its own; the deep link still carries the item.
+ *
+ * The scheme is declared in `android/app/src/main/AndroidManifest.xml`
+ * on `MainActivity`, without which Android never delivers the intent.
  */
 
 export interface ShareTarget {
@@ -79,21 +90,27 @@ export function buildShareUrl(target: ShareTarget): string {
   return rest ? `simbaplayer://${rest}` : '';
 }
 
-/** Build the https://simbaplayer.app fallback for a target. Empty when the route is unknown. */
-export function buildHttpsUrl(target: ShareTarget): string {
-  const rest = buildPathAndQuery(target.route, target.params);
-  return rest ? `https://simbaplayer.app/${rest}` : '';
+/**
+ * The link that always resolves: the project's GitHub.
+ *
+ * It replaced `https://simbaplayer.app/<path>`, which pointed at a
+ * website that does not exist. Until the project has a site of its
+ * own there is no per-item web URL, so this is the project's home and
+ * the deep link beside it is what carries the item.
+ */
+export function buildFallbackUrl(): string {
+  return PROJECT_URL;
 }
 
-/** Open the native share sheet with the deep link + https fallback. */
+/** Open the native share sheet with the deep link + the project link. */
 export async function shareContent(target: ShareTarget): Promise<void> {
   try {
     const deepLink = buildShareUrl(target);
-    const httpsLink = buildHttpsUrl(target);
+    const fallback = buildFallbackUrl();
     const lines = [target.title];
     if (target.subtitle) lines.push(target.subtitle);
     if (deepLink) lines.push(deepLink);
-    if (httpsLink && httpsLink !== deepLink) lines.push(httpsLink);
+    if (fallback && fallback !== deepLink) lines.push(fallback);
     await Share.share({
       message: lines.join('\n'),
       title: `${target.title} — Simba Player`,

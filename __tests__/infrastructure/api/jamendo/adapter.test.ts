@@ -22,6 +22,7 @@ import {
   getJamendoTracksByGenre,
   getPopularJamendoTracks,
   getJamendoTrackById,
+  decodeJamendoText,
   JAMENDO_RETRIES,
 } from '../../../../src/infrastructure/api/jamendo/adapter';
 import {AdapterParseError} from '../../../../src/infrastructure/api/adapterErrors';
@@ -191,5 +192,50 @@ describe('jamendo adapter — V21 W6 P21c', () => {
     await expect(getJamendoTrackById(1)).rejects.toBeInstanceOf(
       AdapterParseError,
     );
+  });
+});
+
+describe('jamendo adapter — the escaped text fields', () => {
+  // Jamendo escapes the characters that are not legal in its payload, so
+  // the artist "Besson & Sa" arrives as "Besson&amp;sa" — and the app
+  // used to draw the ESCAPED name on the row (seen on the Search page's
+  // results on 2026-11-12: "Bad Intentions, Bessonn&amp;sa").
+  it('decodes the named entities in the track, artist, album and genre', async () => {
+    mockedApiFetch.mockResolvedValueOnce({
+      headers: {status: 'success'},
+      results: [
+        {
+          ...validTrack(1),
+          name: 'Rock &amp; Roll',
+          artist_name: 'Besson&amp;sa',
+          album_name: 'Hits &lt;Live&gt;',
+          genre_name: 'rock &amp; roll',
+        },
+      ],
+    });
+    const results = await searchJamendoTracks('test');
+    expect(results[0]).toMatchObject({
+      name: 'Rock & Roll',
+      artistName: 'Besson&sa',
+      albumName: 'Hits <Live>',
+      genreName: 'rock & roll',
+    });
+  });
+
+  it('decodes the numeric entities', async () => {
+    mockedApiFetch.mockResolvedValueOnce({
+      headers: {status: 'success'},
+      results: [{...validTrack(1), name: 'Caf&#233; &#x26; Bar'}],
+    });
+    const results = await searchJamendoTracks('test');
+    expect(results[0].name).toBe('Café & Bar');
+  });
+
+  it('leaves an unknown entity alone', () => {
+    expect(decodeJamendoText('Foo &bar; Baz')).toBe('Foo &bar; Baz');
+  });
+
+  it('leaves a text without an ampersand alone', () => {
+    expect(decodeJamendoText('Plain Name')).toBe('Plain Name');
   });
 });

@@ -63,16 +63,51 @@
         The orientation contract is now: app = portrait, player
         = either (per the chip), the JS layer is the only thing
         that can flip it during a session.
+
+        2026-11-12 (CF-01): `launchMode` is `singleTask`, not
+        `singleTop`.
+
+        A deep link is delivered to the activity that already exists,
+        through `onNewIntent` — and React Native's `ReactActivity`
+        forwards that to the JS linking layer itself
+        (`ReactActivity.java:133-137` -> `mDelegate.onNewIntent`),
+        so no Kotlin change was needed. What was missing was the
+        MANIFEST side, and that is what this edit adds.
+
+        `singleTop` only reuses an activity that is already at the
+        top of the TARGET task. A `simbaplayer://` link is opened
+        from a browser or another app, so the target task is not the
+        app's own and the system was free to start a SECOND
+        MainActivity in a new task — the app would open twice, and
+        the deep link would land in the copy the user was not
+        looking at. `singleTask` makes MainActivity the single
+        instance of its task and routes every launch at it, which is
+        what a deep link needs. It is also the value React
+        Navigation's own documentation recommends for deep links.
       -->
       <activity
         android:name=".MainActivity"
         android:label="@string/app_name"
         android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
-        android:launchMode="singleTop"
+        android:launchMode="singleTask"
         android:windowSoftInputMode="adjustResize"
         android:resizeableActivity="true"
         android:supportsPictureInPicture="true"
         android:exported="true">
+        <!-- Deep links: simbaplayer://artist/Eminem, simbaplayer://library/... etc.
+             The route table lives in src/navigation/linking.ts; this filter
+             only tells Android to DELIVER the intent to this app.
+             Without it the app is never even asked, and every
+             simbaplayer:// link is dead. The `simbaplayer.app` WEB
+             prefix was removed on 2026-11-12 — the project has no
+             website, and claiming a domain it does not own would
+             hijack it from whoever does. -->
+        <intent-filter>
+          <action android:name="android.intent.action.VIEW" />
+          <category android:name="android.intent.category.DEFAULT" />
+          <category android:name="android.intent.category.BROWSABLE" />
+          <data android:scheme="simbaplayer" />
+        </intent-filter>
         <!-- Accept shared video/audio files from other apps -->
         <intent-filter>
           <action android:name="android.intent.action.VIEW" />

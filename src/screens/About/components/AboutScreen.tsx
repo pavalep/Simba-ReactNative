@@ -62,6 +62,11 @@ import {InternalHeader} from '../../../components/layout/InternalHeader/Internal
 import textContent from '../related/textContent';
 import {APP_VERSION_LABEL} from '../../../constants/appVersion';
 import {BUILT_WITH_CHIPS} from '../../../constants/techStack';
+import {
+  ISSUES_URL as GITHUB_ISSUES_URL,
+  PLAY_STORE_URL,
+  supportMailto,
+} from '../../../constants/links';
 
 type Props = AboutScreenProps;
 
@@ -119,10 +124,11 @@ interface LinkItem {
  *   • the bug report said `github.com/diegopvlk/Cine/issues`, which is
  *     a different project entirely — the app's repo is
  *     `pavalep/Simba-ReactNative`.
+ *
+ * Both now live in `src/constants/links.ts`, which owns the app's
+ * outbound links once (and the support address, which was a dead
+ * domain — see the file's own note).
  */
-const PLAY_STORE_URL =
-  'https://play.google.com/store/apps/details?id=com.simba.player';
-const GITHUB_ISSUES_URL = 'https://github.com/pavalep/Simba-ReactNative/issues';
 
 const LINK_ITEMS: LinkItem[] = [
   {
@@ -179,7 +185,7 @@ const LINK_ITEMS: LinkItem[] = [
   {
     label: textContent.contactFeedback,
     action: 'contact',
-    url: 'mailto:support@simbaplayer.app?subject=Simba%20Player%20Feedback',
+    url: supportMailto('Simba Player Feedback'),
     icon: 'megaphone',
   },
 ];

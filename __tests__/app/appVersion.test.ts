@@ -62,10 +62,17 @@ describe('the app version', () => {
     );
   });
 
-  it('is not the npm placeholder', () => {
-    // `package.json`'s `version` is React Native's template value.
-    // The About page must never read it.
+  it('matches package.json', () => {
+    // `package.json`'s `version` was React Native's template placeholder
+    // (`0.0.1`) until 2026-11-12, and no gate read it — so it drifted
+    // away from the build and nobody noticed. It is now the version, and
+    // this is the gate that reads it.
     const pkg = JSON.parse(read('package.json'));
-    expect(pkg.version).not.toBe(APP_VERSION_NAME);
+    expect(pkg.version).toBe(APP_VERSION_NAME);
+  });
+
+  it('is not the npm placeholder anywhere', () => {
+    const pkg = JSON.parse(read('package.json'));
+    expect(pkg.version).not.toBe('0.0.1');
   });
 });

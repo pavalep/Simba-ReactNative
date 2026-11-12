@@ -41,6 +41,21 @@ export type SearchResultGroup =
   | 'playlists'
   | 'folders';
 
+/**
+ * The screens a search result can open.
+ *
+ * 2026-11-12 (SEARCH_PAGE_REDESIGN): `navigateTo.route` was a bare
+ * `string` (and carried a second, never-constructed `screen` key), so
+ * the Search page's row had to cast its way to `navigation.navigate`.
+ * The four destinations are known, so they are named here — one owner,
+ * and the call site is type-checked.
+ */
+export type SearchResultRoute =
+  | 'ArtistDetail'
+  | 'AlbumDetail'
+  | 'PlaylistDetail'
+  | 'FolderBrowser';
+
 export interface SearchResultItem {
   id: string;
   title: string;
@@ -53,8 +68,7 @@ export interface SearchResultItem {
   lastPlayedAt?: string;
   relevanceScore: number;
   navigateTo?: {
-    screen?: string;
-    route?: string;
+    route: SearchResultRoute;
     params?: Record<string, any>;
   };
 }

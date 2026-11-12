@@ -1,8 +1,21 @@
 // ────────────────────────────────────────────────────────
 // Simba Player — SearchBar Core Component (Phase 53.2)
-// Debounced search input with clear + optional cancel.
+// Debounced search input with clear.
 // Promoted from the Search screen so every screen shares
 // one search experience.
+//
+// 2026-11-12 (SEARCH_PAGE_REDESIGN):
+//   • the input's TYPEFACE is fixed. It set `fontSize: 15` with no
+//     `fontFamily` at all, so the field rendered in the SYSTEM font
+//     while every other piece of type in the app is Inter or Cormorant.
+//     The family is now `FONT_FAMILY.inter.regular` — and the weight is
+//     NOT a `fontWeight` prop, because the house rule is that the weight
+//     lives in the family key (a `fontWeight` beside a family is how
+//     Android ends up asking for a file that does not ship).
+//   • the "Cancel" button is GONE. The prop existed, the component drew
+//     it, and NO caller in the app ever passed `onCancel` — so it could
+//     never appear. It was a control drawn in a design and missing in
+//     the app, which is the exact class of drift this wave is about.
 // ────────────────────────────────────────────────────────
 
 import React, {useCallback, useEffect, useRef, useState} from 'react';
@@ -17,8 +30,8 @@ import {
 } from 'react-native';
 import {useTheme} from '../../../theme';
 import {SvgIcon} from '../../utility/SvgIcon';
-import {AppText} from '../AppText/AppText';
 import {radius, spacing} from '../../../theme/tokens';
+import {FONT_FAMILY} from '../../../constants/fontFamily';
 
 interface SearchBarProps {
   value: string;
@@ -28,8 +41,6 @@ interface SearchBarProps {
   debounceMs?: number;
   /** Extra work on clear (e.g. reset filters); text clears automatically. */
   onClear?: () => void;
-  /** When provided, a "Cancel" button shows while text is non-empty. */
-  onCancel?: () => void;
   onSubmitEditing?: () => void;
   placeholder?: string;
   /** Overrides the placeholder-derived accessibilityLabel (e.g. "Search Movies"). */
@@ -45,7 +56,6 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   onDebouncedChange,
   debounceMs = 300,
   onClear,
-  onCancel,
   onSubmitEditing,
   placeholder = 'Search…',
   accessibilityLabel,
@@ -92,7 +102,15 @@ export const SearchBar: React.FC<SearchBarProps> = ({
           styles.searchBar,
           {
             backgroundColor: colors.background.elevated,
-            borderColor: focused ? colors.accent.gold : colors.border.subtle,
+            // 2026-11-12 (SEARCH_PAGE_REDESIGN): the focus ring was
+            // `accent.gold`, which drew a GOLD OUTLINE around the whole
+            // capsule — the loudest thing on the Search page, and the
+            // owner's "gold-outlined pill field". The field's own accent
+            // is the search glyph, which already turns gold on focus. The
+            // border now steps from `border.subtle` to `border.emphasis`
+            // (0.06 → 0.12 white): a real focus cue, in the theme's own
+            // greys.
+            borderColor: focused ? colors.border.emphasis : colors.border.subtle,
           },
         ]}>
         <SvgIcon
@@ -124,21 +142,6 @@ export const SearchBar: React.FC<SearchBarProps> = ({
           </TouchableOpacity>
         )}
       </View>
-
-      {onCancel && value.length > 0 && (
-        <TouchableOpacity
-          onPress={() => {
-            handleClear();
-            onCancel();
-          }}
-          hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}
-          accessibilityRole="button"
-          accessibilityLabel="Cancel search">
-          <AppText variant="body2" color="accent" style={styles.cancelText}>
-            Cancel
-          </AppText>
-        </TouchableOpacity>
-      )}
     </View>
   );
 };
@@ -160,16 +163,15 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
+    // The app's own Inter — the field used to render in the SYSTEM font
+    // because it set a size and no family at all.
+    fontFamily: FONT_FAMILY.inter.regular,
     fontSize: 15,
-    fontWeight: '400',
     paddingVertical: 0,
     marginLeft: spacing.sm,
   },
   clearButton: {
     marginLeft: spacing.xs,
     paddingLeft: spacing.xs,
-  },
-  cancelText: {
-    fontWeight: '600',
   },
 });

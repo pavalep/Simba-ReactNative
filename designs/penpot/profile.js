@@ -389,22 +389,53 @@ function profileKit(themeName) {
    * (`StatsScreen.tsx:144-145`). The divider's RIGHT rule gives way to the
    * action — one action per row, which is the V2 rule
    * (`SectionHeader.tsx:51-55`).
+   *
+   * THE LAYOUT IS THE APP'S, NOT A CENTRED ROW
+   * ------------------------------------------
+   * `SubsectionTitle` with an action is ONE row:
+   *
+   *   [rule flex:1][label wrap 20|label|20][rule flex:1][action 12|text]
+   *
+   * The two rules are `flex: 1`, so they share what is LEFT — they are not
+   * two fixed rules with the label centred between them. The action takes
+   * its own 12 dp of padding on the left, so the label sits to the LEFT of
+   * the centre, not on it.
+   *
+   * Measured on the device (2026-11-12, the Search page's "Recent
+   * searches" divider): the label's text runs 124.3 → 224.3 dp and the
+   * action's text runs 344.5 → 395.5 dp, with the two rules at 88.3 and
+   * 88.2 dp — equal, as `flex: 1` makes them. The board used to centre a
+   * 120 dp rule and the label in the remaining space, which put the label
+   * at 226 dp: 102 dp to the right of where the app draws it.
    */
   function dividerAction(name, label, action, y, actionShapeName) {
     const left = name + ' rule left';
     const lab = name + ' label';
-    const order = [left, lab];
-    const row = {row: {gap: 20, center: SCREEN_W / 2, order}};
+    const CONTAINER = SCREEN_W - ROW.padX * 2;
+    const LABEL_PAD = spacing.xl;
+    const ACTION_PAD = spacing.md;
+    const FIXED = LABEL_PAD * 2 + ACTION_PAD;
+    const ruleWidth = {
+      measured: true,
+      text: lab,
+      also: actionShapeName || name + ' action',
+      container: CONTAINER,
+      extra: FIXED,
+      split: 2,
+      min: 1,
+    };
+    const right = name + ' rule right';
+    const act = actionShapeName || name + ' action';
     return [
       k.rect(left, {
-        x: row,
+        x: ROW.padX,
         y: y + spacing.md + 11,
-        w: 120,
+        w: ruleWidth,
         h: 2,
         fill: k.theme.dividerRule,
       }),
       k.text(lab, label, {
-        x: row,
+        x: {after: {name: left, edge: 'right', pad: LABEL_PAD}},
         y: y + spacing.md,
         family: 'Cormorant Garamond',
         weight: 400,
@@ -417,8 +448,15 @@ function profileKit(themeName) {
         letterSpacing: 0,
         fill: k.theme.dividerGold,
       }),
-      k.text(actionShapeName || name + ' action', action, {
-        x: {right: SCREEN_W - ROW.padX},
+      k.rect(right, {
+        x: {after: {name: lab, edge: 'right', pad: LABEL_PAD}},
+        y: y + spacing.md + 11,
+        w: ruleWidth,
+        h: 2,
+        fill: k.theme.dividerRule,
+      }),
+      k.text(act, action, {
+        x: {after: {name: right, edge: 'right', pad: ACTION_PAD}},
         y: y + spacing.md + 3,
         family: 'Inter',
         weight: 400,

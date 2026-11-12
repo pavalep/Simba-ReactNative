@@ -1,81 +1,67 @@
+// ─── Recent Searches ─────────────────────────────────────────────────────
+// The page's own search history: the terms the user has run.
+//
+// 2026-11-12 (SEARCH_PAGE_REDESIGN):
+//
+//   • the terms are ROWS, not chips. The page had a THIRD chip grammar
+//     here (a third size, a third border, a third active state) on a
+//     page that already had two. Every result on the page is a row
+//     now, and a recent search is a result.
+//
+//   • the title is the app's gold Cormorant divider (`SubsectionTitle`),
+//     the same one every other section on the page uses. It was
+//     `SectionHeader` in its PLAIN skin — Inter SemiBold 20 — sitting
+//     directly above a gold Cormorant 18 divider further down the page:
+//     two title grammars on one screen.
+//
+//   • the action is named "Clear all", not "Clear". It removes the whole
+//     history, and a button that removes everything should say so. (This
+//     is the same direction as the Bookmarks' destructive chip in the R3
+//     wave: a plain label and a named action, never a destructive chip.)
+//
+//   • the divider gained an optional action slot for it
+//     (`SubsectionTitle`'s `actionLabel` + `onAction`), so the page
+//     keeps ONE title grammar instead of growing a second one for a
+//     single action.
+
 import React from 'react';
-import {
-  View,
-  TouchableOpacity,
-  StyleSheet,
-} from 'react-native';
-import {useTheme} from '../../../theme';
-import {AppText} from '../../../components/core/AppText/AppText';
-import {SectionHeader} from '../../../components/utility/SectionHeader/SectionHeader';
-import {radius, spacing} from '../../../theme/tokens';
+import {View} from 'react-native';
+import {SubsectionTitle} from '../../../components/utility/SubsectionTitle/SubsectionTitle';
+import {SearchResultRow} from './SearchResultRow';
 
 interface RecentSearchesProps {
   recentSearches: string[];
-  onChipTap: (term: string) => void;
-  onClearRecent: () => void;
+  /** Re-run a term. */
+  onSelect: (term: string) => void;
+  /** Empty the history. */
+  onClear: () => void;
 }
 
 export const RecentSearches: React.FC<RecentSearchesProps> = ({
   recentSearches,
-  onChipTap,
-  onClearRecent,
+  onSelect,
+  onClear,
 }) => {
-  const {colors, spacing: s} = useTheme();
+  if (recentSearches.length === 0) {
+    return null;
+  }
 
   return (
-    <View style={{marginTop: s.sm}}>
-      <SectionHeader
-        label="Recent Searches"
-        actionLabel={recentSearches.length > 0 ? 'Clear' : undefined}
-        onAction={recentSearches.length > 0 ? onClearRecent : undefined}
+    <View>
+      <SubsectionTitle
+        label="Recent searches"
+        variant="displaySerif"
+        actionLabel="Clear all"
+        onAction={onClear}
       />
-      {recentSearches.length > 0 ? (
-        <View style={styles.chipsContainer}>
-          {recentSearches.map((term, idx) => (
-            <TouchableOpacity
-              key={term + idx}
-              activeOpacity={0.7}
-              onPress={() => onChipTap(term)}
-              accessibilityRole="button"
-              accessibilityLabel={`Search ${term}`}
-              style={[
-                styles.chip,
-                {
-                  backgroundColor: colors.border.subtle,
-                  borderColor: colors.border.emphasis,
-                },
-              ]}>
-              <AppText variant="caption" color="secondary">
-                {term}
-              </AppText>
-            </TouchableOpacity>
-          ))}
-        </View>
-      ) : (
-        <View style={styles.hintContainer}>
-          <AppText variant="body2" color="tertiary">
-            Search tracks, artists, albums, playlists, and linked folders
-          </AppText>
-        </View>
-      )}
+      {recentSearches.map(term => (
+        <SearchResultRow
+          key={term}
+          title={term}
+          icon="history"
+          onPress={() => onSelect(term)}
+        />
+      ))}
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  chipsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: radius.pill,
-    borderWidth: 0.5,
-  },
-  hintContainer: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-  },
-});

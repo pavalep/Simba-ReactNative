@@ -50,7 +50,7 @@
 //   noise. The SubsectionTitle owns its visual identity.
 
 import React from 'react';
-import {View, StyleSheet, type TextStyle} from 'react-native';
+import {View, StyleSheet, TouchableOpacity, type TextStyle} from 'react-native';
 import {useTheme} from '../../../theme';
 import {withAlpha} from '../../../theme/color';
 import {spacing} from '../../../theme/tokens';
@@ -65,10 +65,24 @@ interface SubsectionTitleProps {
    * `displaySerif`      — Cormorant Garamond Italic 18 px, 0.9 gold.
    */
   variant?: 'overline' | 'displaySans' | 'displaySerif';
+  /**
+   * ONE action on the right of the divider.
+   *
+   * 2026-11-12 (SEARCH_PAGE_REDESIGN): the Search page's "Recent
+   * searches" needs a way to be cleared, and the divider is the page's
+   * only title grammar. `SectionHeader` already carries this shape
+   * (a title and one gold action), so the divider takes it too rather
+   * than the page growing a second title style for one action.
+   *
+   * The label is read by the action itself, so a screen reader hears
+   * "Clear all", not "Clear all, Recent searches".
+   */
+  actionLabel?: string;
+  onAction?: () => void;
 }
 
 export const SubsectionTitle: React.FC<SubsectionTitleProps> = React.memo(
-  ({label, variant = 'overline'}) => {
+  ({label, variant = 'overline', actionLabel, onAction}) => {
     const {colors} = useTheme();
     const isDisplaySans = variant === 'displaySans';
     const isDisplaySerif = variant === 'displaySerif';
@@ -152,6 +166,18 @@ export const SubsectionTitle: React.FC<SubsectionTitleProps> = React.memo(
           </AppText>
         </View>
         <View style={[styles.rule, {backgroundColor: lineColor}]} />
+        {actionLabel ? (
+          <TouchableOpacity
+            onPress={onAction}
+            style={styles.action}
+            hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}
+            accessibilityRole="button"
+            accessibilityLabel={actionLabel}>
+            <AppText variant="caption" color="accent">
+              {actionLabel}
+            </AppText>
+          </TouchableOpacity>
+        ) : null}
       </View>
     );
   },
@@ -181,6 +207,12 @@ const styles = StyleSheet.create({
   // floating accent, not as a label crammed between two lines.
   labelWrap: {
     paddingHorizontal: spacing.xl,
+  },
+  // The action sits inside the root's 16 dp gutter, after the closing
+  // rule. A gold caption, the same skin `SectionHeader` gives its
+  // action.
+  action: {
+    paddingLeft: spacing.md,
   },
 });
 

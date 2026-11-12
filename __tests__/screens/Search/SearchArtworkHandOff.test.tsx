@@ -1,10 +1,10 @@
 /**
- * B-026 — the search grid's play action must hand the artwork to the
+ * B-026 — the search result's play action must hand the artwork to the
  * launch.
  *
  * ## The defect
  *
- * The search grid's play action had no artwork field at all:
+ * The search result's play action had no artwork field at all:
  * `playWithToast` took `{uri, title, mediaType}`, so there was nothing
  * for a result to pass even when the result had a poster in hand.
  *
@@ -17,10 +17,10 @@
  *       -> usePlaybackCheckpointSync — the checkpoint copies it
  *         -> recentHistoryStore — `thumbnailPath` on the entry
  *           -> useSearch — the search result's artwork
- *             -> ResultTile — the poster the user actually sees
+ *             -> SearchResultRow — the artwork the user actually sees
  *
  * With the artwork missing at the FIRST link, every history entry was
- * written with `thumbnailPath: ''`, so the tile for a film the user had
+ * written with `thumbnailPath: ''`, so the row for a film the user had
  * already watched drew a placeholder instead of a poster — even though
  * the catalogue plainly had the artwork.
  *
@@ -31,10 +31,18 @@
  * component never forwarded; asserting only that something was called
  * would pass even if the artwork was dropped on the way to the launch.
  *
- * The whole chain is real here — the real grid, the real screen, the
- * real seam — so a mutation at ANY link (the tile's press, the grid's
+ * The whole chain is real here — the real row, the real screen, the
+ * real seam — so a mutation at ANY link (the row's press, the group's
  * `onPlayFile`, the screen's `handlePlayFile`, the facade's `usePlay`)
  * fails the assertion.
+ *
+ * ## The labels
+ *
+ * The rows are `SearchResultRow` now (2026-11-12) — the grid is gone.
+ * The row's own accessibility label is the title, and the title and the
+ * subtitle when it has one ("StimiBeats" → "Free Music Happy,
+ * StimiBeats"). The old grid's "Play <title>" prefix is not there any
+ * more, and a test that still looked for it was pressing nothing.
  */
 
 import React from 'react';
@@ -144,7 +152,7 @@ describe('B-026 — the search grid hands its artwork to the launch', () => {
     ];
 
     await renderScreen();
-    await fireEvent.press(screen.getByLabelText('Play The.Rifle.1960.mkv'));
+    await fireEvent.press(screen.getByLabelText('The.Rifle.1960.mkv'));
 
     // A VIDEO launch renders in-window and never opens an Activity, so
     // the artwork cannot be seen on the bridge — it is recorded on the
@@ -171,7 +179,7 @@ describe('B-026 — the search grid hands its artwork to the launch', () => {
     ];
 
     await renderScreen();
-    await fireEvent.press(screen.getByLabelText('Play nightdrive.mp3'));
+    await fireEvent.press(screen.getByLabelText('nightdrive.mp3'));
 
     expect(mockOpenWithResume).toHaveBeenCalledTimes(1);
     expect(mockOpenWithResume.mock.calls[0]![0]).toMatchObject({

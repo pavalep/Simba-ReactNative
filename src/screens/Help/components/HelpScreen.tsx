@@ -8,6 +8,7 @@ import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
 import {SearchBar} from '../../../components/core/SearchBar/SearchBar';
 import {InternalHeader} from '../../../components/layout/InternalHeader/InternalHeader';
+import {supportMailto} from '../../../constants/links';
 import type {HelpScreenProps} from '../../../navigation/types';
 
 type Props = HelpScreenProps;
@@ -40,7 +41,7 @@ const FAQ_SECTIONS: FaqSection[] = [
       },
       {
         q: 'Do I need an account to use Simba?',
-        a: 'No. Sign-in with Google is optional — it is used only to back up your preferences and playlists. You can browse and play all local media without an account.',
+        a: 'No. Sign-in with Google is optional — it only shows your name, email and avatar on the Profile page. Your library, playlists, bookmarks, playback history and preferences are stored on this device either way, and you can browse and play everything without signing in.',
       },
     ],
   },
@@ -58,7 +59,7 @@ const FAQ_SECTIONS: FaqSection[] = [
       },
       {
         q: 'How does picture-in-picture work?',
-        a: 'While a video is playing, press the PiP button in the top bar or the Home button — the video continues in a floating window. The window can be dragged, resized, and dismissed with the close button.',
+        a: 'While a video is playing, tap the PiP button in the player controls at the bottom of the screen, or press the Home button — the video continues in a floating window. The window can be dragged, resized, and dismissed with the close button.',
       },
       {
         q: 'Can I play audio in the background?',
@@ -76,7 +77,7 @@ const FAQ_SECTIONS: FaqSection[] = [
     items: [
       {
         q: 'How do I create a playlist?',
-        a: 'Open any song or video, tap the queue/list icon, then "Add to playlist". Playlists are managed under Library → Playlists, where you can rename, reorder, and delete them.',
+        a: 'Open any song or video, tap the queue/list icon, then "Add to playlist". Playlists are managed from the Library — you can rename, reorder, pin and delete them there.',
       },
       {
         q: 'What is the difference between queue and playlist?',
@@ -94,7 +95,7 @@ const FAQ_SECTIONS: FaqSection[] = [
     items: [
       {
         q: 'What data is stored when I sign in?',
-        a: 'Sign-in stores your Google profile name, email, and avatar locally so playlists and preferences can be associated with your account. Nothing is shared with third parties. See Privacy Policy for details.',
+        a: 'Your Google profile name, email and avatar, and they are kept on this device. There is no server-side account and no backup: your library, playlists, bookmarks, playback history and preferences are local too, and nothing is sent to us or any third party. See the Privacy Policy for the full picture.',
       },
       {
         q: 'How do I sign out or delete my data?',
@@ -142,8 +143,7 @@ const FAQ_SECTIONS: FaqSection[] = [
   },
 ];
 
-const CONTACT_URL =
-  'mailto:support@simbaplayer.app?subject=Simba%20Player%20Help';
+const CONTACT_URL = supportMailto('Simba Player Help');
 
 export const HelpScreen: React.FC<Props> = () => {
   const {colors} = useTheme();

@@ -37,6 +37,52 @@ const JAMENDO_CONFIG = {
 
 const clientId = (): string => ENV.JAMENDO_CLIENT_ID;
 
+/**
+ * The HTML entities Jamendo returns in its text fields.
+ *
+ * Jamendo escapes the characters that are not legal in its payload, so the
+ * artist "Besson & Sa" arrives as "Besson&amp;sa" — and the app used to
+ * draw the ESCAPED name on the row, in the search results and on the
+ * music screens alike.
+ */
+const ENTITIES: Record<string, string> = {
+  amp: '&',
+  lt: '<',
+  gt: '>',
+  quot: '"',
+  apos: "'",
+  nbsp: ' ',
+};
+
+/**
+ * Decode the entities in a Jamendo text field.
+ *
+ * The decoder belongs to the ADAPTER: the wire shape is the adapter's
+ * business, and nothing above it should ever see an entity. An unknown
+ * entity is left alone — a name with a literal "&foo;" in it is more
+ * likely than a typo in this table.
+ */
+export function decodeJamendoText(value: string): string {
+  if (!value || value.indexOf('&') === -1) return value;
+  return value.replace(
+    /&(#x[0-9a-fA-F]+|#[0-9]+|[a-zA-Z][a-zA-Z0-9]*);/g,
+    (match: string, entity: string) => {
+      if (entity.charAt(0) === '#') {
+        const hex = entity.charAt(1) === 'x' || entity.charAt(1) === 'X';
+        const code = hex ? parseInt(entity.slice(2), 16) : parseInt(entity.slice(1), 10);
+        if (!Number.isFinite(code)) return match;
+        try {
+          return String.fromCodePoint(code);
+        } catch (e) {
+          return match;
+        }
+      }
+      const decoded = ENTITIES[entity.toLowerCase()];
+      return decoded !== undefined ? decoded : match;
+    },
+  );
+}
+
 interface JamendoTrackRaw {
   id: string;
   name: string;
@@ -148,13 +194,13 @@ function parseRawJamendoTrack(
   }
   return {
     id,
-    name: t.name,
-    artistName: t.artist_name ?? '',
-    albumName: t.album_name ?? '',
+    name: decodeJamendoText(t.name),
+    artistName: decodeJamendoText(t.artist_name ?? ''),
+    albumName: decodeJamendoText(t.album_name ?? ''),
     duration: t.duration,
     audioUrl: t.audio,
     imageUrl: t.image ?? '',
-    genreName: t.genre_name ?? '',
+    genreName: decodeJamendoText(t.genre_name ?? ''),
   };
 }
 

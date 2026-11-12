@@ -32,6 +32,7 @@ import {
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../../theme';
 import {radius, spacing} from '../../../theme/tokens';
+import {FONT_FAMILY} from '../../../constants/fontFamily';
 import {
   BottomSheet,
   type BottomSheetHandle,
@@ -116,7 +117,9 @@ const Chip: React.FC<ChipProps> = React.memo(({label, selected, onPress}) => {
             color: selected
               ? colors.background.primary
               : colors.text.primary,
-            fontWeight: selected ? '700' : '500',
+            fontFamily: selected
+              ? FONT_FAMILY.inter.semibold
+              : FONT_FAMILY.inter.medium,
           },
         ]}>
         {label}
@@ -380,7 +383,12 @@ const styles = StyleSheet.create({
   },
   groupTitle: {
     fontSize: 11,
-    fontWeight: '600',
+    // The weight lives in the FAMILY key, not in a `fontWeight` prop:
+    // `fontWeight: '600'` on the family `Inter` asks Android for
+    // `fonts/Inter.ttf` (the rule in `constants/fontFamily.ts` drops the
+    // suffix below weight 700), so the SemiBold face was unreachable and
+    // the heading was drawn in Inter REGULAR.
+    fontFamily: FONT_FAMILY.inter.semibold,
     letterSpacing: 1.4,
     marginBottom: spacing.sm,
   },

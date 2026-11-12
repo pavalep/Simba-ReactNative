@@ -1,6 +1,25 @@
+// ─── HighlightedText ─────────────────────────────────────────────────────
+// The matched part of a result's title or description is drawn in the
+// accent colour.
+//
+// 2026-11-12 (SEARCH_PAGE_REDESIGN): two defects fixed here.
+//
+// 1. THE SIZE JUMPED WITH THE QUERY. With a query the title was drawn as
+//    `bodySmall` (Inter 14/20) and without one as `body2` (Inter 15/22) —
+//    so a result's title changed size as the user typed. It is always
+//    `body2` now.
+//
+// 2. THE HIGHLIGHT WAS NOT REALLY SEMIBOLD. `fontWeight: '600'` on the
+//    family `Inter` asks Android for `fonts/Inter.ttf` (the rule in
+//    `constants/fontFamily.ts` drops the suffix below weight 700), so
+//    `Inter SemiBold.ttf` — which DOES ship — was unreachable and the
+//    matched text was drawn in REGULAR, just tinted. The weight now lives
+//    in the family key.
+
 import React from 'react';
 import {type StyleProp, type TextStyle} from 'react-native';
 import {AppText} from '../../../components/core/AppText/AppText';
+import {FONT_FAMILY} from '../../../constants/fontFamily';
 
 interface HighlightedTextProps {
   text: string;
@@ -15,16 +34,14 @@ export const HighlightedText: React.FC<HighlightedTextProps> = ({
   variant = 'primary',
   style,
 }) => {
+  const isSubtitle = variant === 'subtitle';
 
   if (!query || !text) {
-    if (variant === 'subtitle') {
-      return text ? (
-        <AppText variant="caption" color="tertiary" numberOfLines={1}>
-          {text}
-        </AppText>
-      ) : null;
-    }
-    return (
+    return isSubtitle ? (
+      <AppText variant="caption" color="tertiary" numberOfLines={1}>
+        {text}
+      </AppText>
+    ) : (
       <AppText variant="body2" color="primary" numberOfLines={1} style={style}>
         {text}
       </AppText>
@@ -49,49 +66,41 @@ export const HighlightedText: React.FC<HighlightedTextProps> = ({
   }
 
   if (parts.length === 0) {
-    if (variant === 'subtitle') {
-      return (
-        <AppText color="tertiary" numberOfLines={1} style={{fontSize: 12}}>
-          {text}
-        </AppText>
-      );
-    }
-    return (
+    return isSubtitle ? (
+      <AppText variant="caption" color="tertiary" numberOfLines={1}>
+        {text}
+      </AppText>
+    ) : (
       <AppText variant="body2" color="primary" numberOfLines={1} style={style}>
         {text}
       </AppText>
     );
   }
 
-  if (variant === 'subtitle') {
+  const highlightFamily = isSubtitle
+    ? FONT_FAMILY.inter.medium
+    : FONT_FAMILY.inter.semibold;
+
+  const rendered = parts.map((part, i) => (
+    <AppText
+      key={i}
+      color={part.hl ? 'accent' : isSubtitle ? 'tertiary' : 'primary'}
+      style={part.hl ? {fontFamily: highlightFamily} : undefined}>
+      {part.t}
+    </AppText>
+  ));
+
+  if (isSubtitle) {
     return (
-      <AppText color="tertiary" numberOfLines={1} style={{fontSize: 12}}>
-        {parts.map((part, i) => (
-          <AppText
-            key={i}
-            color={part.hl ? 'accent' : 'tertiary'}
-            style={part.hl ? {fontWeight: '500'} : undefined}>
-            {part.t}
-          </AppText>
-        ))}
+      <AppText variant="caption" color="tertiary" numberOfLines={1}>
+        {rendered}
       </AppText>
     );
   }
 
   return (
-    <AppText
-      variant="bodySmall"
-      color="primary"
-      numberOfLines={1}
-      style={style}>
-      {parts.map((part, i) => (
-        <AppText
-          key={i}
-          color={part.hl ? 'accent' : 'primary'}
-          style={part.hl ? {fontWeight: '600'} : undefined}>
-          {part.t}
-        </AppText>
-      ))}
+    <AppText variant="body2" color="primary" numberOfLines={1} style={style}>
+      {rendered}
     </AppText>
   );
 };
