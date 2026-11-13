@@ -12,6 +12,11 @@ interface InternalHeaderProps {
   rightAction?: {
     icon?: IconName;
     label?: string;
+    /**
+     * The action's accessible name. A button that carries only an icon
+     * has no name, and a screen-reader user hears "button" for it.
+     */
+    accessibilityLabel?: string;
     onPress: () => void;
   };
 }
@@ -41,6 +46,8 @@ export const InternalHeader: React.FC<InternalHeaderProps> = ({
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={rightAction.onPress}
+          accessibilityRole="button"
+          accessibilityLabel={rightAction.accessibilityLabel}
           style={[styles.rightButton, {backgroundColor: colors.background.elevated}]}>
           {rightAction.icon ? (
             <SvgIcon name={rightAction.icon} size={18} color={colors.text.secondary} />

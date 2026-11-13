@@ -70,6 +70,12 @@ const {
   searchFiltersBoard,
 } = require('./penpot/search');
 const {moviesScreenBoard, moviesFilterBoard} = require('./penpot/movies');
+const {
+  podcastsScreenBoard,
+  podcastsFilterBoard,
+  podcastDetailBoard,
+  followedPodcastsBoard,
+} = require('./penpot/podcasts');
 const {SCREEN_W, SCREEN_H} = require('./penpot/kit');
 
 const OUT = path.join(__dirname, '.build');
@@ -303,12 +309,43 @@ for (const page of MOVIES_STATES) {
   }
 }
 
+// The Podcasts screen — DRAWN, in four states, in both themes.
+//
+// The wave that drew them is B12 (`md/WAVE_B12_PODCASTS.md`). The three
+// screens of the feature — the catalogue, the podcast's page, and "My
+// Podcasts" — plus the catalogue's filter sheet, which is the COVER SHELF
+// (md §4.2b): the app's curated twelve genres as a 4 × 3 grid of cover
+// plates, drawn with the app's own `CategoryCard` grammar.
+//
+// The screen and its filter sheet are separate boards, the way the Movies
+// page carries its two, because the owner asked for the screen and the
+// filter to be two boards of their own (2026-11-13).
+const PODCASTS_STATES = [
+  {route: 'PodcastsScreen', state: 'screen', draw: podcastsScreenBoard},
+  {route: 'PodcastsScreen', state: 'filter', draw: podcastsFilterBoard},
+  {route: 'PodcastDetail', state: 'screen', draw: podcastDetailBoard},
+  {route: 'FollowedPodcasts', state: 'screen', draw: followedPodcastsBoard},
+];
+for (const page of PODCASTS_STATES) {
+  for (const theme of ['light', 'dark']) {
+    const drawn = page.draw(theme);
+    boards.push({
+      name: boardName(page.route, theme) + ' — ' + page.state,
+      w: drawn.width,
+      h: drawn.height,
+      fill: (theme === 'dark' ? spec.darkColors : spec.colors).background.primary,
+      shapes: drawn.shapes,
+    });
+  }
+}
+
 // Every other route — a placeholder, in the light theme. The dark variants
 // of the other screens come with their own page pass.
 //
 // `Home` is skipped (it is drawn) and `Login` is skipped (the login pass
 // drew it as the two orb boards).
 const RC1_ROUTES = new Set(RC1_PAGES.map(p => p.route));
+const PODCASTS_ROUTES = new Set(PODCASTS_STATES.map(p => p.route));
 for (const route of ROUTES) {
   if (route.route === 'Home') continue;
   if (route.route === 'Login') continue;
@@ -316,6 +353,8 @@ for (const route of ROUTES) {
   if (route.route === 'Search') continue;
   if (route.route === 'MoviesScreen') continue;
   if (RC1_ROUTES.has(route.route)) continue;
+  // The three Podcasts screens are drawn now, on their own boards.
+  if (PODCASTS_ROUTES.has(route.route)) continue;
   addPlaceholder(route.route, 'light');
 }
 
@@ -362,7 +401,7 @@ const DESIGNED = new Set([
  * results" and not "Search / light" — and the app's own edges leave the
  * Search screen from the RESULTS board, where the six result rows are.
  */
-const ROUTE_STATES = {Search: 'results'};
+const ROUTE_STATES = {Search: 'results', PodcastsScreen: 'screen', PodcastDetail: 'screen', FollowedPodcasts: 'screen'};
 
 /**
  * The state a route's edge ARRIVES at.
@@ -377,7 +416,13 @@ const ROUTE_STATES = {Search: 'results'};
  * grid and nothing applied — and the filter sheet is reached from the
  * screen's own FAB.
  */
-const ROUTE_ENTRY_STATES = {Search: 'empty', MoviesScreen: 'screen'};
+const ROUTE_ENTRY_STATES = {
+  Search: 'empty',
+  MoviesScreen: 'screen',
+  PodcastsScreen: 'screen',
+  PodcastDetail: 'screen',
+  FollowedPodcasts: 'screen',
+};
 
 /** The board a route's edge leaves from. */
 function boardOf(route, theme) {
@@ -404,6 +449,14 @@ for (const theme of ['light', 'dark']) {
 for (const theme of ['light', 'dark']) {
   DESIGNED.add(boardName('MoviesScreen', theme) + ' — screen');
   DESIGNED.add(boardName('MoviesScreen', theme) + ' — filter');
+}
+
+// The Podcasts boards are drawn, so their edges carry a SHAPE rather than
+// the whole board.
+for (const page of PODCASTS_STATES) {
+  for (const theme of ['light', 'dark']) {
+    DESIGNED.add(boardName(page.route, theme) + ' — ' + page.state);
+  }
 }
 
 /** A connector from one board to another. */
@@ -468,6 +521,29 @@ link(LOGIN_PEAK, LOGIN_REST, 'click', {
   label: 'the orb pulses down',
 });
 
+/**
+ * The shape an edge's connector lands on, when the app's edge list names a
+ * shape the drawing does not have.
+ *
+ * The edge list in `designs/penpot/app-boards.js` was written before the
+ * screens were drawn, so its shape names are the app's own vocabulary
+ * ("Podcast row") rather than the drawing's. Once a screen is DRAWN, the
+ * connector must name a shape that actually exists on that board — otherwise
+ * the links call reports "no shape … on …" and the edge is dropped.
+ *
+ * The key is "from > to" — one edge may exist from more than one screen.
+ */
+const EDGE_SHAPE_OVERRIDES = {
+  // The catalogue's first row. The drawing names every row by its number.
+  'PodcastsScreen>PodcastDetail': {shape: 'PodcastsScreen row 1 card'},
+};
+
+/** The shape an edge's connector lands on. */
+function edgeShape(edge) {
+  const override = EDGE_SHAPE_OVERRIDES[edge.from + '>' + edge.to];
+  return override ? override.shape : edge.shape;
+}
+
 // Every edge the app itself makes.
 for (const edge of EDGES) {
   if (edge.from === 'Login') continue; // already wired above
@@ -481,7 +557,7 @@ for (const edge of EDGES) {
       // placeholder board it does not, so the whole board is the hit
       // target until that screen is designed. The same goes for the
       // shape's family — a placeholder board has no family.
-      shape: DESIGNED.has(fromName) ? edge.shape : undefined,
+      shape: DESIGNED.has(fromName) ? edgeShape(edge) : undefined,
       family: DESIGNED.has(fromName) ? edge.family : undefined,
       also: DESIGNED.has(fromName) ? edge.also : undefined,
       delay: edge.delay,
@@ -508,6 +584,23 @@ for (const theme of ['light', 'dark']) {
     shape: 'MoviesScreen FAB disc',
     family: 'MoviesScreen FAB',
     label: 'Filter movies',
+  });
+}
+
+// The Podcasts filter sheet — the COVER SHELF — the app's own transition.
+//
+// The sheet is a MODAL over the catalogue, not a route, so it is not in the
+// app's edge list. But the app really does make this transition: the FAB
+// opens the sheet (`src/screens/_shared/BrowseLayout.tsx`), and the sheet is
+// the ONLY place the curated genres are shown.
+for (const theme of ['light', 'dark']) {
+  link(boardName('PodcastsScreen', theme) + ' — screen', boardName('PodcastsScreen', 'light') + ' — filter', 'click', {
+    // The FAB's glyph sits ON TOP of the disc, and the Play viewer gives the
+    // click to the topmost shape — so the whole unit carries the connector
+    // (rule P10: the whole unit is the target).
+    shape: 'PodcastsScreen FAB disc',
+    family: 'PodcastsScreen FAB',
+    label: 'Browse the genres',
   });
 }
 
@@ -1650,6 +1743,12 @@ buildBatches.forEach((group, i) => {
       // "MoviesScreen / light — filter"), so the placeholder of the bare
       // name is removed by NAME.
       'MoviesScreen / light',
+      // The Podcasts PLACEHOLDERS — the catalogue, the podcast's page and
+      // "My Podcasts" are drawn now, on their own boards, so the
+      // placeholders of the bare names are removed by NAME.
+      'PodcastsScreen / light',
+      'PodcastDetail / light',
+      'FollowedPodcasts / light',
     ],
   });
   written.push(writePayload('penpot-app-build-' + (i + 1) + '.json', buildCode.replace('__PLAN__', JSON.stringify(plan))));

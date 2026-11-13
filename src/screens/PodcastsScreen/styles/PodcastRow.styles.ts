@@ -3,7 +3,6 @@
 //
 //   [60×60 thumb]  Title (1 line)
 //                  Author (secondary)
-//                  [N ep.]          ›
 
 import {StyleSheet} from 'react-native';
 import {spacing, radius} from '../../../theme/tokens';
@@ -51,17 +50,5 @@ export const createPodcastRowStyles = (colors: ColorTokens) =>
       // the suffix below weight 700), so the SemiBold face was
       // unreachable and the title was drawn in Inter REGULAR.
       fontFamily: FONT_FAMILY.inter.semibold,
-    },
-    badge: {
-      alignSelf: 'flex-start',
-      paddingHorizontal: spacing.sm,
-      paddingVertical: 2,
-      borderRadius: radius.sm - 2,
-      backgroundColor: colors.accent.goldDim,
-    },
-    badgeText: {
-      fontSize: 11,
-      fontWeight: '700',
-      color: colors.accent.gold,
     },
   });

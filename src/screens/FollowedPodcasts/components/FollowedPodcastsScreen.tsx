@@ -19,9 +19,14 @@
 // the same three things — remove it, tick the haptic, say so in a
 // toast — and this page does the same three things, so following a
 // podcast and unfollowing it feel the same wherever the user does it.
+//
+// ONE ROW GRAMMAR. The row is art + title + author — the same three
+// things the catalogue's row carries. It used to add the episode count
+// as well, so the same podcast showed two different amounts of
+// information on two screens a swipe apart.
 
-import React, {useCallback} from 'react';
-import {View, FlatList, TouchableOpacity, StyleSheet} from 'react-native';
+import React, {useCallback, useMemo} from 'react';
+import {View, FlatList, TouchableOpacity} from 'react-native';
 import {ScreenContainer} from '../../../components/layout/ScreenContainer/ScreenContainer';
 import {InternalHeader} from '../../../components/layout/InternalHeader/InternalHeader';
 import {EmptyState} from '../../../components/feedback/EmptyState/EmptyState';
@@ -30,27 +35,24 @@ import {SvgIcon} from '../../../components/utility/SvgIcon';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {SimbaStatusBar} from '../../../components/StatusBar';
 import {useTheme} from '../../../theme';
-import {spacing, radius} from '../../../theme/tokens';
-import {FONT_FAMILY} from '../../../constants/fontFamily';
 import {useFollowedPodcasts} from '../../../features/followedPodcasts';
 import {useToast} from '../../../components/feedback/Toast';
 import {useHaptics} from '../../../hooks/useHaptics';
+import {createFollowedPodcastsScreenStyles} from '../styles';
 import type {RootStackScreenProps} from '../../../navigation/types';
 
 type Props = RootStackScreenProps<'FollowedPodcasts'>;
 
-/** The circular cover on a row. */
-const ARTWORK_SIZE = 56;
-
 export const FollowedPodcastsScreen: React.FC<Props> = ({navigation}) => {
   const {colors} = useTheme();
+  const styles = useMemo(() => createFollowedPodcastsScreenStyles(colors), [colors]);
   const {list, unfollow} = useFollowedPodcasts();
   const toast = useToast();
   const haptics = useHaptics();
 
   const handleOpen = useCallback(
-    (podcastId: number, title: string) => {
-      navigation.navigate('PodcastDetail', {podcastId, podcastTitle: title});
+    (podcastId: number) => {
+      navigation.navigate('PodcastDetail', {podcastId});
     },
     [navigation],
   );
@@ -66,17 +68,17 @@ export const FollowedPodcastsScreen: React.FC<Props> = ({navigation}) => {
 
   const renderItem = useCallback(
     ({item}: {item: (typeof list)[number]}) => (
-      <View style={[styles.row, {borderBottomColor: colors.border.subtle}]}>
+      <View style={styles.row}>
         <TouchableOpacity
           activeOpacity={0.75}
-          onPress={() => handleOpen(item.id, item.title)}
+          onPress={() => handleOpen(item.id)}
           accessibilityRole="button"
           accessibilityLabel={`Open podcast ${item.title}${item.author ? ` by ${item.author}` : ''}`}
           style={styles.artwork}>
           {item.image ? (
             <MediaImage source={item.image} style={styles.artworkImage} resizeMode="cover" />
           ) : (
-            <View style={[styles.artworkFallback, {backgroundColor: colors.accent.goldDim}]}>
+            <View style={styles.artworkFallback}>
               <SvgIcon name="headphones" size={24} color={colors.accent.gold} />
             </View>
           )}
@@ -84,7 +86,7 @@ export const FollowedPodcastsScreen: React.FC<Props> = ({navigation}) => {
 
         <TouchableOpacity
           activeOpacity={0.75}
-          onPress={() => handleOpen(item.id, item.title)}
+          onPress={() => handleOpen(item.id)}
           accessibilityRole="button"
           accessibilityLabel={`Open podcast ${item.title}`}
           style={styles.info}>
@@ -94,11 +96,6 @@ export const FollowedPodcastsScreen: React.FC<Props> = ({navigation}) => {
           {item.author ? (
             <AppText variant="caption" color="secondary" numberOfLines={1} style={styles.author}>
               {item.author}
-            </AppText>
-          ) : null}
-          {item.episodeCount ? (
-            <AppText variant="caption" color="tertiary" numberOfLines={1} style={styles.meta}>
-              {item.episodeCount} {item.episodeCount === 1 ? 'episode' : 'episodes'}
             </AppText>
           ) : null}
         </TouchableOpacity>
@@ -115,7 +112,7 @@ export const FollowedPodcastsScreen: React.FC<Props> = ({navigation}) => {
         </TouchableOpacity>
       </View>
     ),
-    [colors, handleOpen, handleUnfollow],
+    [colors, handleOpen, handleUnfollow, styles],
   );
 
   return (
@@ -149,54 +146,3 @@ export const FollowedPodcastsScreen: React.FC<Props> = ({navigation}) => {
     </ScreenContainer>
   );
 };
-
-const styles = StyleSheet.create({
-  list: {
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.xxl,
-  },
-  empty: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  artwork: {
-    width: ARTWORK_SIZE,
-    height: ARTWORK_SIZE,
-    borderRadius: ARTWORK_SIZE / 2,
-    overflow: 'hidden',
-  },
-  artworkImage: {
-    width: '100%',
-    height: '100%',
-  },
-  artworkFallback: {
-    width: '100%',
-    height: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  info: {
-    flex: 1,
-    minWidth: 0,
-  },
-  title: {
-    fontFamily: FONT_FAMILY.inter.semibold,
-  },
-  author: {
-    marginTop: 2,
-  },
-  meta: {
-    marginTop: 2,
-  },
-  unfollow: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-});

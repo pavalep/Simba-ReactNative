@@ -2,10 +2,8 @@ import React, {useState, useMemo, useCallback, useRef} from 'react';
 import {View, FlatList, TouchableOpacity} from 'react-native';
 import {SimbaStatusBar} from '../../components/StatusBar';
 import {useTheme} from '../../theme';
-import {spacing, radius} from '../../theme/tokens';
 import {AppText} from '../../components/core/AppText/AppText';
 import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
-import {SearchBar} from '../../components/core/SearchBar/SearchBar';
 import {InternalHeader} from '../../components/layout/InternalHeader/InternalHeader';
 import {ScreenContainer} from '../../components/layout/ScreenContainer/ScreenContainer';
 import type {PodcastDetailScreenProps} from '../../navigation/types';
@@ -45,11 +43,17 @@ export const PodcastDetailScreen: React.FC<Props> = ({navigation, route}) => {
     isLoading,
     isLoadingMore,
     error,
+    pageError,
     hasLoaded,
     hasMore,
     loadMore,
     retry,
   } = usePodcastDetailScreen(podcastId);
+
+  // The header and the share sheet carry the PODCAST's name, not a
+  // constant. Before the API resolves there is no name yet, so the
+  // generic label stands in until it does.
+  const headerTitle = podcast?.title ?? HEADER_TITLE;
 
   // Episode-level interactions (play / long-press menu / playlist sheet).
   const {
@@ -86,9 +90,9 @@ export const PodcastDetailScreen: React.FC<Props> = ({navigation, route}) => {
     shareContent({
       route: 'PodcastDetail',
       params: {podcastId},
-      title: HEADER_TITLE,
+      title: headerTitle,
     });
-  }, [podcastId]);
+  }, [podcastId, headerTitle]);
 
   const handleEpisodeBookmark = useCallback(
     (episode: (typeof episodes)[number]) => {
@@ -131,13 +135,6 @@ export const PodcastDetailScreen: React.FC<Props> = ({navigation, route}) => {
     }
   }, [podcast, isFollowed, followPodcast, unfollowPodcast, haptics, toast]);
 
-  const handleRetry = useCallback(() => {
-    navigation.replace('PodcastDetail', {
-      podcastId,
-      podcastTitle: HEADER_TITLE,
-    });
-  }, [navigation, podcastId]);
-
   const styles = useMemo(() => createPodcastScreenStyles(colors), [colors]);
 
   // Mount-time pagination guard: FlatList fires `onEndReached` once
@@ -160,7 +157,7 @@ export const PodcastDetailScreen: React.FC<Props> = ({navigation, route}) => {
             {text.footer.loadingMore}
           </AppText>
         </View>
-      ) : !!error && hasLoaded && episodes.length > 0 ? (
+      ) : !!pageError && hasLoaded && episodes.length > 0 ? (
         <TouchableOpacity
           activeOpacity={0.8}
           onPress={loadMore}
@@ -186,8 +183,12 @@ export const PodcastDetailScreen: React.FC<Props> = ({navigation, route}) => {
     <ScreenContainer
       header={
         <InternalHeader
-          title={HEADER_TITLE}
-          rightAction={{icon: 'share', onPress: handleShare}}
+          title={headerTitle}
+          rightAction={{
+            icon: 'share',
+            accessibilityLabel: 'Share podcast',
+            onPress: handleShare,
+          }}
         />
       }>
       <SimbaStatusBar variant="home" />

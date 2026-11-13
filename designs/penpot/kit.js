@@ -186,7 +186,12 @@ function kit(themeName) {
       y: o.y,
       w: o.w,
       h: o.h,
-      fill: o.fill || c.background.elevated,
+      // `fill: null` means NO fill — a stroke on an empty rectangle. Without
+      // it a stroke-only rectangle paints the elevated background OVER
+      // everything under it, which is how the Cover Shelf's selected tile
+      // lost its plate, its badge and its glyph. The ellipse below has
+      // always worked this way; the rectangle now agrees with it.
+      fill: o.fill === null ? null : o.fill || c.background.elevated,
     };
     if (o.radius != null) shape.radius = o.radius;
     if (o.stroke) {

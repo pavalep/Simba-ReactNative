@@ -63,7 +63,12 @@ export type RootStackParamList = {
   AllPlaylistsScreen: undefined;
   MoviesScreen: {categoryId?: string} | undefined;
   // ── Screens moved from tab stacks (Phase 14.0 navigation refactoring) ──
-  PodcastsScreen: {categoryId?: number} | undefined;
+  //
+  // The Podcasts catalogue takes NO route params. It used to declare
+  // `{categoryId?: number}` and seed the filter from it — but no caller
+  // ever passed one, so the parameter was a promise the app did not
+  // keep. The category is chosen from the filter sheet's Cover Shelf.
+  PodcastsScreen: undefined;
   /**
    * "My Podcasts" — the podcasts the user follows.
    *
@@ -89,14 +94,11 @@ export type RootStackParamList = {
       // P39.3: MusicBrainz release-group id for metadata enrichment
       musicBrainzReleaseId?: string;
     };
-  // Synchronous title — required so the InternalHeader paints on the
-  // first frame after navigation. Without it the header is blank during
-  // the iOS-style slide transition (glitch visible because the header
-  // re-mounts before the API resolves the real title). Every caller
-  // (Home → podcasts, Podcasts → PodcastDetail, deep link, share) is
-  // expected to pass `podcastTitle`; we still keep an in-screen fallback
-  // for defensive completeness but the type guarantees non-undefined.
-  PodcastDetail: {podcastId: number; podcastTitle: string};
+  // The podcast's id is all the route carries. The title used to be
+  // passed too (`podcastTitle`) and never read — the screen showed the
+  // constant "Podcast Details" instead, and the loaded podcast's own
+  // title is what the header and the share sheet carry now.
+  PodcastDetail: {podcastId: number};
   MusicScreen: {genre?: string} | undefined;
   MusicDetail: {trackId: string; source: 'jamendo' | 'audius'};
   MovieDetail: {identifier: string; title?: string};

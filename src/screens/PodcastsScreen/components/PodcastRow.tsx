@@ -2,11 +2,17 @@
 // Single-column list row (the brand — no view group on this section):
 //
 //   [60×60 thumb]  Title (1 line)
-//                  Author (secondary)
-//                  [N ep.]          ›
+//                  Author (secondary)                ›
 //
-// Thumb falls back to the `music` glyph in goldDim when the feed has no
-// image or the load fails — consecutive rows never render as voids.
+// Three things, and only three: the podcast's own artwork, its title
+// and its author. There used to be a fourth — an "{n} ep." badge —
+// but the catalogue's two endpoints (`/podcasts/trending` and
+// `/search/byterm`) do not send `episodeCount` at all, so the badge
+// could never render here.
+//
+// The thumb falls back to the podcast glyph in goldDim when the feed
+// has no image or the load fails — consecutive rows never render as
+// voids.
 
 import React, {useMemo, useState} from 'react';
 import {View, TouchableOpacity} from 'react-native';
@@ -15,7 +21,6 @@ import {useTheme} from '../../../theme';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
 import {createPodcastRowStyles} from '../styles';
-import text from '../related/textContent.json';
 import type {PodcastResult} from '../../../types/api';
 
 interface Props {
@@ -47,7 +52,7 @@ export const PodcastRow: React.FC<Props> = React.memo(({item, onPress}) => {
           />
         ) : (
           <View style={styles.thumbPlaceholder}>
-            <SvgIcon name="music" size={22} color={colors.accent.goldDim} />
+            <SvgIcon name="podcastRings" size={22} color={colors.accent.goldDim} />
           </View>
         )}
       </View>
@@ -62,16 +67,6 @@ export const PodcastRow: React.FC<Props> = React.memo(({item, onPress}) => {
             {item.author}
           </AppText>
         ) : null}
-        {item.episodeCount > 0 && (
-          <View style={styles.badge}>
-            <AppText variant="caption" style={styles.badgeText}>
-              {text.row.episodesCount.replace(
-                '{count}',
-                String(item.episodeCount),
-              )}
-            </AppText>
-          </View>
-        )}
       </View>
 
       <SvgIcon name="chevronRight" size={18} color={colors.text.tertiary} />

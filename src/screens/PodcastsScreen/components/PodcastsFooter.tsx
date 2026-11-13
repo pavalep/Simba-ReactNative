@@ -15,7 +15,15 @@ import text from '../related/textContent.json';
 interface Props {
   isLoadingMore: boolean;
   hasLoaded: boolean;
-  error: string | null;
+  /**
+   * The error from a failed LOAD-MORE.
+   *
+   * Not the list's error: a first-load failure is the error card's
+   * business, and the footer saying it too announced the same failure
+   * twice — and wrongly ("Couldn't load MORE" for a load-more that
+   * never started).
+   */
+  pageError: string | null;
   /** Terminal state — no more pages to fetch. */
   reachedEnd: boolean;
   /** Whether the list has any rows at all. */
@@ -26,7 +34,7 @@ interface Props {
 export const PodcastsFooter: React.FC<Props> = ({
   isLoadingMore,
   hasLoaded,
-  error,
+  pageError,
   reachedEnd,
   hasItems,
   onLoadMore,
@@ -43,7 +51,7 @@ export const PodcastsFooter: React.FC<Props> = ({
             {text.footer.loadingMore}
           </AppText>
         </View>
-      ) : !!error && hasLoaded ? (
+      ) : !!pageError && hasLoaded ? (
         <TouchableOpacity
           activeOpacity={0.8}
           onPress={onLoadMore}

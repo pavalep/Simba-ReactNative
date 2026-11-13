@@ -186,7 +186,6 @@ export const linking: LinkingOptions<RootStackParamList> = {
         path: 'podcast/:podcastId',
         parse: {
           podcastId: Number,
-          podcastTitle: decodeURIComponent,
         },
       },
       RadioScreen: {

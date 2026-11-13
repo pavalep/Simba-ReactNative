@@ -9,6 +9,8 @@
 // 3 per-screen `types/index.ts` re-export them so existing
 // consumers keep working.
 
+import type {ImageSourcePropType} from 'react-native';
+
 /** Group id for the option sheet — `'filter' | 'sort' | 'view'`
  *  (or any custom string for a screen-specific group). */
 export type SectionOptionGroupId = 'filter' | 'sort' | 'view' | string;
@@ -17,6 +19,11 @@ export interface OptionItem {
   key: string;
   label: string;
   icon?: string;
+  /**
+   * Local cover plate for the option — drawn only by a `'coverGrid'`
+   * group (the Cover Shelf). A chip group ignores it.
+   */
+  image?: ImageSourcePropType;
 }
 
 export interface OptionGroup {
@@ -24,6 +31,20 @@ export interface OptionGroup {
   title: string;
   multiSelect?: boolean;
   collapsedRowLimit?: number;
+  /**
+   * How the sheet draws the group.
+   *
+   * `'chips'` (the default) is the sheet's chip flow. `'coverGrid'` is
+   * the Cover Shelf — a grid of cover plates with the glyph badge on
+   * the plate and the name underneath. Only the Podcasts screen opts
+   * into it; every other group renders exactly as it always has.
+   */
+  layout?: 'chips' | 'coverGrid';
+  /**
+   * The key that means "no filter" in a cover-grid group — tapping that
+   * tile clears the group instead of selecting it.
+   */
+  clearKey?: string;
   /**
    * The option that is applied when the group has NO explicit
    * selection.

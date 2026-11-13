@@ -34,6 +34,7 @@ export const PodcastsContent: React.FC<PodcastsContentProps> = ({
     isLoading,
     isLoadingMore,
     error,
+    pageError,
     hasLoaded,
     hasMore,
     isSearchActive,
@@ -142,7 +143,7 @@ export const PodcastsContent: React.FC<PodcastsContentProps> = ({
           <PodcastsFooter
             isLoadingMore={isLoadingMore}
             hasLoaded={hasLoaded}
-            error={error}
+            pageError={pageError}
             reachedEnd={reachedEnd}
             hasItems={items.length > 0}
             onLoadMore={() => loadMore()}

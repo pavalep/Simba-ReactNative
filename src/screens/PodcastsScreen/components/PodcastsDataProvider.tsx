@@ -25,6 +25,8 @@ interface PodcastsDataContextValue {
   isLoadingMore: boolean;
   hasMore: boolean;
   error: string | null;
+  /** The error from a failed load-more — the footer's copy. */
+  pageError: string | null;
   setSearchTerm: (term: string) => void;
   setActiveCategoryId: (id: string) => void;
   loadMore: () => void;
@@ -60,10 +62,7 @@ export const PodcastsDataProvider: React.FC<{
   const podcasts = usePodcastsScreen();
 
   const handlePodcastPress = useCallback((item: PodcastResult) => {
-    navigate('PodcastDetail', {
-      podcastId: item.id,
-      podcastTitle: item.title,
-    });
+    navigate('PodcastDetail', {podcastId: item.id});
   }, []);
 
   const value = useMemo<PodcastsDataContextValue>(
@@ -76,6 +75,7 @@ export const PodcastsDataProvider: React.FC<{
       isLoadingMore: podcasts.isLoadingMore,
       hasMore: podcasts.hasMore,
       error: podcasts.error,
+      pageError: podcasts.pageError,
       setSearchTerm: podcasts.setSearchTerm,
       setActiveCategoryId: podcasts.setActiveCategoryId,
       loadMore: podcasts.loadMore,
@@ -93,6 +93,7 @@ export const PodcastsDataProvider: React.FC<{
       podcasts.isLoadingMore,
       podcasts.hasMore,
       podcasts.error,
+      podcasts.pageError,
       podcasts.setSearchTerm,
       podcasts.setActiveCategoryId,
       podcasts.loadMore,

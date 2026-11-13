@@ -220,6 +220,47 @@ const ICONS = [
   // (`Fab.tsx:82,119`). This is the app's ONE floating action button and
   // it is what opens the filter sheet.
   { name: 'sliders', file: 'ic_sliders.svg', size: 24, light: '#1A1A1C', dark: '#0A0A0C' },
+
+  // ── The Podcasts surface's glyphs (2026-11-13) ───────────────────────────
+  //
+  // Every file below is the APP'S OWN (`src/assets/svg/`), at the size the
+  // app draws it, in the colour the app draws it. Nothing here is a new
+  // drawing.
+  //
+  // The twelve CATEGORY glyphs are the ones the app's own podcast catalogue
+  // names (`src/constants/podcastCategories.ts`) — the app already ships a
+  // distinct glyph per genre, and the filter sheet's cover tiles put that
+  // glyph in the app's own badge disc (`CategoryCard.tsx:99-105`).
+  //
+  // They are rendered at 24 px because the tile's disc is 32 dp, not the
+  // 40 dp of the 160 dp Home card: the tile is 88 dp square, so a 40 dp
+  // disc would swallow it.
+  { name: 'micVocal', file: 'ic_mic_vocal.svg', size: 24, light: 'gold', dark: 'gold' },
+  { name: 'palette', file: 'ic_palette.svg', size: 24, light: 'gold', dark: 'gold' },
+  { name: 'briefcase', file: 'ic_briefcase.svg', size: 24, light: 'gold', dark: 'gold' },
+  { name: 'smile', file: 'ic_smile.svg', size: 24, light: 'gold', dark: 'gold' },
+  { name: 'graduationCap', file: 'ic_graduation_cap.svg', size: 24, light: 'gold', dark: 'gold' },
+  { name: 'heartPulse', file: 'ic_heart_pulse.svg', size: 24, light: 'gold', dark: 'gold' },
+  { name: 'historyTile', file: 'ic_history.svg', size: 24, light: 'gold', dark: 'gold' },
+  { name: 'disc3Tile', file: 'ic_disc_3.svg', size: 24, light: 'gold', dark: 'gold' },
+  { name: 'newspaper', file: 'ic_newspaper.svg', size: 24, light: 'gold', dark: 'gold' },
+  { name: 'flaskConical', file: 'ic_flask_conical.svg', size: 24, light: 'gold', dark: 'gold' },
+  { name: 'trophyTile', file: 'ic_trophy.svg', size: 24, light: 'gold', dark: 'gold' },
+  { name: 'cpuTile', file: 'ic_cpu.svg', size: 24, light: 'gold', dark: 'gold' },
+  // The podcast glyph inside the episode-count badge — 14 px, as the app
+  // draws the badge's own glyph (`HeroSection.tsx:81`).
+  { name: 'podcastRingsSmall', file: 'ic_podcast_rings.svg', size: 14, light: 'gold', dark: 'gold' },
+  // The list row's chevron — 18 px in `text.tertiary`
+  // (`PodcastRow.tsx:77`). The 14 px chevron above is the rail's size.
+  { name: 'chevronRight18', file: 'ic_chevron_right.svg', size: 18, light: 'chevron', dark: 'chevron' },
+  // The Follow button's tick — 16 px in the accent colour.
+  { name: 'check', file: 'ic_check.svg', size: 16, light: 'gold', dark: 'gold' },
+  // The episode row's play glyph — 20 px in the accent colour, on the
+  // 44 dp gold-dim disc (`DetailItem.tsx:113-116`).
+  { name: 'playGold', file: 'ic_play.svg', size: 20, light: 'gold', dark: 'gold' },
+  // The detail header's share glyph — 18 px in `text.secondary`
+  // (`PodcastDetailScreen/index.tsx:190`).
+  { name: 'shareAction', file: 'ic_share.svg', size: 18, light: 'secondary', dark: 'secondary' },
 ];
 
 function resolveColor(spec, theme) {

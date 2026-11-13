@@ -258,7 +258,18 @@ export const BrowseLayout: React.FC<Props> = ({
           multiSelect: g.multiSelect ?? false,
           collapsedRowLimit: g.collapsedRowLimit,
           defaultKey: g.defaultKey,
-          rows: g.options.map(o => ({key: o.key, label: o.label})),
+          // `layout` and the row's `icon` / `image` are undefined for
+          // every group that does not opt into the Cover Shelf, so the
+          // chip groups (Movies, Search, Radio, Live TV) render exactly
+          // as they always have.
+          layout: g.layout,
+          clearKey: g.clearKey,
+          rows: g.options.map(o => ({
+            key: o.key,
+            label: o.label,
+            icon: o.icon,
+            image: o.image,
+          })),
         }))}
         // Only the groups the config actually declares carry a value.
         // `state.view` is undefined unless the config has a `view` group

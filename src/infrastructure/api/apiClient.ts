@@ -73,12 +73,26 @@ export function getAxiosInstance(): AxiosInstance {
     axiosInstance.interceptors.response.use(
       res => res,
       (err: AxiosError) => {
+        const kind = classifyApiError(err);
         const status = err.response?.status ?? 0;
-        const msg =
-          err.response?.data && typeof err.response.data === 'object'
-            ? JSON.stringify(err.response.data)
-            : err.message;
-        return Promise.reject(new ApiError(msg, status));
+        if (kind === 'http') {
+          // A 4xx is the server answering: its body says what it
+          // rejected, and the existing behaviour of passing that body
+          // through is kept.
+          const msg =
+            err.response?.data && typeof err.response.data === 'object'
+              ? JSON.stringify(err.response.data)
+              : err.message;
+          return Promise.reject(new ApiError(msg, status, kind));
+        }
+        // A transport failure in React Native arrives as axios's bare
+        // "Network Error" — the same string for a wrong device clock, a
+        // captive portal, a dead cell connection and a blocked host. The
+        // raw text is kept for the log; the user gets a line that says
+        // something true and actionable, and nothing about the app's
+        // internals.
+        logger.debug(`[API] transport failure (${kind}): ${err.message}`);
+        return Promise.reject(new ApiError(TRANSPORT_MESSAGES[kind], status, kind));
       },
     );
   }
@@ -87,12 +101,53 @@ export function getAxiosInstance(): AxiosInstance {
 
 // ─── ApiError ───────────────────────────────────────────────────────────
 
+/**
+ * What KIND of failure it was.
+ *
+ * `'network'` — no HTTP response at all: the host was unreachable, a
+ *               captive portal intercepted the request, or the TLS
+ *               handshake was refused (a device with the wrong clock
+ *               lands here).
+ * `'timeout'` — the request timed out.
+ * `'server'`  — the server answered with a 5xx.
+ * `'http'`    — the server answered with a 4xx.
+ */
+export type ApiErrorKind = 'network' | 'timeout' | 'server' | 'http';
+
+/**
+ * The user-facing copy for a transport failure.
+ *
+ * It says what happened and what to do, blames nothing, and leaks
+ * nothing about the app's internals.
+ */
+const TRANSPORT_MESSAGES: Record<Exclude<ApiErrorKind, 'http'>, string> = {
+  network: "Can't reach the server right now. Try again.",
+  timeout: 'The server took too long to answer. Try again.',
+  server: 'The server had a problem. Try again in a moment.',
+};
+
+/** Classify an axios failure into the kind the UI can talk about. */
+function classifyApiError(err: AxiosError): ApiErrorKind {
+  const status = err.response?.status;
+  if (typeof status === 'number') {
+    return status >= 500 ? 'server' : 'http';
+  }
+  // axios reports a timeout as ECONNABORTED (the XHR adapter) or
+  // ETIMEDOUT (the node adapter).
+  if (err.code === 'ECONNABORTED' || err.code === 'ETIMEDOUT') {
+    return 'timeout';
+  }
+  return 'network';
+}
+
 export class ApiError extends Error {
   status: number;
-  constructor(message: string, status: number) {
+  kind: ApiErrorKind;
+  constructor(message: string, status: number, kind: ApiErrorKind = 'http') {
     super(message);
     this.name = 'ApiError';
     this.status = status;
+    this.kind = kind;
   }
 }
 

@@ -8,8 +8,7 @@
 // / retry), and a `dedupe` helper at the bottom of the file
 // to dedup the per-page response. The V18-ideal version is
 // ~100 lines: 1 useState (searchTerm), 1 useInfiniteApiQuery
-// (with `pageParam` = the doubling `max` window), 0 useRefs,
-// 0 dedupe helper.
+// (with `pageParam` = the doubling `max` window), 0 useRefs.
 //
 // Podcast Index paginates by doubling a `max` window (no true
 // offset): 25 → 50 → 100, then stop. The `getNextPageParam`
@@ -17,6 +16,14 @@
 //   - short page           → undefined (no more results)
 //   - max at the API cap   → undefined
 //   - otherwise             → min(max × 2, API cap)
+//
+// The de-dupe is NOT TanStack's job — TanStack de-dupes REQUESTS,
+// not rows. Because the pages nest (`max=50` re-sends the first 25
+// rows of `max=25`), the flattened list has to drop the repeats
+// itself, or every podcast is rendered three times under a duplicate
+// React key. The shared contract lives in
+// `infrastructure/api/podcastIndex/pagination.ts`, so this screen
+// and the detail screen cannot drift apart.
 //
 // Per the V18.6.2 ideal, the active categoryId and searchTerm
 // are part of the TanStack queryKey — every (categoryId,
@@ -27,21 +34,23 @@
 //
 // Junior-dev rule: 1 useState (for the controlled input
 // echo) + 1 useInfiniteApiQuery (for the data). The pagination,
-// dedup, stale-response cancellation, in-flight guard, and
-// scroll throttle are all gone — TanStack owns them.
+// stale-response cancellation, in-flight guard, and scroll
+// throttle are all gone — TanStack owns them.
 
 import {useCallback, useState} from 'react';
 import {
   searchPodcasts,
   getTrendingPodcasts,
 } from '../../../infrastructure/api/podcastIndex/adapter';
+import {
+  flattenUniqueById,
+  nextPageMax,
+} from '../../../infrastructure/api/podcastIndex/pagination';
 import {INITIAL_MAX, MAX_RESULTS_PER_QUERY} from '../related/constants';
 import text from '../related/textContent.json';
 import {useInfiniteApiQuery} from '../../../hooks/useApiQuery';
 import {usePullToRefresh} from '../../_shared/pullToRefresh';
 import type {PodcastResult} from '../../../types/api';
-
-const DOUBLING = 2; // 25 → 50 → 100 → stop
 
 export interface UsePodcastsScreenReturn {
   // search
@@ -58,6 +67,13 @@ export interface UsePodcastsScreenReturn {
   isLoadingMore: boolean;
   hasMore: boolean;
   error: string | null;
+  /**
+   * The error from a failed NEXT PAGE — the load-more that did not
+   * make it. `error` covers the FIRST page (the error card), so the
+   * footer reports this one and the two never say the same failure
+   * twice.
+   */
+  pageError: string | null;
   // actions
   loadMore: () => void;
   retry: () => void;
@@ -102,23 +118,16 @@ export function usePodcastsScreen(
       if (term) return searchPodcasts(term, max);
       return getTrendingPodcasts(max, activeCategoryId);
     },
-    getNextPageParam: (lastPage, _pages, lastParam) => {
-      // Short page = API returned fewer than `max` items = end of stream.
-      if (lastPage.length === 0) return undefined;
-      const currentMax = lastParam as number;
-      if (currentMax >= MAX_RESULTS_PER_QUERY) return undefined;
-      // The Podcast Index returns `max` items when more results
-      // are available, fewer when the result set is exhausted.
-      // If the last page was short, stop.
-      if (lastPage.length < currentMax) return undefined;
-      // Otherwise double the window, capped at the API limit.
-      return Math.min(currentMax * DOUBLING, MAX_RESULTS_PER_QUERY);
-    },
+    getNextPageParam: (lastPage, _pages, lastParam) =>
+      nextPageMax(lastParam as number, lastPage.length, MAX_RESULTS_PER_QUERY),
     staleTime: 60_000,
   });
 
+  // The pages NEST: `max=50` re-sends the first 25 rows of `max=25`.
+  // Flattening them raw rendered every podcast three times under
+  // duplicate React keys, so the pages are de-duplicated by id here.
   const allPages = q.data?.pages ?? [];
-  const items = allPages.flat();
+  const items = flattenUniqueById(allPages);
   const hasMore = q.hasNextPage ?? false;
 
   const loadMore = useCallback(() => {
@@ -145,6 +154,11 @@ export function usePodcastsScreen(
       ? text.errors.hookLoadFailed
       : null;
 
+  // ONE FAILURE, ONE MESSAGE. `error` is the FIRST page's failure and
+  // the error card owns it; the footer's copy is only for a failed
+  // load-more.
+  const pageError = q.isFetchNextPageError ? errorMessage : null;
+
   return {
     searchTerm,
     setSearchTerm,
@@ -157,6 +171,7 @@ export function usePodcastsScreen(
     isLoadingMore: q.isFetchingNextPage,
     hasMore,
     error: errorMessage,
+    pageError,
     loadMore,
     retry,
     refreshing,

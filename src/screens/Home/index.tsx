@@ -60,10 +60,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
   // 35.5: followed podcast card → podcast detail
   const handleFollowedPodcastPress = useCallback(
     (item: {id: number; title: string}) => {
-      navigation.navigate('PodcastDetail', {
-        podcastId: item.id,
-        podcastTitle: item.title,
-      });
+      navigation.navigate('PodcastDetail', {podcastId: item.id});
     },
     [navigation],
   );

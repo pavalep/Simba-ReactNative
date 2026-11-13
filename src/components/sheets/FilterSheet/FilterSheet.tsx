@@ -6,6 +6,10 @@
 //
 //   • Each group renders as a WRAPPING flow of chip buttons (no horizontal
 //     scroll — every option stays visible without extra gestures).
+//   • A group may opt into `layout: 'coverGrid'` — the Cover Shelf: a
+//     grid of cover plates with the glyph badge on the plate and the
+//     name underneath. Only the Podcasts category group does; every
+//     other group renders exactly as it always has.
 //   • `multiSelect: true` → multiple keys may be active (e.g. Movies
 //     categories: "Classic Films + Documentaries"). `multiSelect: false`
 //     → at most one key (e.g. Sort by: "Most popular" XOR "Newest").
@@ -28,6 +32,7 @@ import {
   View,
   ScrollView,
   StyleSheet,
+  type ImageSourcePropType,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../../theme';
@@ -39,10 +44,15 @@ import {
 } from '../BottomSheet/BottomSheet';
 import {SvgIcon} from '../../utility/SvgIcon/SvgIcon';
 import {AppText} from '../../core/AppText/AppText';
+import {CoverGrid} from './CoverGrid';
 
 export interface FilterSheetRow {
   key: string;            // '' = "no filter" placeholder row (clears the group)
   label: string;
+  /** Glyph inside the tile's badge disc — cover-grid groups only. */
+  icon?: string;
+  /** Cover plate for the tile — cover-grid groups only. */
+  image?: ImageSourcePropType;
 }
 
 export interface FilterSheetGroup {
@@ -56,6 +66,20 @@ export interface FilterSheetGroup {
    * (e.g. Sort by). Defaults to `false` for backward compatibility.
    */
   multiSelect?: boolean;
+  /**
+   * How the group is drawn.
+   *
+   * `'chips'` (the default) is the chip flow every group has always
+   * been. `'coverGrid'` is the Cover Shelf — a grid of cover plates
+   * with the glyph badge on the plate and the name underneath. Only
+   * the Podcasts category group opts into it.
+   */
+  layout?: 'chips' | 'coverGrid';
+  /**
+   * The key that means "no filter" in a cover-grid group — tapping that
+   * tile clears the group instead of selecting it.
+   */
+  clearKey?: string;
   /**
    * When set, the group renders only the first `collapsedRowLimit` chips
    * plus a "SHOW MORE"/"HIDE" toggle that reveals the rest AND extends
@@ -202,16 +226,26 @@ const GroupChipRow: React.FC<{
         <AppText style={[styles.groupTitle, {color: colors.text.secondary}]}>
           {group.title.toUpperCase()}
         </AppText>
-        <View style={styles.chipWrap}>
-          {visibleRows.map(row => (
-            <Chip
-              key={row.key || `${group.id}-empty`}
-              label={row.label}
-              selected={selectedKeys.includes(row.key) && row.key !== ''}
-              onPress={() => handlePress(row.key)}
-            />
-          ))}
-        </View>
+        {group.layout === 'coverGrid' ? (
+          <CoverGrid
+            tiles={visibleRows}
+            selectedKeys={selectedKeys}
+            explicitKeys={explicitKeys}
+            clearKey={group.clearKey ?? ''}
+            onChange={onChange}
+          />
+        ) : (
+          <View style={styles.chipWrap}>
+            {visibleRows.map(row => (
+              <Chip
+                key={row.key || `${group.id}-empty`}
+                label={row.label}
+                selected={selectedKeys.includes(row.key) && row.key !== ''}
+                onPress={() => handlePress(row.key)}
+              />
+            ))}
+          </View>
+        )}
         {collapsible ? (
           <TouchableOpacity
             activeOpacity={0.7}

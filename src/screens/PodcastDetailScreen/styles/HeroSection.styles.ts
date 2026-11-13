@@ -63,6 +63,7 @@ export const createHeroSectionStyles = (colors: ColorTokens) =>
     followButton: {
       flexDirection: 'row',
       alignItems: 'center',
+      justifyContent: 'center',
       gap: spacing.xs,
       borderWidth: 1,
       borderColor: colors.accent.gold,
@@ -70,11 +71,18 @@ export const createHeroSectionStyles = (colors: ColorTokens) =>
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.xs,
       marginTop: spacing.sm,
+      // The app's touch target — the pill is the hero's one action.
+      minHeight: 44,
     },
     followButtonActive: {
-      backgroundColor: colors.accent.goldDim,
+      backgroundColor: colors.accent.gold,
     },
     followLabel: {
       color: colors.accent.gold,
+    },
+    followLabelActive: {
+      // On the solid gold fill the label reads in the inverse colour —
+      // the same pairing the filter sheet's selected chip uses.
+      color: colors.background.primary,
     },
   });

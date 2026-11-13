@@ -76,6 +76,40 @@ const ASSETS = {
   'ph.rail5': {file: 'placeholders/audio/studio.jpg', box: [320, 180]},
   'ph.rail6': {file: 'placeholders/video/cinema.jpg', box: [320, 180]},
 
+  // ── the podcast category plates (88 dp square tiles) ─────────────────
+  //
+  // The app already ships a cover plate for every podcast genre it can
+  // art-direct (`src/assets/images/categories/podcasts/`), and those plates
+  // are the surface the FILTER SHEET's genre tiles are drawn from — the
+  // same artwork the app draws on its Home rail.
+  //
+  // The sources are 280x500 portraits; the resizer centre-crops to the
+  // tile's box, exactly as the app's `resizeMode="cover"` does.
+  'cat.pod.all': {file: 'categories/podcasts/all.png', box: [176, 176]},
+  'cat.pod.arts': {file: 'categories/podcasts/arts.png', box: [176, 176]},
+  'cat.pod.business': {file: 'categories/podcasts/business.png', box: [176, 176]},
+  'cat.pod.comedy': {file: 'categories/podcasts/comedy.png', box: [176, 176]},
+  'cat.pod.education': {file: 'categories/podcasts/education.png', box: [176, 176]},
+  'cat.pod.health': {file: 'categories/podcasts/health.png', box: [176, 176]},
+  'cat.pod.history': {file: 'categories/podcasts/history.png', box: [176, 176]},
+  'cat.pod.music': {file: 'categories/podcasts/music.png', box: [176, 176]},
+  'cat.pod.news': {file: 'categories/podcasts/news.png', box: [176, 176]},
+  'cat.pod.technology': {file: 'categories/podcasts/technology.png', box: [176, 176]},
+
+  // ── the podcast list rows' artwork (60 dp square thumbs) ─────────────
+  //
+  // The app draws the REAL podcast cover in every row
+  // (`PodcastRow.tsx:41-47`). A Penpot board cannot fetch a remote image,
+  // so the row carries one of the app's OWN bundled audio placeholders —
+  // the same pictures the app ships for a podcast with no artwork of its
+  // own (`src/assets/images/placeholders/audio/`).
+  'ph.podRow1': {file: 'placeholders/audio/mic.jpg', box: [120, 120]},
+  'ph.podRow2': {file: 'placeholders/audio/headphones.jpg', box: [120, 120]},
+  'ph.podRow3': {file: 'placeholders/audio/studio.jpg', box: [120, 120]},
+  'ph.podRow4': {file: 'placeholders/audio/guitar.jpg', box: [120, 120]},
+  'ph.podRow5': {file: 'placeholders/audio/vinyl.jpg', box: [120, 120]},
+  'ph.podRow6': {file: 'placeholders/audio/piano.jpg', box: [120, 120]},
+
   // ── the podcast circles (132 dp, `ARTWORK_SIZE`) ──
   'ph.pod1': {file: 'placeholders/audio/mic.jpg', box: [264, 264]},
   'ph.pod2': {file: 'placeholders/audio/concert.jpg', box: [264, 264]},

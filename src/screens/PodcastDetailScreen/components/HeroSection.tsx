@@ -41,7 +41,7 @@ export const HeroSection: React.FC<Props> = ({
         />
       ) : (
         <View style={styles.imagePlaceholder}>
-          <SvgIcon name="music" size={48} color={colors.accent.gold} />
+          <SvgIcon name="podcastRings" size={48} color={colors.accent.gold} />
         </View>
       )}
 
@@ -78,7 +78,7 @@ export const HeroSection: React.FC<Props> = ({
       ) : null}
 
       <View style={styles.episodeCountBadge}>
-        <SvgIcon name="music" size={14} color={colors.accent.gold} />
+        <SvgIcon name="micVocal" size={14} color={colors.accent.gold} />
         <AppText variant="caption" style={styles.episodeCountText}>
           {podcast.episodeCount}{' '}
           {podcast.episodeCount === 1
@@ -87,6 +87,10 @@ export const HeroSection: React.FC<Props> = ({
         </AppText>
       </View>
 
+      {/* The follow action is a STATE PILL — outlined "Follow" until the
+          podcast is followed, then a solid gold "✓ Following". It used
+          to carry the BOOKMARK glyph, which belongs to the app's
+          separate Bookmarks feature. */}
       <TouchableOpacity
         style={[styles.followButton, isFollowed && styles.followButtonActive]}
         activeOpacity={0.7}
@@ -98,10 +102,18 @@ export const HeroSection: React.FC<Props> = ({
             ? text.hero.unfollowAccessibility
             : text.hero.followAccessibility
         }>
-        <SvgIcon name="bookmark" size={16} color={colors.accent.gold} />
-        <AppText variant="caption" style={styles.followLabel}>
-          {isFollowed ? text.hero.following : text.hero.follow}
-        </AppText>
+        {isFollowed ? (
+          <>
+            <SvgIcon name="check" size={16} color={colors.background.primary} />
+            <AppText variant="caption" style={styles.followLabelActive}>
+              {text.hero.following}
+            </AppText>
+          </>
+        ) : (
+          <AppText variant="caption" style={styles.followLabel}>
+            {text.hero.follow}
+          </AppText>
+        )}
       </TouchableOpacity>
     </View>
   );

@@ -3,8 +3,9 @@
 
 import text from './textContent.json';
 
-// The header always shows a fixed "Podcast Details" title — the real
-// title lives in the hero section below once the API resolves.
+// The header's fallback title — what it says before the API has
+// answered. Once the podcast is loaded the header carries the
+// podcast's OWN name.
 export const HEADER_TITLE = text.screen.headerTitle;
 
 // ─── Episode pagination (Podcast Index /episodes/byfeedid) ───────────
@@ -14,8 +15,6 @@ export const HEADER_TITLE = text.screen.headerTitle;
 export const INITIAL_MAX = 10;
 /** Hard cap from Podcast Index — the pagination ceiling. */
 export const MAX_RESULTS_PER_QUERY = 1000;
-/** Minimum ms between loadMore triggers (onEndReached spam guard). */
-export const LOAD_MORE_THROTTLE_MS = 600;
 
 // 35.6: episode long-press menu. Labels/icons are static — only the
 // handler differs per action, so the array is hoisted out of the render.

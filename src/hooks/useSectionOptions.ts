@@ -72,7 +72,7 @@ export function useSectionOptions(
     for (const param of FILTER_SEED_PARAMS) {
       const value = (routeParams as Record<string, unknown>)[param];
       // The route param and the filter key are both the category's id,
-      // but not always in the same TYPE: `PodcastsScreen` declares
+      // but not always in the same TYPE: a route may declare
       // `categoryId?: number` while its filter keys are strings ('1',
       // '10', …). Comparing only strings made the seeding unreachable
       // for every numeric route — the param was declared and then

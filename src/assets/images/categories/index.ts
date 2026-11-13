@@ -37,9 +37,11 @@ export const CATEGORY_COVERS = {
     technology:  require('./podcasts/technology.png'),
     history:     require('./podcasts/history.png'),
     news:        require('./podcasts/news.png'),
-    science:     require('./podcasts/news.png'), // falls back to news (no science asset generated)
-    sports:      require('./podcasts/news.png'), // falls back to news
-    tvFilm:      require('./podcasts/news.png'), // falls back to news
+    // Science, Sports and TV & Film have NO plate of their own. They
+    // used to point at `news.png` — a picture of a DIFFERENT genre,
+    // which is a lie about the product. A genre with no plate draws
+    // the app's own `goldSoft` plate with its glyph badge on top
+    // instead (see `constants/podcastCategories.ts`).
   },
   // ── Music ──
   music: {

@@ -7,34 +7,40 @@
 
 import type {ReactNode} from 'react';
 import {
-  PODCAST_CATEGORIES,
   type PodcastCategory,
 } from '../../../constants/podcastCategories';
 import type {SectionBrowseConfig} from '../types';
 
 /**
- * The Category group — single-select (the Podcast Index's category
- * endpoints take `cat` but no `q`, so one category at a time).
+ * The Category group — the COVER SHELF.
  *
- * `collapsedRowLimit: 6` is the sheet's one rule across the three
- * browse screens: the sheet shows six chips and a SHOW MORE toggle, so
- * the panel stays a panel instead of running past the screen.
+ * Single-select (the Podcast Index's category endpoints take `cat` but
+ * no `q`, so one category at a time), drawn as a 4 × 3 grid of the
+ * app's own cover plates rather than as a chip rail: the curated set is
+ * art-led, and a chip rail turns it back into a strip of words.
  *
- * The rows carry no icon: the filter sheet draws text pills, and the
- * category icons were being copied into the option model and then
- * thrown away by the sheet.
+ * `defaultKey: 'all'` is what makes the first tile ("All") the applied
+ * state — the unfiltered catalogue. It is the group's DEFAULT, not a
+ * selection of its own, so it does not raise the sheet's RESET footer
+ * and it is what the user lands on when the group is cleared.
+ *
+ * There is no `collapsedRowLimit`: the shelf shows the whole curated
+ * set at once. The API's own 112-category taxonomy is never offered —
+ * that is a set of decisions the user should not have to make.
  */
 function podcastFilterGroup(categories: PodcastCategory[]) {
   return {
     id: 'filter',
     title: 'Category',
-    collapsedRowLimit: 6,
-    options: categories
-      .filter(category => category.id !== 'all')
-      .map(category => ({
-        key: String(category.id),
-        label: category.name,
-      })),
+    layout: 'coverGrid' as const,
+    clearKey: 'all',
+    defaultKey: 'all',
+    options: categories.map(category => ({
+      key: String(category.id),
+      label: category.name,
+      icon: category.icon,
+      image: category.image,
+    })),
   };
 }
 
@@ -53,5 +59,3 @@ export function createPodcastsSectionConfig(
     renderContent: (): ReactNode => null,
   };
 }
-
-export const PODCASTS_SECTION_CONFIG = createPodcastsSectionConfig(PODCAST_CATEGORIES);

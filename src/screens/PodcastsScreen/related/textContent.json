@@ -1,7 +1,4 @@
 {
-  "row": {
-    "episodesCount": "{count} ep."
-  },
   "footer": {
     "loadingMore": "Loading more…",
     "loadMoreRetry": "Couldn't load more — tap to retry",

@@ -17,8 +17,14 @@
  */
 
 import {screen, fireEvent} from '@testing-library/react-native';
+import {StyleSheet} from 'react-native';
 
 import {renderWithProviders} from '../../helpers/renderWithProviders';
+
+/** The styles of an element, flattened into one object. */
+function flattenStyle(style: unknown): Record<string, unknown> {
+  return (StyleSheet.flatten(style as never) ?? {}) as Record<string, unknown>;
+}
 
 // The list is a module-level `let` so each test can hand the screen a
 // different library. The mock factory only creates a closure — it reads
@@ -89,13 +95,36 @@ describe('FollowedPodcastsScreen — My Podcasts', () => {
   it('gives the row the podcast’s identity, so a screen reader says who it is', async () => {
     // The press itself navigates to `PodcastDetail`, and the PARAMETERS
     // of that navigation are pinned by the type system
-    // (`podcastTitle` is a REQUIRED param, so a missing one is a
-    // compile error). What is worth pinning here is the ROW: it must
-    // carry the podcast's identity in its own label, or a screen-reader
-    // user hears "button" eight times in a row.
+    // (`podcastId` is the only param, so a missing one is a compile
+    // error). What is worth pinning here is the ROW: it must carry the
+    // podcast's identity in its own label, or a screen-reader user
+    // hears "button" eight times in a row.
     mockList = [makePodcast({id: 7, title: 'The Show', author: 'The Host'})];
     await renderScreen();
 
     expect(screen.getByLabelText('Open podcast The Show by The Host')).toBeOnTheScreen();
+  });
+
+  it('uses the catalogue’s row grammar — art, title and author, and no episode count', async () => {
+    // The Home rail shows title + author; this page used to add the
+    // episode count as well, so the same podcast showed two different
+    // amounts of information on two screens a swipe apart.
+    mockList = [makePodcast({id: 7, title: 'The Show', author: 'The Host', episodeCount: 12})];
+    await renderScreen();
+
+    expect(screen.getByText('The Show')).toBeOnTheScreen();
+    expect(screen.getByText('The Host')).toBeOnTheScreen();
+    expect(screen.queryByText(/12 episodes/)).toBeNull();
+  });
+
+  it('gives the Unfollow action a real touch target', async () => {
+    mockList = [makePodcast({id: 7, title: 'The Show'})];
+    await renderScreen();
+
+    const unfollow = screen.getByLabelText('Unfollow The Show');
+    const style = flattenStyle(unfollow.props.style);
+
+    expect(style.minHeight).toBeGreaterThanOrEqual(44);
+    expect(style.minWidth).toBeGreaterThanOrEqual(44);
   });
 });
