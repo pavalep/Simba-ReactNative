@@ -98,6 +98,22 @@ export const BrowseLayout: React.FC<Props> = ({
   const [sheetVisible, setSheetVisible] = useState(false);
   const {state, setOption, reset, activeFilterCount, options} = optionsApi;
 
+  /**
+   * Is the list finished and sitting at its end?
+   *
+   * When it is, the floating filter button has nothing left to float
+   * over: it sits in the corner the "You're all caught up" line leaves,
+   * and the bottom of the screen reads as clutter. The owner's call
+   * (2026-11-13) is that the button gets out of the way there — and comes
+   * back the moment the user scrolls up, because the button is the list's
+   * filter affordance and hiding it from the whole screen would remove
+   * the action.
+   */
+  const [atListEnd, setAtListEnd] = useState(false);
+  const reportAtListEnd = useCallback((atEnd: boolean) => {
+    setAtListEnd(atEnd);
+  }, []);
+
   // `activeChips` is computed here (not in ctx) and fed directly to the
   // <FilterChips> strip — keeping the ctx dep array lean.
   const activeChips = useMemo<FilterChipItem[]>(() => {
@@ -178,8 +194,9 @@ export const BrowseLayout: React.FC<Props> = ({
       query: search.debouncedQuery,
       options,
       offline: !isOnline,
+      setAtListEnd: reportAtListEnd,
     }),
-    [search.debouncedQuery, options, isOnline],
+    [search.debouncedQuery, options, isOnline, reportAtListEnd],
   );
 
   return (
@@ -224,7 +241,10 @@ export const BrowseLayout: React.FC<Props> = ({
         icon="sliders"
         onPress={() => setSheetVisible(true)}
         accessibilityLabel={`Filter ${config.title} options`}
-        visible={hasOptions}
+        // The button is there for the whole list, and gone once the list
+        // is finished and the user is looking at its end — see
+        // `atListEnd` above.
+        visible={hasOptions && !atListEnd}
         badgeCount={activeFilterCount}
       />
 

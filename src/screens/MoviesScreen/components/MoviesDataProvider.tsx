@@ -37,6 +37,14 @@ interface MoviesDataContextValue {
   data: MovieScopeState;
   /** Refetch the active scope (used for retry / pull-to-refresh). */
   refetch: () => void;
+  /**
+   * The pull-to-refresh gesture's state. The spinner belongs to the
+   * gesture, not to the query's fetch flag — see
+   * `src/screens/_shared/pullToRefresh.ts`.
+   */
+  refreshing: boolean;
+  /** Run the pull-to-refresh gesture. */
+  refresh: () => Promise<void>;
   /** Client-side slice growth (used for infinite scroll). */
   loadMore: () => void;
   /** Active scope state + setters. */
@@ -194,6 +202,8 @@ export const MoviesDataProvider: React.FC<{
     () => ({
       data: movies.data,
       refetch: movies.refetch,
+      refreshing: movies.refreshing,
+      refresh: movies.refresh,
       loadMore: movies.loadMore,
       activeCategoryIds,
       activeSearchTerm,
@@ -206,6 +216,8 @@ export const MoviesDataProvider: React.FC<{
     [
       movies.data,
       movies.refetch,
+      movies.refreshing,
+      movies.refresh,
       movies.loadMore,
       activeCategoryIds,
       activeSearchTerm,

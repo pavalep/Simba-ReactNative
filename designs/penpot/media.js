@@ -81,6 +81,25 @@ const ASSETS = {
   'ph.pod2': {file: 'placeholders/audio/concert.jpg', box: [264, 264]},
   'ph.pod3': {file: 'placeholders/audio/studio.jpg', box: [264, 264]},
 
+  // ── the Movies grid cards (205.5 x 115.6 dp, 16:9) ──
+  //
+  // The Movies screen is a full-bleed 2-column mosaic of 16:9 cards
+  // (`MovieCard.styles.ts:18-30`), and the app draws a REAL Internet
+  // Archive poster in each one. A Penpot board cannot fetch a remote
+  // image, so the card carries one of the app's OWN bundled video
+  // placeholders instead — the same pictures the app ships for a video
+  // with no artwork of its own (`src/assets/images/placeholders/video/`).
+  //
+  // The resizer centre-crops to the box, exactly as the app's
+  // `resizeMode="cover"` does, so a 3:2 photograph fills the 16:9 card
+  // without being stretched.
+  'ph.movie1': {file: 'placeholders/video/movies.jpg', box: [411, 231]},
+  'ph.movie2': {file: 'placeholders/video/cinema.jpg', box: [411, 231]},
+  'ph.movie3': {file: 'placeholders/video/film_reel.jpg', box: [411, 231]},
+  'ph.movie4': {file: 'placeholders/video/documentary.jpg', box: [411, 231]},
+  'ph.movie5': {file: 'placeholders/video/camera.jpg', box: [411, 231]},
+  'ph.movie6': {file: 'placeholders/video/shows.jpg', box: [411, 231]},
+
   // ── the search rows' artwork (40x40 dp) ────────────────────────────
   //
   // The Search page's rows are 40x40 (`md/SEARCH_PAGE_REDESIGN.md` §3.2),

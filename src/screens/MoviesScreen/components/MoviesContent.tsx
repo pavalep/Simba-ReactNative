@@ -7,6 +7,7 @@ import {PlaylistSheet, type PlaylistSheetProps} from '../../../components/sheets
 import {useToast} from '../../../components/feedback/Toast';
 import {resolveInternetArchiveVideoDetails} from '../../../infrastructure/api/internetArchive/adapter';
 import {useBottomChromeInset} from '../../../infrastructure/player/miniPlayerChrome';
+import {useListEnd} from '../../_shared/useListEnd';
 import {MOVIE_CATEGORIES} from '../../../constants/movieCategories';
 import {useTheme} from '../../../theme';
 import {spacing} from '../../../theme/tokens';
@@ -28,6 +29,8 @@ export const MoviesContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => {
   const {
     data,
     refetch,
+    refreshing,
+    refresh,
     loadMore,
     activeCategoryIds,
     activeSearchTerm,
@@ -66,6 +69,14 @@ export const MoviesContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => {
   // footer's own copy distinguishes "that is everything" from "the
   // archive refuses to page further".
   const reachedEnd = hasLoaded && !error && !hasMore;
+
+  // The list tells the shell when it is finished AND the user is at its
+  // end, so the shell can get the floating filter button out of the way
+  // (see `_shared/useListEnd.ts`).
+  const {onScroll, onContentSizeChange} = useListEnd(
+    ctx.setAtListEnd,
+    reachedEnd,
+  );
 
   // The placeholder cover is the CATEGORY's own cover, shown while the
   // item's real artwork loads (and if it fails). It only makes sense
@@ -303,12 +314,19 @@ export const MoviesContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => {
           userDraggedRef.current = true;
         }}
         onEndReachedThreshold={0.35}
+        onScroll={onScroll}
+        onContentSizeChange={onContentSizeChange}
         removeClippedSubviews={false}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
-            refreshing={isLoading && hasLoaded}
-            onRefresh={refetch}
+            // The GESTURE owns the spinner, not the query. `isLoading`
+            // is TanStack's `isFetching`, which is also true while the
+            // next PAGE loads — so the refresh spinner used to appear
+            // at the top of the grid the moment the user scrolled to
+            // the end of the list. See `_shared/pullToRefresh.ts`.
+            refreshing={refreshing}
+            onRefresh={refresh}
             tintColor={colors.accent.gold}
             colors={[colors.accent.gold]}
           />

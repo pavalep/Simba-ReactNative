@@ -4,6 +4,7 @@
 import {StyleSheet} from 'react-native';
 import {spacing, radius} from '../../../theme/tokens';
 import type {ColorTokens} from '../../../theme/tokens';
+import {BROWSE_FOOTER_MARGIN_BOTTOM} from '../../_shared/browseFooter';
 
 export const createMoviesFooterStyles = (colors: ColorTokens) =>
   StyleSheet.create({
@@ -15,6 +16,10 @@ export const createMoviesFooterStyles = (colors: ColorTokens) =>
       minHeight: 56,
       alignItems: 'center',
       justifyContent: 'center',
+      // The footer gives the list's FAB clearance back, so the loader row
+      // lands on the button's own line instead of floating 68 dp above the
+      // bottom edge. See `_shared/browseFooter.ts`.
+      marginBottom: BROWSE_FOOTER_MARGIN_BOTTOM,
     },
     footerSpacer: {
       // Height identical to `footerRow`'s visual footprint so the bottom

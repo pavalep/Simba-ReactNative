@@ -29,6 +29,14 @@ interface PodcastsDataContextValue {
   setActiveCategoryId: (id: string) => void;
   loadMore: () => void;
   retry: () => void;
+  /**
+   * The pull-to-refresh gesture's state. The spinner belongs to the
+   * gesture, not to the query's fetch flag — see
+   * `src/screens/_shared/pullToRefresh.ts`.
+   */
+  refreshing: boolean;
+  /** Run the pull-to-refresh gesture. */
+  refresh: () => Promise<void>;
   handlePodcastPress: (item: PodcastResult) => void;
 }
 
@@ -72,6 +80,8 @@ export const PodcastsDataProvider: React.FC<{
       setActiveCategoryId: podcasts.setActiveCategoryId,
       loadMore: podcasts.loadMore,
       retry: podcasts.retry,
+      refreshing: podcasts.refreshing,
+      refresh: podcasts.refresh,
       handlePodcastPress,
     }),
     [
@@ -87,6 +97,8 @@ export const PodcastsDataProvider: React.FC<{
       podcasts.setActiveCategoryId,
       podcasts.loadMore,
       podcasts.retry,
+      podcasts.refreshing,
+      podcasts.refresh,
       handlePodcastPress,
     ],
   );

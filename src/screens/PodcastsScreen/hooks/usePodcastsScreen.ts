@@ -38,6 +38,7 @@ import {
 import {INITIAL_MAX, MAX_RESULTS_PER_QUERY} from '../related/constants';
 import text from '../related/textContent.json';
 import {useInfiniteApiQuery} from '../../../hooks/useApiQuery';
+import {usePullToRefresh} from '../../_shared/pullToRefresh';
 import type {PodcastResult} from '../../../types/api';
 
 const DOUBLING = 2; // 25 → 50 → 100 → stop
@@ -60,6 +61,17 @@ export interface UsePodcastsScreenReturn {
   // actions
   loadMore: () => void;
   retry: () => void;
+  /**
+   * True while a user-started pull-to-refresh is running.
+   *
+   * NOT `isFetching`: that flag is also true while the next PAGE is
+   * loading, and the refresh spinner then appeared at the top of the
+   * list for a fetch the user never asked for. See
+   * `src/screens/_shared/pullToRefresh.ts`.
+   */
+  refreshing: boolean;
+  /** Run the pull-to-refresh gesture. */
+  refresh: () => Promise<void>;
 }
 
 export function usePodcastsScreen(
@@ -119,6 +131,11 @@ export function usePodcastsScreen(
     void q.refetch();
   }, [q]);
 
+  // The pull-to-refresh gesture owns the spinner. The query's own
+  // `isFetching` cannot: it is true while the next PAGE loads, and the
+  // spinner then showed up at the top of the list mid-scroll.
+  const {refreshing, refresh} = usePullToRefresh(q.refetch);
+
   // Convert TanStack's typed error into a human-readable string
   // (matches the legacy hook's behaviour — set a string
   // instead of an Error object so the consumer doesn't have
@@ -142,5 +159,7 @@ export function usePodcastsScreen(
     error: errorMessage,
     loadMore,
     retry,
+    refreshing,
+    refresh,
   };
 }

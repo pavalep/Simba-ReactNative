@@ -2,6 +2,7 @@ import React, {useEffect, useMemo, useRef} from 'react';
 import {FlatList, RefreshControl, View} from 'react-native';
 import {FAB_SIZE} from '../../../components/core/Fab/Fab';
 import {useBottomChromeInset} from '../../../infrastructure/player/miniPlayerChrome';
+import {useListEnd} from '../../_shared/useListEnd';
 import type {PodcastCategory} from '../../../constants/podcastCategories';
 import {useTheme} from '../../../theme';
 import {spacing} from '../../../theme/tokens';
@@ -41,6 +42,8 @@ export const PodcastsContent: React.FC<PodcastsContentProps> = ({
     setActiveCategoryId,
     loadMore,
     retry,
+    refreshing,
+    refresh,
     handlePodcastPress,
   } = usePodcastsData();
   const {offline} = ctx;
@@ -79,6 +82,17 @@ export const PodcastsContent: React.FC<PodcastsContentProps> = ({
   const reachedEnd = !hasMore;
   const userDraggedRef = useRef(false);
   const isEmptySlot = state === 'empty' || state === 'error';
+
+  // The source has nothing further to give.
+  const listComplete = hasLoaded && !error && !hasMore;
+
+  // The list tells the shell when it is finished AND the user is at its
+  // end, so the shell can get the floating filter button out of the way
+  // (see `_shared/useListEnd.ts`).
+  const {onScroll, onContentSizeChange} = useListEnd(
+    ctx.setAtListEnd,
+    listComplete,
+  );
 
   return (
     <View style={styles.sectionRoot}>
@@ -145,16 +159,23 @@ export const PodcastsContent: React.FC<PodcastsContentProps> = ({
           if (userDraggedRef.current) loadMore();
         }}
         onEndReachedThreshold={0.4}
+        onScroll={onScroll}
+        onContentSizeChange={onContentSizeChange}
         removeClippedSubviews={false}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
-            refreshing={isLoading && hasLoaded}
+            // The GESTURE owns the spinner, not the query. `isLoading`
+            // is TanStack's `isFetching`, which is also true while the
+            // next PAGE loads — so the refresh spinner used to appear
+            // at the top of the list the moment the user scrolled to
+            // the end of it. See `_shared/pullToRefresh.ts`.
+            refreshing={refreshing}
             // The refresh actually REFETCHES. It used to call
             // `setActiveCategoryId(categoryId)` with the value the
             // screen already had, so React saw no change and nothing
             // was refetched — the gesture spun and did nothing.
-            onRefresh={() => retry()}
+            onRefresh={refresh}
             tintColor={colors.accent.gold}
             colors={[colors.accent.gold]}
           />

@@ -36,6 +36,14 @@ interface MusicDataContextValue {
   error: string | null;
   fetchNextPage: () => void;
   refetch: () => void;
+  /**
+   * The pull-to-refresh gesture's state. The spinner belongs to the
+   * gesture, not to the query's fetch flag — see
+   * `src/screens/_shared/pullToRefresh.ts`.
+   */
+  refreshing: boolean;
+  /** Run the pull-to-refresh gesture. */
+  refresh: () => Promise<void>;
   handleTrackPress: (item: JamendoTrackResult) => void;
 }
 
@@ -131,6 +139,8 @@ export const MusicDataProvider: React.FC<{
       error: music.error,
       fetchNextPage: music.fetchNextPage,
       refetch: music.refetch,
+      refreshing: music.refreshing,
+      refresh: music.refresh,
       handleTrackPress,
     }),
     [
@@ -146,6 +156,8 @@ export const MusicDataProvider: React.FC<{
       music.error,
       music.fetchNextPage,
       music.refetch,
+      music.refreshing,
+      music.refresh,
       handleTrackPress,
     ],
   );

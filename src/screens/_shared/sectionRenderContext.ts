@@ -23,4 +23,15 @@ export interface SectionRenderContext {
   query: string;
   options: SectionOptionsMerged;
   offline: boolean;
+  /**
+   * Report that the list is finished AND scrolled to its end, so the
+   * shell can get the floating filter button out of the way.
+   *
+   * The list owns the scroll and the source's completeness; the shell
+   * owns the button. This is the one channel between them.
+   *
+   * Optional: a content that has no list (or a test's context) simply
+   * does not report.
+   */
+  setAtListEnd?: (atEnd: boolean) => void;
 }

@@ -29,6 +29,7 @@
 
 import {useCallback, useMemo} from 'react';
 import {useInfiniteApiQuery} from '../../../hooks/useApiQuery';
+import {usePullToRefresh} from '../../_shared/pullToRefresh';
 import {MOVIE_CATEGORIES, withJunkFilter} from '../../../constants/movieCategories';
 import {searchInternetArchiveVideos} from '../../../infrastructure/api/internetArchive/adapter';
 import type {
@@ -77,6 +78,17 @@ export interface UseMoviesScreenReturn {
   loadMore: () => void;
   /** Refetch the active scope. */
   refetch: () => void;
+  /**
+   * True while a user-started pull-to-refresh is running.
+   *
+   * NOT `isFetching`: that flag is also true while the next PAGE is
+   * loading, and the refresh spinner then appeared at the top of the
+   * grid for a fetch the user never asked for. See
+   * `src/screens/_shared/pullToRefresh.ts`.
+   */
+  refreshing: boolean;
+  /** Run the pull-to-refresh gesture. */
+  refresh: () => Promise<void>;
 }
 
 // ─── helpers ────────────────────────────────────────────────────────────
@@ -232,5 +244,10 @@ export function useMoviesScreen({
     void q.refetch();
   }, [q]);
 
-  return {data, loadMore, refetch};
+  // The pull-to-refresh gesture owns the spinner. The query's own
+  // `isFetching` cannot: it is true while the next PAGE loads, and the
+  // spinner then showed up at the top of the grid mid-scroll.
+  const {refreshing, refresh} = usePullToRefresh(q.refetch);
+
+  return {data, loadMore, refetch, refreshing, refresh};
 }

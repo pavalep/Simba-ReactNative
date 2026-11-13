@@ -69,6 +69,7 @@ const {
   searchNoResultsBoard,
   searchFiltersBoard,
 } = require('./penpot/search');
+const {moviesScreenBoard, moviesFilterBoard} = require('./penpot/movies');
 const {SCREEN_W, SCREEN_H} = require('./penpot/kit');
 
 const OUT = path.join(__dirname, '.build');
@@ -277,6 +278,31 @@ for (const page of SEARCH_STATES) {
   }
 }
 
+// The Movies screen — DRAWN, and its filter sheet is a SEPARATE board.
+//
+// The owner asked for the screen and the filter to be two boards of their
+// own (2026-11-13), the way the Search page carries its four states — so
+// the Movies page has two: the page as it opens, and the page with the
+// app's own filter sheet over it.
+//
+// Both in both themes.
+const MOVIES_STATES = [
+  {state: 'screen', draw: moviesScreenBoard},
+  {state: 'filter', draw: moviesFilterBoard},
+];
+for (const page of MOVIES_STATES) {
+  for (const theme of ['light', 'dark']) {
+    const drawn = page.draw(theme);
+    boards.push({
+      name: boardName('MoviesScreen', theme) + ' — ' + page.state,
+      w: drawn.width,
+      h: drawn.height,
+      fill: (theme === 'dark' ? spec.darkColors : spec.colors).background.primary,
+      shapes: drawn.shapes,
+    });
+  }
+}
+
 // Every other route — a placeholder, in the light theme. The dark variants
 // of the other screens come with their own page pass.
 //
@@ -288,6 +314,7 @@ for (const route of ROUTES) {
   if (route.route === 'Login') continue;
   if (route.route === 'Splash') continue;
   if (route.route === 'Search') continue;
+  if (route.route === 'MoviesScreen') continue;
   if (RC1_ROUTES.has(route.route)) continue;
   addPlaceholder(route.route, 'light');
 }
@@ -345,8 +372,12 @@ const ROUTE_STATES = {Search: 'results'};
  * page first (`md/SEARCH_PAGE_REDESIGN.md` §3.5). So the Home's search
  * button goes to the empty board, and the six result rows leave from the
  * results board.
+ *
+ * The Movies page opens on its SCREEN board — the page as it is, with the
+ * grid and nothing applied — and the filter sheet is reached from the
+ * screen's own FAB.
  */
-const ROUTE_ENTRY_STATES = {Search: 'empty'};
+const ROUTE_ENTRY_STATES = {Search: 'empty', MoviesScreen: 'screen'};
 
 /** The board a route's edge leaves from. */
 function boardOf(route, theme) {
@@ -366,6 +397,13 @@ for (const page of RC1_PAGES) {
 // the connectors' targets.
 for (const theme of ['light', 'dark']) {
   DESIGNED.add(boardOf('Search', theme));
+}
+
+// The Movies boards are drawn, so the sheet's board can be reached from the
+// screen's own FAB.
+for (const theme of ['light', 'dark']) {
+  DESIGNED.add(boardName('MoviesScreen', theme) + ' — screen');
+  DESIGNED.add(boardName('MoviesScreen', theme) + ' — filter');
 }
 
 /** A connector from one board to another. */
@@ -450,6 +488,27 @@ for (const edge of EDGES) {
       label: edge.label,
     });
   }
+}
+
+// The Movies filter sheet — the app's own transition.
+//
+// The sheet is a MODAL over the page, not a route, so it is not in the
+// app's edge list (`designs/penpot/app-boards.js`). But the walk has to be
+// able to reach the board that draws it, and the app really does make this
+// transition: the FAB opens the sheet
+// (`src/screens/_shared/BrowseLayout.tsx:223-229`).
+//
+// The destination is the LIGHT board, like every other edge in the walk.
+for (const theme of ['light', 'dark']) {
+  link(boardName('MoviesScreen', theme) + ' — screen', boardName('MoviesScreen', 'light') + ' — filter', 'click', {
+    // The FAB is the app's ONE floating action button and the door to the
+    // sheet. Its glyph sits ON TOP of the disc, and the Play viewer gives
+    // the click to the topmost shape — so the glyph carries the connector
+    // as well (rule P10: the whole unit is the target).
+    shape: 'MoviesScreen FAB disc',
+    family: 'MoviesScreen FAB',
+    label: 'Filter movies',
+  });
 }
 
 // The V2 boards carry the SAME app edges, on the V2 shapes. The redesign
@@ -1586,6 +1645,11 @@ buildBatches.forEach((group, i) => {
       // its three siblings). The placeholder of the bare name is not part
       // of the map any more, so it is removed by NAME.
       'Search / light',
+      // The Movies PLACEHOLDER — the screen and its filter sheet are drawn
+      // now, on their own boards ("MoviesScreen / light — screen" and
+      // "MoviesScreen / light — filter"), so the placeholder of the bare
+      // name is removed by NAME.
+      'MoviesScreen / light',
     ],
   });
   written.push(writePayload('penpot-app-build-' + (i + 1) + '.json', buildCode.replace('__PLAN__', JSON.stringify(plan))));

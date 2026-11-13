@@ -23,6 +23,7 @@ import {
 } from '../../../infrastructure/api/jamendo/adapter';
 import type {JamendoTrackResult} from '../../../types/api';
 import {useInfiniteApiQuery} from '../../../hooks/useApiQuery';
+import {usePullToRefresh} from '../../_shared/pullToRefresh';
 
 export const JAMENDO_GENRES = [
   'rock',
@@ -79,6 +80,17 @@ export interface UseMusicScreenResult {
   error: string | null;
   fetchNextPage: () => void;
   refetch: () => void;
+  /**
+   * True while a user-started pull-to-refresh is running.
+   *
+   * NOT `isFetching`: that flag is also true while the next PAGE is
+   * loading, and the refresh spinner then appeared at the top of the
+   * list for a fetch the user never asked for. See
+   * `src/screens/_shared/pullToRefresh.ts`.
+   */
+  refreshing: boolean;
+  /** Run the pull-to-refresh gesture. */
+  refresh: () => Promise<void>;
 }
 
 export function useMusicScreen(): UseMusicScreenResult {
@@ -112,6 +124,11 @@ export function useMusicScreen(): UseMusicScreenResult {
     [query.data],
   );
 
+  // The pull-to-refresh gesture owns the spinner. The query's own
+  // `isFetching` cannot: it is true while the next PAGE loads, and the
+  // spinner then showed up at the top of the list mid-scroll.
+  const {refreshing, refresh} = usePullToRefresh(query.refetch);
+
   return {
     activeGenre,
     setActiveGenre,
@@ -129,5 +146,7 @@ export function useMusicScreen(): UseMusicScreenResult {
     refetch: () => {
       void query.refetch();
     },
+    refreshing,
+    refresh,
   };
 }
