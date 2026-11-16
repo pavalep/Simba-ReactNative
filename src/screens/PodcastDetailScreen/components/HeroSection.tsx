@@ -31,18 +31,29 @@ export const HeroSection: React.FC<Props> = ({
   const {colors} = useTheme();
   const styles = useMemo(() => createHeroSectionStyles(colors), [colors]);
 
+  // The cover's tile — what the user sees while the artwork is on the
+  // wire, and what stays if it never arrives. The same tile is the
+  // fallback for a feed that carries no artwork at all.
+  const coverTile = (
+    <View
+      style={styles.imagePlaceholder}
+      testID="podcast-artwork-placeholder">
+      <SvgIcon name="podcastRings" size={48} color={colors.accent.gold} />
+    </View>
+  );
+
   return (
     <View style={styles.heroSection}>
       {podcast.image ? (
         <MediaImage
           source={podcast.image}
-          style={styles.heroImage}
+          style={styles.cover}
           resizeMode="cover"
+          placeholder={coverTile}
+          testID="podcast-artwork-image"
         />
       ) : (
-        <View style={styles.imagePlaceholder}>
-          <SvgIcon name="podcastRings" size={48} color={colors.accent.gold} />
-        </View>
+        <View style={styles.cover}>{coverTile}</View>
       )}
 
       <AppText variant="displaySerif" color="primary" style={styles.podcastTitle}>

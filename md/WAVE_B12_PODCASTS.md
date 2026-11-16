@@ -6,7 +6,7 @@
 
 **The owner's ask, in order:** fix the Podcasts API → deep-analyse the surface (UI, UX, dead code, bad code, half-baked code, wrong implementation) → create a cohesive UI for Podcasts and its sub-pages → put it in Penpot → apply it to the real code, with the code fixes.
 
-**Status of this document:** §1 the API root cause (fixed), §2 the API truth, §3 the audit (the findings), §4 the design direction and the spec, §5 the fix list, §6 gates, §7 Carried forward. The Penpot boards and the code application land in §4/§5 and are marked as they happen.
+**Status of this document:** §1 the API root cause (fixed), §2 the API truth, §3 the audit (the findings), §4 the design direction and the spec, §5 the gates, §6 the blank-artwork defect and its fix (2026-11-13 → 2026-11-16), §7 Carried forward. The Penpot boards and the code application land in §4 and are marked as they happen.
 
 ---
 
@@ -513,7 +513,122 @@ The device's data was put back the way it was found: the one podcast that was fo
 
 ---
 
-## 6. Carried forward
+## 6. The blank artwork — the loading defect, the four surfaces, and the fix (2026-11-13 → 2026-11-16)
+
+**The owner's report, 2026-11-13 22:55 IST:** *"internal page, image not loading"* — the Podcast Detail hero's cover is blank. Then, after watching it again: *"its not always happening, sometimes happening, and when i follow when image is not laoded, the home page list will nevere have image also, this is image loading errror, which sometimes carry forward to followed podcasts, when i follow before image load."*
+
+Three surfaces were named — the detail page, the Home shelf and "My Podcasts". The audit found **one defect on four surfaces**: the catalogue row had it too.
+
+### 6.1 The measurements that found it
+
+| # | Evidence | Value |
+|---|---|---|
+| 1 | The 22:55:50 screenshot's hero box | every sampled pixel **(10,10,12)** — a flat `#0A0A0C`, the background itself. The hero's gold fallback tile **did not render**, so `podcast.image` was truthy: the source was present and the fallback branch never ran |
+| 2 | The API | `GET /podcasts/byfeedid?id=6279364` → `image = "https://d3wo5wojvuv7l.cloudfront.net/t_rss_itunes_square_1400/images.spreaker.com/original/7fa8e3f4f85faf0b280cb09022448716.jpg"` — HTTP **200**, **330,532 bytes**, JPEG magic `ffd8ffdb` |
+| 3 | The device's Fresco disk cache | holds **that exact file** — 330,532 bytes, the same byte count — written at **22:59**, i.e. **3 min 10 s AFTER** the screenshot |
+| 4 | The link | the emulator's connection ran at **≈41 KB/s** for that file; a cold fetch lands in **8 s**; and the catalogue pulls **full-resolution** artwork (up to **6.2 MB** per feed) for **60 dp** thumbnails, which queues the hero's request behind the list's |
+| 5 | The persisted follow record | the device's MMKV (`files/mmkv/simba`) holds the **full, correct URL**; the record was followed at **2026-11-13T17:26:53Z** = **22:56:53 IST** — while the cover was still loading |
+
+**Row 3 is the finding.** The artwork was **late, not missing**: it arrived on the device three minutes after the screenshot the owner took. Row 5 says the same thing about the store — **following a podcast while its cover was still loading loses nothing.** The persisted URL is complete and correct; the bug was never the store, the API, or the follow action.
+
+### 6.2 The root cause
+
+Every podcast artwork surface drew its remote artwork with a bare React Native `Image`, and `Image` has **no loading state and (mostly) no error state**: it draws nothing until the bytes arrive, and it draws nothing at all if the fetch fails. A cover still on the wire is therefore an **invisible hole in the layout** — on the hero, **120 × 120 dp of empty screen**.
+
+The four surfaces, as they stood before the fix:
+
+| Surface | Loading state | Error state | What the user saw |
+|---|---|---|---|
+| The detail hero's cover | none | none | a hole |
+| The catalogue row's thumb | none | a bare glyph at `opacity: 0.4` | a hole — the glyph measured **max (21,19,16)** against a **(10,10,12)** background, i.e. **≈6 % alpha**: legible to a pixel probe, invisible to a person |
+| The "My Podcasts" row's circle | none | none | a hole |
+| The Home shelf's circle | none | none | a hole — this is the "home page list" in the report |
+
+The row's muted glyph was the most misleading of the four, because it looked like a fallback and was not one: it was a permanent state drawn for a feed that carries no artwork at all, applied to a cover that had not arrived yet.
+
+### 6.3 What it was NOT
+
+* **Not the API** — the URL is HTTP 200, 330,532 bytes, a valid JPEG (§6.1 row 2).
+* **Not the store** — the persisted record holds the complete URL (§6.1 row 5).
+* **Not the follow action** — following works, and the follow is not what empties the circles; the missing rendering state is.
+* **Not cleartext blocking** — `android:usesCleartextTraffic` resolves to **`true`** in the merged manifest, so a plain-`http://` artwork is not blocked. **7 of the 100** trending feeds do carry `http://` URLs, and they load.
+* **Not the clock** — that was §1, and it was fixed before this report.
+
+### 6.4 The fix
+
+**The shared component owns the third thing.** `MediaImage` already owned the artwork's *source shape* and its *resize policy*; it now owns the artwork's **three states**:
+
+| State | What is drawn |
+|---|---|
+| `pending` | the placeholder, because the image is transparent until it decodes |
+| `loaded` | the artwork alone — the placeholder is **dropped**, because a tile behind a transparent PNG would show through |
+| `failed` | the placeholder, because the image draws nothing at all |
+
+The placeholder is dropped rather than covered, and the artwork paints over it in the meantime, so there is **no flash and no layout shift**: the box is the same box in every state. The tile is drawn under the artwork with an explicit `zIndex: 1` rather than relying on the draw order of an absolutely positioned sibling.
+
+**A caller that passes no placeholder gets exactly the old output** — a bare `Image` with no wrapper. The component is the app's shared artwork component and most of its callers do not want a box around their image, so that path is byte-identical and the other ~28 call sites are untouched.
+
+**The four surfaces now share ONE artwork vocabulary** — a `goldDim` plate with the podcast glyph in full gold on it:
+
+| Surface | The tile |
+|---|---|
+| The detail hero's cover | a 120 × 120 dp box, `radius.lg` (16), `marginBottom` `spacing.lg` (16), `overflow: hidden`; the tile is `absoluteFill` on the `goldDim` plate with the `podcastRings` glyph at **48 dp** in full gold |
+| The catalogue row's thumb | the same plate and glyph at **22 dp** — the `opacity: 0.4` is gone |
+| The "My Podcasts" row's circle | the tile the row already owned: the `headphones` glyph at **24 dp** in full gold |
+| The Home shelf's circle | the tile the shelf already owned: the `headphones` glyph at **36 dp** in full gold |
+
+Each surface reuses the tile it already owns, and the no-URL case renders the same tile — so "no artwork" and "artwork still arriving" are now the same picture, which is what the owner sees as "the image did not load".
+
+**No new affordance was invented.** Apple Music, Plex and YouTube Music all show a placeholder tile until the cover decodes; this is that, with the app's own tile.
+
+### 6.5 The proof
+
+**On the device, on a cold fetch, with the same script before and after:**
+
+| | The hero box measured | What it is |
+|---|---|---|
+| **Before** | **(10,10,12)** | a hole — the background, flat |
+| **After** | **max (201,168,80)** | the `podcastRings` glyph at **(201,168,76)** on the `goldDim` plate at **(39,34,21)** |
+
+The cold fetch was forced by deleting the artwork's entry from the device's Fresco disk cache, so the cover had to travel the wire again; the pending state was captured at t+8…11 s.
+
+The catalogue was captured with the fix in place: **six rows** had their artwork, and the **three rows still fetching showed the tile** instead of a void.
+
+**The tests bite.** With the `src/` changes stashed (`git stash push -- src`), the two new suites give **11 failed / 2 passed**; with them restored, all **13** pass. They are not tautologies.
+
+| Suite | What it pins |
+|---|---|
+| `__tests__/components/utility/MediaImage/MediaImage.placeholder.test.tsx` (new, 6 cases) | the placeholder is drawn; it **stays** on error; it is **dropped** on load; the box carries the size, the radius and the overflow; no placeholder → a bare `Image`; `onLoad`/`onError` still reach the caller |
+| `__tests__/screens/PodcastsScreen/podcastArtwork.test.tsx` (new, 7 cases) | the hero, the catalogue row and the Home shelf each show their tile while the cover is pending and keep it after a failure; a feed with no artwork shows its tile and mounts **no** image |
+
+### 6.6 Why the Penpot boards do not change
+
+The detail board draws the **loaded** state — the artwork. The tile is a **transient** state, so there is nothing to redraw and no board change. No board was added, moved or deleted by this fix, and `designs/check-board-routes.js` is unchanged.
+
+### 6.7 The separate defect this exposed — the catalogue's payload
+
+The **bytes** are a different problem from the **state**. The catalogue requests the publisher's **original** artwork for a **60 dp** thumbnail: the WIRED cover is `megaphone.imgix.net/…?max-w=3000&max-h=3000`, **6.2 MB** in the device's cache.
+
+There is **no generic fix inside the app**: Podcast Index serves the publisher's original URL, and the decode is already downsampled (the app's heap stayed at ≈32 MB), so the cost is the transfer, not the memory. Fixing the bytes needs a **resize proxy** — a dependency, and a privacy decision about which host sees the user's requests. That is the owner's call, so it is **carried forward, not fixed**.
+
+### 6.8 The gates for this fix
+
+Run on this wave's tree, from the app repo (`X:/Development/SIMBA/.scratch-figcraft/gates.ps1`):
+
+| Gate | Command | Result |
+|---|---|---|
+| types | `tsc --noEmit` | **exit 0** — no output |
+| lint | `eslint . --ext .ts,.tsx --max-warnings 0` | **exit 0** — no output |
+| boundaries | `scripts/check-import-boundaries.js` | **exit 0** — 568 files scanned, 0 errors, 0 warnings |
+| fonts | `scripts/check-font-resolution.js` | **exit 0** — 672 text usages, every one resolves to a shipped font file |
+| boards | `designs/check-board-routes.js` | **exit 0** — 51 app routes, 48 boards, 4 "no board, on purpose" |
+| tests | `jest --silent` | **exit 0** — **182 suites / 1790 tests** (1 todo), 144.8 s |
+
+The Wave B12 baseline was 180 suites / 1777 tests; this fix adds **2 suites and 13 tests** — the placeholder contract in the shared component and the artwork contract on the surfaces.
+
+---
+
+## 7. Carried forward
 
 Every item deferred by this wave, one by one.
 
@@ -525,7 +640,7 @@ Every item deferred by this wave, one by one.
 | B12-2 | **The 112-item API taxonomy is hidden but unreachable** | The curated shelf is the decision the owner made; a "More genres" tier is a *second* decision | The owner's call on whether the raw list is ever shown |
 | B12-3 | **TV & Film is not on the shelf** | Podcast Index splits it into TV (104) and Film (105), and the app ships no plate and no glyph for either — a tile that cannot be drawn does not ship | Two plates, two glyphs, and the owner's call |
 | B12-4 | **Science and Sports draw the `goldSoft` plate, not artwork** | `src/assets/images/categories/podcasts/` has no file for either, and the image-generation connector is **not available in this session** (only the stock library) | Two cover plates |
-| B12-5 | **The detail hero's cover is blank when a feed carries no artwork** | Found on the device with "Enough-ism" (a feed with no image); the fix is a fallback tile, which is a design decision | A fallback, and the owner's call on which |
+| B12-5 | ~~The detail hero's cover is blank when a feed carries no artwork~~ | **CLOSED by §6** — the hero, the catalogue row, the "My Podcasts" row and the Home shelf all draw a tile while the artwork is arriving and if it never arrives; the no-URL case renders the same tile | — |
 | B12-6 | **`eslint .` reports 4 errors and 15 warnings in `designs/penpot/*.js`** | The repo's own gate lints `.ts,.tsx` only, so this is not a gate failure; the designs' JavaScript has never been lint-clean | A decision to lint the designs' JS, or to exclude it |
 | B12-7 | **The detail board is proven by the layout rule, not by a numeric comparison** | The device's podcast title wrapped to four lines where the board's is two, so the two boards are not the same picture | A feed whose title is two lines, to close the comparison numerically |
 | B12-8 | **The Movies, Search, Radio and Live TV sheets were not re-measured on the device** | The Cover Shelf is opt-in (`layout: 'coverGrid'`), and every other group renders the chip flow it always has | A device pass over the other three sheets |
@@ -533,6 +648,8 @@ Every item deferred by this wave, one by one.
 | B12-10 | **The "a short page ends the stream" rule is unproven against a feed that returns a short page mid-stream** | Every feed measured on 2026-11-13 returns a short page only at the end of its result set | A feed that truncates mid-stream |
 | B12-11 | **`FILTER_SEED_PARAMS['categoryId']` is kept** | The seeding mechanism is shared with Movies, Live TV, Radio and Archive; only the Podcasts-specific param was removed. No caller passes `categoryId` to any screen today | The owner's call on the shared mechanism |
 | B12-12 | **The shared `FilterSheet`'s own `fontWeight: '700'`** (the toggle label and the reset text) | Pre-existing, shared with Movies and Search, and not one of the findings | A separate wave for the shared sheet |
+| B12-13 | **The catalogue requests the publisher's full-resolution artwork for 60 dp thumbnails** (up to 6.2 MB per feed) | The **state** is fixed (§6), but the **bytes** are not: Podcast Index serves the publisher's original URL, and the decode is already downsampled (heap ≈32 MB), so the cost is the transfer. There is no generic in-app fix | The owner's call on a **resize proxy** — a dependency, and a privacy decision about which host sees the user's requests |
+| B12-14 | **7 of the 100 trending feeds carry plain-`http://` artwork URLs** | Harmless on this build (`usesCleartextTraffic` resolves to `true` in the merged manifest) and they load; recorded so it is not mistaken for a defect later | A decision on whether the shipping build should keep cleartext on |
 
 ### Still open from the previous waves
 

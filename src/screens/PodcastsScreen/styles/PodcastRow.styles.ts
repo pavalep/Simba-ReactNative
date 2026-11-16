@@ -34,10 +34,21 @@ export const createPodcastRowStyles = (colors: ColorTokens) =>
       height: 60,
     },
     thumbPlaceholder: {
+      // The artwork's plate — the SAME vocabulary as the detail hero's
+      // cover tile, the "My Podcasts" row's circle and the Home shelf's
+      // circle: a gold-dim plate with the podcast glyph on it.
+      //
+      // It used to be a bare glyph at `opacity: 0.4` over the
+      // background, which was right for a feed that carries no artwork
+      // at all (a permanent state). It is wrong for a cover that is
+      // still arriving: the plate is drawn at 15 % gold under a glyph at
+      // 15 % gold, so the whole tile came out at about 6 % — legible in
+      // a pixel probe and invisible to a person, which is the same hole
+      // the tile was added to close.
       ...StyleSheet.absoluteFill,
       alignItems: 'center',
       justifyContent: 'center',
-      opacity: 0.4,
+      backgroundColor: colors.accent.goldDim,
     },
     info: {
       flex: 1,

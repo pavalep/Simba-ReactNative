@@ -57,6 +57,27 @@ export const FollowedPodcastsShelf: React.FC<FollowedPodcastsShelfProps> =
       return null;
     }
 
+    // The circle's tile — what it shows while the cover is on the wire,
+    // and what stays if it never arrives. Following a podcast while its
+    // cover was still loading used to leave an empty circle here that
+    // never filled in, because the shelf had no state for a pending or
+    // failed artwork.
+    const artworkTile = (
+      <View
+        style={[
+          styles.artwork,
+          styles.artworkFallback,
+          {backgroundColor: colors.accent.goldDim},
+        ]}
+        testID="podcast-artwork-placeholder">
+        <SvgIcon
+          name="headphones"
+          size={36}
+          color={colors.accent.gold}
+        />
+      </View>
+    );
+
     return (
       <View style={styles.container}>
         <SectionHeader
@@ -101,20 +122,11 @@ export const FollowedPodcastsShelf: React.FC<FollowedPodcastsShelfProps> =
                     source={podcast.image}
                     style={styles.artwork}
                     resizeMode="cover"
+                    placeholder={artworkTile}
+                    testID="podcast-artwork-image"
                   />
                 ) : (
-                  <View
-                    style={[
-                      styles.artwork,
-                      styles.artworkFallback,
-                      {backgroundColor: colors.accent.goldDim},
-                    ]}>
-                    <SvgIcon
-                      name="headphones"
-                      size={36}
-                      color={colors.accent.gold}
-                    />
-                  </View>
+                  artworkTile
                 )}
               </View>
 

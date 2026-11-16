@@ -11,10 +11,10 @@
 // could never render here.
 //
 // The thumb falls back to the podcast glyph in goldDim when the feed
-// has no image or the load fails — consecutive rows never render as
-// voids.
+// has no image — and while the image is still arriving, or if the load
+// fails. Consecutive rows never render as voids.
 
-import React, {useMemo, useState} from 'react';
+import React, {useMemo} from 'react';
 import {View, TouchableOpacity} from 'react-native';
 import {MediaImage} from '../../../components/utility/MediaImage';
 import {useTheme} from '../../../theme';
@@ -31,8 +31,12 @@ interface Props {
 export const PodcastRow: React.FC<Props> = React.memo(({item, onPress}) => {
   const {colors} = useTheme();
   const styles = useMemo(() => createPodcastRowStyles(colors), [colors]);
-  const [imageFailed, setImageFailed] = useState(false);
-  const showImage = !!item.image && !imageFailed;
+
+  const thumbTile = (
+    <View style={styles.thumbPlaceholder} testID="podcast-artwork-placeholder">
+      <SvgIcon name="podcastRings" size={22} color={colors.accent.gold} />
+    </View>
+  );
 
   return (
     <TouchableOpacity
@@ -42,18 +46,17 @@ export const PodcastRow: React.FC<Props> = React.memo(({item, onPress}) => {
       style={styles.row}>
       {/* Thumb */}
       <View style={styles.thumbWrap}>
-        {showImage ? (
+        {item.image ? (
           <MediaImage
             source={item.image}
             style={styles.thumbImage}
             resizeMode="cover"
-            onError={() => setImageFailed(true)}
+            placeholder={thumbTile}
             accessibilityIgnoresInvertColors
+            testID="podcast-artwork-image"
           />
         ) : (
-          <View style={styles.thumbPlaceholder}>
-            <SvgIcon name="podcastRings" size={22} color={colors.accent.goldDim} />
-          </View>
+          thumbTile
         )}
       </View>
 

@@ -66,6 +66,14 @@ export const FollowedPodcastsScreen: React.FC<Props> = ({navigation}) => {
     [haptics, toast, unfollow],
   );
 
+  // The artwork's tile — what the circle shows while the cover is on
+  // the wire, and what stays if it never arrives.
+  const artworkTile = (
+    <View style={styles.artworkFallback} testID="podcast-artwork-placeholder">
+      <SvgIcon name="headphones" size={24} color={colors.accent.gold} />
+    </View>
+  );
+
   const renderItem = useCallback(
     ({item}: {item: (typeof list)[number]}) => (
       <View style={styles.row}>
@@ -76,11 +84,15 @@ export const FollowedPodcastsScreen: React.FC<Props> = ({navigation}) => {
           accessibilityLabel={`Open podcast ${item.title}${item.author ? ` by ${item.author}` : ''}`}
           style={styles.artwork}>
           {item.image ? (
-            <MediaImage source={item.image} style={styles.artworkImage} resizeMode="cover" />
+            <MediaImage
+              source={item.image}
+              style={styles.artworkImage}
+              resizeMode="cover"
+              placeholder={artworkTile}
+              testID="podcast-artwork-image"
+            />
           ) : (
-            <View style={styles.artworkFallback}>
-              <SvgIcon name="headphones" size={24} color={colors.accent.gold} />
-            </View>
+            artworkTile
           )}
         </TouchableOpacity>
 
