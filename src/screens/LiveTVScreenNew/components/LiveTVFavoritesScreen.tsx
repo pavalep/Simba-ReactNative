@@ -35,6 +35,21 @@ import {
 
 type Props = RootStackScreenProps<'LiveTVFavoritesScreen'>;
 
+// A MODULE-level separator. It used to be an inline arrow, which is a
+// new component type on every render — so the FlatList re-created every
+// separator on every render.
+const ItemSeparator: React.FC = () => {
+  const {colors} = useTheme();
+  return (
+    <View
+      style={{
+        height: spacing.sm,
+        backgroundColor: colors.background.primary,
+      }}
+    />
+  );
+};
+
 export const LiveTVFavoritesScreen: React.FC<Props> = () => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
@@ -192,14 +207,7 @@ export const LiveTVFavoritesScreen: React.FC<Props> = () => {
           )}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
-          ItemSeparatorComponent={() => (
-            <View
-              style={{
-                height: spacing.sm,
-                backgroundColor: colors.background.primary,
-              }}
-            />
-          )}
+          ItemSeparatorComponent={ItemSeparator}
           windowSize={5}
           maxToRenderPerBatch={10}
         />

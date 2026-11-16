@@ -170,6 +170,25 @@ const ICONS = [
   { name: 'play', file: 'ic_play.svg', size: 24, light: '#1A1A1C', dark: '#0A0A0C' },
   { name: 'headphones', file: 'ic_headphones.svg', size: 36, light: 'gold', dark: 'gold' },
 
+  // ── The Music and Radio surface's glyphs (2026-11-16) ────────────────
+  //
+  // The Radio screen draws the app's own FAVOURITE language — a heart —
+  // and it draws it in two places and two colours:
+  //
+  //   • the row's trailing mark is the plain `heart` at 16 px in GOLD
+  //     (`RadioStationCard.tsx:106-108`) — it says "this station is a
+  //     favourite";
+  //   • the header's right action is `heartPulse` at 18 px in
+  //     `text.secondary` (`InternalHeader.tsx:53`) — the door to the
+  //     favourites screen.
+  //
+  // The strip chip's × sits on the chip's GOLD fill, so it carries the
+  // INVERSE ink — the same ink the FAB's sliders glyph uses on the same
+  // gold disc (`Fab.tsx:119`).
+  { name: 'heart', file: 'ic_heart.svg', size: 16, light: 'gold', dark: 'gold' },
+  { name: 'heartSecondary', file: 'ic_heart_pulse.svg', size: 18, light: 'secondary', dark: 'secondary' },
+  { name: 'closeInverse', file: 'ic_close.svg', size: 16, light: '#1A1A1C', dark: '#0A0A0C' },
+
   // ── The RC1 internal-page glyphs (2026-11-11) ─────────────────────────
   //
   // The About page's link list is drawn again on the RC1 boards, and the

@@ -1,9 +1,16 @@
-// ─── Music — TrackCard ──────────────────────────────────────────────
-// Horizontal row card: 52px thumb + title/artist/album + duration +
-// play button. Local "image failed" state so a broken thumbnail falls
-// back to the music-icon placeholder instead of the broken-image icon.
+// ─── Music — TrackCard ───────────────────────────────────────────────
+// Horizontal row card: 52px thumb + title/artist/album + duration.
+// The row IS the play action — the whole card is one TouchableOpacity —
+// so there is no second play button inside it.
+//
+// The artwork follows the house artwork contract: the thumb shows the
+// surface's OWN tile (a goldDim plate with the music glyph on it) until
+// the image decodes, and the tile is dropped the moment it does. It used
+// to be a bare glyph at `opacity: 0.4` over the background, which came
+// out at about 6 % gold — the same invisible hole the Podcasts wave
+// closed on the podcast row.
 
-import React, {useMemo, useState} from 'react';
+import React, {useMemo} from 'react';
 import {TouchableOpacity, View} from 'react-native';
 import {MediaImage} from '../../../components/utility/MediaImage';
 import {useTheme} from '../../../theme';
@@ -17,21 +24,35 @@ interface TrackCardProps {
   onPress: (item: JamendoTrackResult) => void;
 }
 
-function formatDuration(duration: number): string {
+/**
+ * The duration, in the app's one format.
+ *
+ * The seconds are FLOORED: `Math.round` produced `3:60` for a 179.7 s
+ * track, and the detail screen's own formatter floored while this one
+ * rounded — so the same track was drawn two different ways, and the two
+ * disagreed on the empty case too.
+ */
+export function formatDuration(duration: number): string {
   if (!duration || duration <= 0) return '--:--';
   const m = Math.floor(duration / 60);
-  const s = Math.round(duration % 60)
-    .toString()
-    .padStart(2, '0');
-  return `${m}:${s}`;
+  const s = Math.floor(duration % 60);
+  return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
 export const TrackCard: React.FC<TrackCardProps> = React.memo(
   ({item, onPress}) => {
     const {colors} = useTheme();
-    const styles = useMemo(() => createTrackCardStyles(), []);
-    const [imageFailed, setImageFailed] = useState(false);
-    const showImage = !!item.imageUrl && !imageFailed;
+    const styles = useMemo(() => createTrackCardStyles(colors), [colors]);
+
+    // The thumb's tile — what the user sees while the artwork is on the
+    // wire, and what stays if it never arrives. The same tile is the
+    // fallback for a track that carries no artwork at all, so "no
+    // artwork" and "artwork still arriving" are one picture.
+    const thumbTile = (
+      <View style={styles.thumbPlaceholder} testID="music-artwork-placeholder">
+        <SvgIcon name="music" size={22} color={colors.accent.gold} />
+      </View>
+    );
 
     return (
       <TouchableOpacity
@@ -48,18 +69,17 @@ export const TrackCard: React.FC<TrackCardProps> = React.memo(
             styles.thumbWrap,
             {backgroundColor: colors.background.primary},
           ]}>
-          {showImage ? (
+          {item.imageUrl ? (
             <MediaImage
               source={item.imageUrl}
               style={styles.thumbImage}
               resizeMode="cover"
-              onError={() => setImageFailed(true)}
+              placeholder={thumbTile}
               accessibilityIgnoresInvertColors
+              testID="music-artwork-image"
             />
           ) : (
-            <View style={styles.thumbPlaceholder}>
-              <SvgIcon name="music" size={22} color={colors.accent.goldDim} />
-            </View>
+            thumbTile
           )}
         </View>
 
@@ -67,9 +87,11 @@ export const TrackCard: React.FC<TrackCardProps> = React.memo(
           <AppText variant="bodySmall" numberOfLines={1} style={styles.trackName}>
             {item.name}
           </AppText>
-          <AppText variant="caption" color="secondary" numberOfLines={1}>
-            {item.artistName}
-          </AppText>
+          {item.artistName ? (
+            <AppText variant="caption" color="secondary" numberOfLines={1}>
+              {item.artistName}
+            </AppText>
+          ) : null}
           {item.albumName ? (
             <AppText variant="caption" color="tertiary" numberOfLines={1}>
               {item.albumName}
@@ -81,9 +103,6 @@ export const TrackCard: React.FC<TrackCardProps> = React.memo(
           <AppText variant="caption" color="tertiary">
             {formatDuration(item.duration)}
           </AppText>
-          <View style={[styles.playButton, {backgroundColor: colors.accent.gold}]}>
-            <SvgIcon name="play" size={14} color={colors.text.inverse} />
-          </View>
         </View>
       </TouchableOpacity>
     );

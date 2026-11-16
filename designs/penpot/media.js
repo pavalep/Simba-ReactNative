@@ -134,6 +134,39 @@ const ASSETS = {
   'ph.movie5': {file: 'placeholders/video/camera.jpg', box: [411, 231]},
   'ph.movie6': {file: 'placeholders/video/shows.jpg', box: [411, 231]},
 
+  // ── the Music row's artwork (52 dp square thumbs) ─────────────────
+  //
+  // The Music row draws the track's REAL album art, which is a remote
+  // Jamendo URL (`usercontent.jamendo.com`) — a Penpot board cannot fetch
+  // a remote image, so the row carries one of the app's OWN bundled audio
+  // placeholders instead: the same pictures the app ships for audio with
+  // no artwork of its own (`src/assets/images/placeholders/audio/`).
+  //
+  // The row's thumb is 52 dp (`TrackCard.styles.ts:24-31`), so the box is
+  // 104 px — 2x, for a sharp board.
+  'ph.musicRow1': {file: 'placeholders/audio/vinyl.jpg', box: [104, 104]},
+  'ph.musicRow2': {file: 'placeholders/audio/piano.jpg', box: [104, 104]},
+  'ph.musicRow3': {file: 'placeholders/audio/guitar.jpg', box: [104, 104]},
+  'ph.musicRow4': {file: 'placeholders/audio/concert.jpg', box: [104, 104]},
+  'ph.musicRow5': {file: 'placeholders/audio/studio.jpg', box: [104, 104]},
+  'ph.musicRow6': {file: 'placeholders/audio/mic.jpg', box: [104, 104]},
+
+  // ── the Radio row's artwork (48 dp square favicons) ───────────────
+  //
+  // The Radio row draws the station's favicon, which is a remote
+  // radio-browser URL — so the row carries the app's OWN bundled audio
+  // placeholders as well. The thumb is 48 dp
+  // (`RadioStationCard.tsx:126-132`), so the box is 96 px.
+  //
+  // The pictures are a DIFFERENT set from the Music row's, so the two
+  // boards do not read as the same list twice.
+  'ph.radioRow1': {file: 'placeholders/audio/headphones.jpg', box: [96, 96]},
+  'ph.radioRow2': {file: 'placeholders/audio/mic.jpg', box: [96, 96]},
+  'ph.radioRow3': {file: 'placeholders/audio/guitar.jpg', box: [96, 96]},
+  'ph.radioRow4': {file: 'placeholders/audio/studio.jpg', box: [96, 96]},
+  'ph.radioRow5': {file: 'placeholders/audio/vinyl.jpg', box: [96, 96]},
+  'ph.radioRow6': {file: 'placeholders/audio/concert.jpg', box: [96, 96]},
+
   // ── the search rows' artwork (40x40 dp) ────────────────────────────
   //
   // The Search page's rows are 40x40 (`md/SEARCH_PAGE_REDESIGN.md` §3.2),

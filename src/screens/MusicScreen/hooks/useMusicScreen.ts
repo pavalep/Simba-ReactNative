@@ -10,10 +10,12 @@
 // data instantly if the user has visited that scope before.
 //
 // Fetch branches (single stream, filter-aware):
-//   • search term → global Jamendo search
+//   • search term → global Jamendo search, WITH the genre tag when one
+//     is selected — Jamendo answers both at once (see `fetchPage`)
 //   • genre ('' = none = "All") → genre browse / global popular
-// Pagination via Jamendo's {limit, page} for ALL branches — the "All"
-// stream paginates through `getPopularJamendoTracks(limit, page)`.
+// Pagination: every branch passes a PAGE number, and the adapter turns it
+// into Jamendo's own `offset` — Jamendo has no `page` parameter. See
+// `jamendoPaging` in the adapter for the measurement that proved it.
 
 import {useCallback, useMemo, useState} from 'react';
 import {
@@ -24,21 +26,6 @@ import {
 import type {JamendoTrackResult} from '../../../types/api';
 import {useInfiniteApiQuery} from '../../../hooks/useApiQuery';
 import {usePullToRefresh} from '../../_shared/pullToRefresh';
-
-export const JAMENDO_GENRES = [
-  'rock',
-  'pop',
-  'jazz',
-  'classical',
-  'electronic',
-  'hiphop',
-  'metal',
-  'blues',
-  'country',
-  'folk',
-  'reggae',
-  'latin',
-] as const;
 
 const PAGE_SIZE = 20;
 
@@ -57,12 +44,51 @@ async function fetchPage(
   page: number,
 ): Promise<JamendoTrackResult[]> {
   if (term) {
-    return searchJamendoTracks(term, {limit: PAGE_SIZE, page});
+    // The genre goes WITH the term, not instead of it.
+    //
+    // MEASURED on 2026-11-16 against the live API: Jamendo's `/tracks/`
+    // honours `search` and `tags` together — `search=love&tags=rock`
+    // returns the rock pool filtered by the term
+    // (`(search+genre) ∩ genre = 3`, `(search+genre) ∩ search = 0`, and
+    // `search ∩ genre = 0`). The old code dropped the genre the moment a
+    // term arrived, while the chip strip kept showing it — a filter that
+    // looked applied and was not.
+    return searchJamendoTracks(term, {
+      limit: PAGE_SIZE,
+      page,
+      ...(genre ? {tags: genre} : {}),
+    });
   }
   if (genre) {
     return getJamendoTracksByGenre(genre, {limit: PAGE_SIZE, page});
   }
   return getPopularJamendoTracks(PAGE_SIZE, page);
+}
+
+/**
+ * The end-of-stream rule.
+ *
+ * A page that came back SHORT is the last page — the source has nothing
+ * more to give.
+ *
+ * The guard was described in a comment for a long time and was NOT in the
+ * code: `lastPage` was bound to `_lastPage` and never read, so
+ * `hasNextPage` was permanently `true`. The visible consequences were:
+ * the filter button never got out of the way at the end of the list
+ * (`MusicContent.tsx` → `BrowseLayout.tsx`'s `atListEnd` rule), and every
+ * scroll to the end fetched another page — four HTTP requests on the
+ * "All" branch, which walks its own order chain.
+ *
+ * It is a named function so the rule can be pinned by a test rather than
+ * by a comment.
+ */
+export function nextMusicPage(
+  lastPageLength: number,
+  lastPageParam: unknown,
+): number | undefined {
+  if (lastPageLength < PAGE_SIZE) return undefined;
+  if (typeof lastPageParam !== 'number') return undefined;
+  return lastPageParam + 1;
 }
 
 export interface UseMusicScreenResult {
@@ -106,14 +132,8 @@ export function useMusicScreen(): UseMusicScreenResult {
     queryKey,
     queryFn: ({pageParam}) => fetchPage(searchTerm, activeGenre, pageParam as number),
     initialPageParam: 1,
-    getNextPageParam: (_lastPage, _pages, lastPageParam) => {
-      // End of stream: a 'more' fetch that produced fewer than PAGE_SIZE
-      // rows is the last page. Without this guard, the partial-page
-      // heuristic would never trip when the API consistently returns 0
-      // rows past page 1, and loadMore would loop forever.
-      if (typeof lastPageParam !== 'number') return undefined;
-      return lastPageParam + 1;
-    },
+    getNextPageParam: (lastPage, _pages, lastPageParam) =>
+      nextMusicPage(lastPage.length, lastPageParam),
     staleTime: 60_000,
   });
 

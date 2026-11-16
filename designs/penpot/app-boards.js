@@ -279,7 +279,7 @@ const EDGES = [
   {from: 'AudiobooksScreen', to: 'AudiobookDetail', trigger: 'click', shape: 'Book row', label: 'book'},
   {from: 'ArchiveScreen', to: 'MovieDetail', trigger: 'click', shape: 'Archive video row', label: 'video'},
   {from: 'ArchiveScreen', to: 'ArchiveItemDetail', trigger: 'click', shape: 'Archive audio row', label: 'audio'},
-  {from: 'RadioScreen', to: 'RadioFavoritesScreen', trigger: 'click', shape: 'Radio heart', label: 'favourites'},
+  {from: 'RadioScreen', to: 'RadioFavoritesScreen', trigger: 'click', shape: 'RadioScreen right button', family: 'RadioScreen right', label: 'favourites'},
   {from: 'LiveTVScreen', to: 'LiveTVFavoritesScreen', trigger: 'click', shape: 'Live TV heart', label: 'favourites'},
 
   // ── Search ──

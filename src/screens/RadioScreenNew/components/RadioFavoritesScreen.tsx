@@ -23,6 +23,7 @@ import {PlaylistSheet} from '../../../components/sheets/PlaylistSheet/PlaylistSh
 import {OptionSheetDialog} from '../../../components/core/OptionSheetDialog/OptionSheetDialog';
 import {shareContent} from '../../../services/shareService';
 import {useBookmarks} from '../../../features/bookmarks';
+import {confirmBookmarkAdd} from '../../../features/bookmarks/confirmAdd';
 import { resolveStreamType, useResumeAwareLaunch } from '../../../infrastructure/player';
 import {useLiveFavoritesStore} from '../../../state';
 
@@ -59,6 +60,11 @@ export const RadioFavoritesScreen: React.FC<Props> = () => {
         uri: row.url,
         title: row.name,
         type: resolveStreamType('radio'),
+        // The KIND and the LANE — the same pair the browse screen sends,
+        // so the same station is labelled the same way from either screen.
+        mediaKind: 'radio',
+        mediaLane: 'audio',
+        ...(row.image ? {thumbnailPath: row.image} : {}),
       });
     },
     [openPlayer],
@@ -88,6 +94,7 @@ export const RadioFavoritesScreen: React.FC<Props> = () => {
             source: 'api',
             provider: 'radio',
             mediaType: 'audio',
+            type: 'radio',
           });
           break;
         case 'bookmark': {
@@ -104,28 +111,25 @@ export const RadioFavoritesScreen: React.FC<Props> = () => {
             type: 'radio' as const,
           };
           const result = addBookmark(input);
-          if (result.status === 'requires-confirmation') {
-            Alert.alert(
-              'Bookmark limit reached',
-              `Adding “${row.name}” will remove the oldest bookmark “${result.candidate.title}”. Continue?`,
-              [
-                {text: 'Cancel', style: 'cancel'},
-                {
-                  text: 'Remove & Add',
-                  style: 'destructive',
-                  onPress: () => addBookmark(result.requested, {evictId: result.candidate.id}),
-                },
-              ],
-            );
-          } else {
-            toast.show('Station bookmarked');
-          }
+          // ONE owner for the cap — the same helper the browse screen and
+          // the Live TV screens use.
+          confirmBookmarkAdd(
+            result,
+            row.name,
+            addBookmark,
+            () => toast.show('Station bookmarked'),
+          );
           break;
         }
         case 'share':
+          // ONE share target for the whole feature, and the params the
+          // linking config actually parses. This used to share to
+          // `route: 'RadioScreen'`, whose linking config parses only
+          // `initialTab` — so the station was lost entirely and the
+          // recipient landed on the browse screen with nothing.
           shareContent({
-            route: 'RadioScreen',
-            params: {fileUri: row.url, fileTitle: row.name, source: 'radio'},
+            route: 'SongScreen',
+            params: {fileUri: row.url, title: row.name, source: 'radio'},
             title: row.name,
             subtitle: row.subtitle,
           });
@@ -149,7 +153,7 @@ export const RadioFavoritesScreen: React.FC<Props> = () => {
         <Placeholder
           variant="empty"
           anchor="top-third"
-          icon="bookmark"
+          icon="heart"
           title="No favorite stations yet."
           message="Long-press any station to save it here."
         />

@@ -6,19 +6,12 @@ import {useListEnd} from '../../_shared/useListEnd';
 import {useTheme} from '../../../theme';
 import {spacing} from '../../../theme/tokens';
 import {MUSIC_CATEGORIES} from '../../../constants/musicCategories';
-import {JAMENDO_GENRES} from '../hooks/useMusicScreen';
 import {useMusicData} from './MusicDataProvider';
 import {TrackCard} from './TrackCard';
-import {MusicFooter} from './MusicFooter';
+import {BrowseFooter} from '../../_shared/BrowseListFooter';
 import {ListStates} from './ListStates';
 import {createMusicScreenStyles} from '../styles';
 import type {SectionRenderContext} from '../types';
-
-/** Capitalized genre label for copy (for example, "no Rock tracks found"). */
-function genreLabel(genre: string): string {
-  const match = JAMENDO_GENRES.find(g => g === genre);
-  return match ? match.charAt(0).toUpperCase() + match.slice(1) : genre;
-}
 
 /**
  * Owns the Music data stream and its single virtualized list. The screen
@@ -55,6 +48,11 @@ export const MusicContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => {
   const {offline} = ctx;
 
   // The section shell owns the selected filter; Music is single-select.
+  //
+  // It is single-select because Jamendo's `/tracks/` takes ONE tag per
+  // request: the sheet used to be multi-select and to claim it OR'd the
+  // genres together, but the consumer read only `filter[0]`, so the user
+  // could hold two genres in the strip while the list answered one.
   const rawFilter = ctx.options.filter;
   const genre = Array.isArray(rawFilter)
     ? (rawFilter[0] ?? '')
@@ -112,9 +110,12 @@ export const MusicContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => {
     );
   }
 
+  // The category's OWN name is the empty-state label — the app's genre
+  // list is `MUSIC_CATEGORIES`, and the genre can only ever be one of
+  // its ids (the sheet's row keys, or a route-param seed validated
+  // against them).
   const activeCategory = MUSIC_CATEGORIES.find(c => String(c.id) === genre);
-  const emptyGenreLabel =
-    activeCategory?.name ?? (genre ? genreLabel(genre) : undefined);
+  const emptyGenreLabel = activeCategory?.name;
 
   return (
     <View style={styles.sectionRoot}>
@@ -145,10 +146,12 @@ export const MusicContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => {
           ) : null
         }
         ListFooterComponent={
-          <MusicFooter
+          <BrowseFooter
             isLoadingMore={isLoadingMore}
             hasLoaded={hasLoaded}
             error={error}
+            reachedEnd={reachedEnd}
+            shown={items.length}
             onLoadMore={fetchNextPage}
           />
         }

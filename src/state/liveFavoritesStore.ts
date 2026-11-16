@@ -32,7 +32,6 @@ export interface LiveFavoritesState {
 export interface LiveFavoritesActions {
   addLiveFavorite: (item: LiveFavoriteItem) => void;
   removeLiveFavorite: (input: {kind: 'radio' | 'tv'; id: string}) => void;
-  setLiveFavorites: (items: LiveFavoriteItem[]) => void;
   reset: () => void;
 }
 
@@ -55,7 +54,6 @@ export const useLiveFavoritesStore = create<LiveFavoritesState & LiveFavoritesAc
         set((s) => ({
           items: s.items.filter((i) => !(i.kind === kind && i.id === id)),
         })),
-      setLiveFavorites: (items) => set({items}),
       reset: () => set({...initialState}),
     }),
     {

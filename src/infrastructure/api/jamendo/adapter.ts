@@ -232,25 +232,62 @@ export function trackResultFromRaw(
   return parseRawJamendoTrack(raw, path);
 }
 
+/**
+ * Jamendo paginates with `offset`, NOT with `page`.
+ *
+ * MEASURED on 2026-11-16 against the live API (limit 30):
+ *
+ *   search=love            → 30 rows
+ *   search=love&page=2     → **0 rows**   (`page` is not a Jamendo
+ *                                      parameter; with `search` it turns the
+ *                                      request into one that answers with
+ *                                      nothing at all)
+ *   search=love&offset=30  → 30 rows, **0 shared** with page 1
+ *
+ *   tags=rock&order=popularity_total             → 30 rows
+ *   tags=rock&order=popularity_total&page=2      → 30 rows, **30 shared**
+ *                                                   with page 1 — the same
+ *                                                   rows again
+ *   tags=rock&order=popularity_total&offset=30   → 30 rows, **0 shared**
+ *
+ * So the two paths failed DIFFERENTLY, and both failed silently:
+ *
+ *   • the GENRE path sent `page=2`, Jamendo ignored it and answered with
+ *     page 1's rows; the screen's dedupe-by-id threw them all away, so
+ *     the list never grew, `hasNextPage` stayed true forever, the
+ *     end-of-list footer never said "You're all caught up." and the
+ *     filter button never got out of the way at the end of the list;
+ *   • the SEARCH path sent `page=2` and Jamendo answered with NOTHING —
+ *     four retried requests for a page that does not exist.
+ *
+ * The POPULAR path already sent `offset` and was the only branch that
+ * paged correctly; it now shares this one rule with the other two.
+ */
+function jamendoPaging(
+  page: number,
+  limit: number,
+): {limit: number; offset: number} {
+  return {limit, offset: Math.max(0, (page - 1) * limit)};
+}
+
 export async function searchJamendoTracks(
   query: string,
   options?: ApiSearchOptions,
   signal?: AbortSignal,
 ): Promise<JamendoTrackResult[]> {
-  const raw = await apiFetch<JamendoResponseRaw<JamendoTrackRaw>>({
-    config: JAMENDO_CONFIG,
-    path: '/tracks/',
-    params: {
-      client_id: clientId(),
-      format: 'json',
+  const {limit, offset} = jamendoPaging(options?.page ?? 1, options?.limit ?? 10);
+  return fetchTracksWithRetry(
+    {
       search: query,
-      limit: options?.limit ?? 10,
-      page: options?.page ?? 1,
-      include: 'musicinfo',
+      limit,
+      offset,
+      // Jamendo honours `search` AND `tags` together (measured
+      // 2026-11-16), so a browse screen can keep its genre filter applied
+      // while the user searches. See `ApiSearchOptions.tags`.
+      ...(options?.tags ? {tags: options.tags} : {}),
     },
     signal,
-  });
-  return trackResultsFromResponseRaw(raw);
+  );
 }
 
 export async function getJamendoTracksByGenre(
@@ -258,23 +295,88 @@ export async function getJamendoTracksByGenre(
   options?: ApiSearchOptions,
   signal?: AbortSignal,
 ): Promise<JamendoTrackResult[]> {
-  const raw = await apiFetch<JamendoResponseRaw<JamendoTrackRaw>>({
-    config: JAMENDO_CONFIG,
-    path: '/tracks/',
-    params: {
-      client_id: clientId(),
-      format: 'json',
+  const {limit, offset} = jamendoPaging(options?.page ?? 1, options?.limit ?? 10);
+  return fetchTracksWithRetry(
+    {
       tags: genre,
-      limit: options?.limit ?? 10,
-      page: options?.page ?? 1,
-      include: 'musicinfo',
+      limit,
+      offset,
       order: 'popularity_total',
     },
     signal,
-  });
-  return trackResultsFromResponseRaw(raw);
+  );
 }
 
+/**
+ * Jamendo answers intermittently with NOTHING.
+ *
+ * MEASURED on 2026-11-16 against the live API: the SAME url with the SAME
+ * parameters returns 20 rows on one call and 0 rows on the next. Over 30
+ * requests (3 passes x 10 genres) a fixed-order request came back empty
+ * **10 times** — a third of all requests.
+ *
+ * An empty result is NOT an answer. It is a question the API declined to
+ * answer, and TanStack Query will never retry it, because an empty array
+ * is a SUCCESS to it — so the empty state is shown for a genre that has
+ * thousands of tracks.
+ *
+ * The retry measured out as: 23 of 30 succeeded first time, 5 needed a
+ * second attempt, 1 a third and 1 a fourth. **All 30 recovered within
+ * three retries.**
+ *
+ * So the request is repeated, UNCHANGED, while it answers with nothing.
+ * The parameters are never varied — see the note on `order` below.
+ */
+const EMPTY_RETRY_ATTEMPTS = 4;
+
+/**
+ * `order` selects a POOL, not a sort.
+ *
+ * MEASURED: `search=love` with no `order` and `search=love` with
+ * `order=popularity_total` share **0 of 20** tracks. The same holds for
+ * `tags=rock`. So varying `order` is not a retry — it returns different
+ * tracks, and a list whose pages came from different pools would mix
+ * them. The retry therefore repeats the request exactly as it was.
+ */
+async function fetchTracksWithRetry(
+  params: Record<string, string | number>,
+  signal?: AbortSignal,
+): Promise<JamendoTrackResult[]> {
+  let lastEmpty: JamendoTrackResult[] = [];
+
+  for (let attempt = 0; attempt < EMPTY_RETRY_ATTEMPTS; attempt++) {
+    const raw = await apiFetch<JamendoResponseRaw<JamendoTrackRaw>>({
+      config: JAMENDO_CONFIG,
+      path: '/tracks/',
+      params: {
+        client_id: clientId(),
+        format: 'json',
+        include: 'musicinfo',
+        ...params,
+      },
+      signal,
+    });
+    const results = trackResultsFromResponseRaw(raw);
+    if (results.length > 0) {
+      return results;
+    }
+    lastEmpty = results;
+  }
+
+  return lastEmpty;
+}
+
+/**
+ * The order fallback chain — the POPULAR stream's own rule.
+ *
+ * Jamendo's per-order availability is unreliable, so this path tries
+ * several orders and remembers the first one that yields rows.
+ *
+ * It is the one place that varies `order`, because the popular stream has
+ * no single pool to preserve: it is "whatever Jamendo says is popular
+ * now". The genre and search paths keep their own pool and retry instead
+ * (see `fetchTracksWithRetry`).
+ */
 const POPULAR_FALLBACK_ORDERS = [
   'popularity_week',
   'buzzrate',
@@ -300,6 +402,7 @@ export async function getPopularJamendoTracks(
   signal?: AbortSignal,
 ): Promise<JamendoTrackResult[]> {
   let lastEmpty: JamendoTrackResult[] = [];
+  const paging = jamendoPaging(page, limit);
   for (const order of preferredOrder()) {
     const raw = await apiFetch<JamendoResponseRaw<JamendoTrackRaw>>({
       config: JAMENDO_CONFIG,
@@ -307,8 +410,8 @@ export async function getPopularJamendoTracks(
       params: {
         client_id: clientId(),
         format: 'json',
-        limit,
-        offset: (page - 1) * limit,
+        limit: paging.limit,
+        offset: paging.offset,
         include: 'musicinfo',
         order,
       },

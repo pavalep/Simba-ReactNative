@@ -24,7 +24,9 @@ import {
 import type {JamendoTrackResult} from '../../../types/api';
 
 interface MusicDataContextValue {
-  activeGenre: string;
+  // `activeGenre` used to be here too. It had NO consumer — the content
+  // reads the genre from the shell's filter, not from the context — so it
+  // was a second copy of a fact nobody read.
   setActiveGenre: (genre: string) => void;
   setSearchTerm: (term: string) => void;
   isSearchActive: boolean;
@@ -127,7 +129,6 @@ export const MusicDataProvider: React.FC<{
 
   const value = useMemo<MusicDataContextValue>(
     () => ({
-      activeGenre: music.activeGenre,
       setActiveGenre: music.setActiveGenre,
       setSearchTerm: music.setSearchTerm,
       isSearchActive: music.isSearchActive,
@@ -144,7 +145,6 @@ export const MusicDataProvider: React.FC<{
       handleTrackPress,
     }),
     [
-      music.activeGenre,
       music.setActiveGenre,
       music.setSearchTerm,
       music.isSearchActive,

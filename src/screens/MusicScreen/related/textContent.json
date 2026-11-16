@@ -2,10 +2,6 @@
   "pills": {
     "loading": "Loading tracks…"
   },
-  "footer": {
-    "loadingMore": "Loading more…",
-    "loadMoreRetry": "Couldn't load more — tap to retry"
-  },
   "states": {
     "errorOfflineTitle": "You're offline",
     "errorOfflineMessage": "Check your connection and try again.",

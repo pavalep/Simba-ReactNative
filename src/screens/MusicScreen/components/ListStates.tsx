@@ -65,11 +65,15 @@ export const ListStates: React.FC<Props> = ({
     return (
       <ErrorState
         title={offline ? text.states.errorOfflineTitle : undefined}
+        // The friendly copy is the MESSAGE; the raw reason goes UNDER it
+        // as `errorDetail`, so the user can report what actually went
+        // wrong. The raw message used to BE the message — which meant the
+        // friendly copy ("Couldn't load tracks.") could never render, and
+        // the screen showed a bare adapter string.
         message={
-          offline
-            ? text.states.errorOfflineMessage
-            : error ?? text.states.errorLoadFailed
+          offline ? text.states.errorOfflineMessage : text.states.errorLoadFailed
         }
+        errorDetail={error ?? undefined}
         onRetry={onRetry}
       />
     );

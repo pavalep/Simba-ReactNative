@@ -30,28 +30,30 @@ import {InternalHeader} from '../../../components/layout/InternalHeader/Internal
 import {AppText} from '../../../components/core/AppText/AppText';
 import {SearchBar} from '../../../components/core/SearchBar/SearchBar';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
-import {ActivityOrb} from '../../../components/feedback/ActivityOrb/ActivityOrb';
 import {Placeholder} from '../../../components/feedback/Placeholder';
+import {ErrorState} from '../../../components/feedback/ErrorState/ErrorState';
 import {shareContent} from '../../../services/shareService';
-import {useBookmarks} from '../../../hooks/useBookmarks';
+import {useBookmarks} from '../../../features/bookmarks';
+import {confirmBookmarkAdd} from '../../../features/bookmarks/confirmAdd';
 import {useToast} from '../../../components/feedback/Toast';
-import {useResumeAwareLaunch} from '../../../infrastructure/player';
+import {resolveStreamType, useResumeAwareLaunch} from '../../../infrastructure/player';
 import {useHaptics} from '../../../hooks/useHaptics';
 import {PlaylistSheet} from '../../../components/sheets/PlaylistSheet/PlaylistSheet';
 import {OptionSheetDialog} from '../../../components/core/OptionSheetDialog/OptionSheetDialog';
 import {styles} from '../styles';
-import {Fab} from '../../../components/core/Fab/Fab';
+import {Fab, FAB_SIZE} from '../../../components/core/Fab/Fab';
+import {useBottomChromeInset} from '../../../infrastructure/player/miniPlayerChrome';
 import {useKeyboard} from '../../../hooks/useKeyboard';
 import {ChannelCard, toRow} from './ChannelCard';
 import {FilterSheet} from '../../../components/sheets/FilterSheet/FilterSheet';
+import {BrowseFooter} from '../../_shared/BrowseListFooter';
+import {spacing} from '../../../theme/tokens';
 import type {
   ActiveFilterChipsProps,
   ChannelRow,
 } from '../types';
 
 type Props = RootStackScreenProps<'LiveTVScreen'>;
-
-const PAGE_SIZE = 50;
 
 // ─── Active-filter chip row ───────────────────────────────────────────
 
@@ -69,19 +71,22 @@ const ActiveFilterChips: React.FC<ActiveFilterChipsProps> = React.memo(
           style={[
             styles.chip,
             {
-              backgroundColor: colors.accent.goldDim,
+              // The shared `FilterChips` chip's ACTIVE state: a gold fill
+              // with inverse text and a gold border — the family now
+              // speaks ONE chip language.
+              backgroundColor: colors.accent.gold,
               borderColor: colors.accent.gold,
             },
           ]}>
           <AppText
             variant="caption"
-            style={[styles.chipText, {color: colors.accent.gold}]}>
+            style={[styles.chipText, {color: colors.text.inverse}]}>
             {filters.category}
           </AppText>
           <SvgIcon
             name="close"
             size={12}
-            color={colors.accent.gold}
+            color={colors.text.inverse}
           />
         </TouchableOpacity>
       </View>
@@ -105,6 +110,10 @@ const ItemSeparator: React.FC = () => {
 export const LiveTVScreenNew: React.FC<Props> = ({navigation, route}) => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
+  // The app's ONE bottom-chrome rule: the safe area, or the mini-player
+  // dock if one is up. The FAB's own height goes on top so the last row
+  // clears the BUTTON.
+  const bottomChromeInset = useBottomChromeInset();
   // The button steps aside while the keyboard is up — the sheet it
   // opens needs the room, and a floating button over the keyboard is
   // a control nobody can reach.
@@ -130,9 +139,9 @@ export const LiveTVScreenNew: React.FC<Props> = ({navigation, route}) => {
     handleRefresh,
     tags,
     tagsLoaded,
+    hasMore: scopeHasMore,
     isFavoriteId,
     toggleFavorite,
-    removeFavorite,
   } = useLiveTVBrowser(
     route.params?.categoryId && route.params.categoryId !== 'all'
       ? route.params.categoryId
@@ -149,9 +158,12 @@ export const LiveTVScreenNew: React.FC<Props> = ({navigation, route}) => {
   const scope = getScope();
   const {items, hasLoaded, isLoading, isLoadingMore, error} = scope;
   const rows = useMemo<ChannelRow[]>(() => items.map(toRow), [items]);
-  // Client-side pagination has no server hasMore; treat the response
-  // ceiling (`sourceCount >= requested limit`) as the signal.
-  const hasMore = rows.length > 0 && rows.length >= PAGE_SIZE;
+  // The hook owns `hasMore` — it is the client's own count against the
+  // page size. The screen used to re-derive it from a SECOND copy of
+  // PAGE_SIZE, which says "maybe more" even when every channel is
+  // already loaded, and the footer's "tap to retry" then rendered and
+  // did nothing.
+  const hasMore = scopeHasMore;
 
   // ── Page-1 failure toast (with Retry) ──
   const lastShownErrorRef = useRef<string | null>(null);
@@ -187,7 +199,19 @@ export const LiveTVScreenNew: React.FC<Props> = ({navigation, route}) => {
       openPlayer({
         uri: row.url,
         title: row.name,
-        type: 'video',
+        // The LANE comes from the app's own mapping, not from a literal —
+        // the browse screen used a raw 'video' while its own favourites
+        // screen used `resolveStreamType('live-tv')`, so the same channel
+        // was labelled differently depending on which screen you tapped
+        // it from.
+        type: resolveStreamType('live-tv'),
+        // The KIND and the LANE. Without the kind, the seam defaults it
+        // to the lane and the channel is recorded in Recently Played as
+        // a plain video instead of 'live-tv' — and the app HAS a label
+        // for it (`src/types/media.ts`: 'live-tv' → 'Live TV').
+        mediaKind: 'live-tv',
+        mediaLane: 'video',
+        ...(row.image ? {thumbnailPath: row.image} : {}),
       });
     },
     [openPlayer],
@@ -206,6 +230,9 @@ export const LiveTVScreenNew: React.FC<Props> = ({navigation, route}) => {
         case 'favorite': {
           const channel = items.find(c => c.id === row.id);
           const wasFavorite = isFavoriteId(row.id);
+          // The channel is always in `items` — `rows` is derived from it —
+          // so the old `else { removeFavorite(...) }` branch was
+          // unreachable.
           if (channel) {
             toggleFavorite(channel);
             toast.show(
@@ -213,9 +240,6 @@ export const LiveTVScreenNew: React.FC<Props> = ({navigation, route}) => {
                 ? 'Removed from favorites'
                 : 'Saved to favorites',
             );
-          } else {
-            removeFavorite(row.id);
-            toast.show('Removed from favorites');
           }
           haptics.light();
           break;
@@ -229,23 +253,37 @@ export const LiveTVScreenNew: React.FC<Props> = ({navigation, route}) => {
             source: 'api',
             provider: 'iptv',
             mediaType: 'video',
+            // The KIND. Without it a TV channel was filed as `type:
+            // 'video'` by the playlist/bookmark path that reads the kind
+            // back.
+            type: 'live-tv',
           });
           break;
-        case 'bookmark':
-          addBookmark({
+        case 'bookmark': {
+          const input = {
             fileUri: row.url,
             title: row.name,
             position: 0,
             duration: 0,
             label: '',
             thumbnailPath: row.image || undefined,
-            mediaType: 'video',
-            source: 'api',
+            mediaType: 'video' as const,
+            source: 'api' as const,
             provider: 'iptv',
-            type: 'video',
-          });
-          toast.show('Channel bookmarked');
+            type: 'live-tv' as const,
+          };
+          // The cap is the store's business, and the confirmation is ONE
+          // owner's. The result used to be discarded here, so adding a
+          // bookmark past the cap did NOTHING and still toasted
+          // "Channel bookmarked".
+          confirmBookmarkAdd(
+            addBookmark(input),
+            row.name,
+            addBookmark,
+            () => toast.show('Channel bookmarked'),
+          );
           break;
+        }
         case 'share':
           shareContent({
             route: 'LiveTVScreen',
@@ -266,7 +304,6 @@ export const LiveTVScreenNew: React.FC<Props> = ({navigation, route}) => {
       menuRow,
       items,
       isFavoriteId,
-      removeFavorite,
       toggleFavorite,
       addBookmark,
       toast,
@@ -282,6 +319,13 @@ export const LiveTVScreenNew: React.FC<Props> = ({navigation, route}) => {
     [setFilter, haptics],
   );
 
+  // A STABLE callback — the chip row is memoized, and an inline arrow
+  // meant the memo never hit.
+  const handleClearFilter = useCallback(
+    (id: 'category') => setFilter(id, ''),
+    [setFilter],
+  );
+
   // ── Content states ──
   let content: React.ReactNode;
   if (!hasLoaded && isLoading) {
@@ -292,19 +336,24 @@ export const LiveTVScreenNew: React.FC<Props> = ({navigation, route}) => {
         title="Loading channels…"
       />
     );
-  } else if (
-    !hasLoaded &&
-    !isLoading &&
-    error &&
-    rows.length === 0
-  ) {
+  } else if (error && rows.length === 0) {
+    // The house error card, with its OWN retry button.
+    //
+    // It used to be a `Placeholder` whose message said "Use Retry at the
+    // bottom of the screen to try again." — there is no bottom retry —
+    // and the branch was unreachable besides: `hasLoaded` was true when
+    // the first page failed, so a page-1 failure fell through every
+    // branch and rendered a BLANK LIST.
     content = (
-      <Placeholder
-        variant="empty"
-        anchor="top-third"
-        icon="alertCircle"
-        title={isOnline ? "Couldn't load channels." : "You're offline."}
-        message="Use Retry at the bottom of the screen to try again."
+      <ErrorState
+        title={isOnline ? 'Could not load channels' : "You're offline"}
+        message={
+          isOnline
+            ? 'We could not reach the channel directory.'
+            : 'Check your connection and try again.'
+        }
+        errorDetail={error ?? undefined}
+        onRetry={retry}
       />
     );
   } else if (hasLoaded && !error && rows.length === 0) {
@@ -335,7 +384,10 @@ export const LiveTVScreenNew: React.FC<Props> = ({navigation, route}) => {
             onLongPress={handleLongPress}
           />
         )}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[
+          styles.listContent,
+          {paddingBottom: bottomChromeInset + FAB_SIZE + spacing.md},
+        ]}
         showsVerticalScrollIndicator={false}
         ItemSeparatorComponent={ItemSeparator}
         refreshControl={
@@ -349,26 +401,14 @@ export const LiveTVScreenNew: React.FC<Props> = ({navigation, route}) => {
         onEndReached={() => hasMore && loadMore()}
         onEndReachedThreshold={0.4}
         ListFooterComponent={
-          isLoadingMore || (hasMore && error) ? (
-            <View style={styles.footer}>
-              {isLoadingMore ? (
-                <ActivityOrb size={22} />
-              ) : (
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={() => loadMore()}
-                  style={[
-                    styles.loadMoreRetry,
-                    {borderColor: colors.border.subtle},
-                  ]}
-                  accessibilityRole="button">
-                  <AppText variant="caption" color="secondary">
-                    Could not load more — tap to retry
-                  </AppText>
-                </TouchableOpacity>
-              )}
-            </View>
-          ) : null
+          <BrowseFooter
+            isLoadingMore={isLoadingMore}
+            hasLoaded={hasLoaded}
+            error={error}
+            reachedEnd={!hasMore}
+            shown={rows.length}
+            onLoadMore={loadMore}
+          />
         }
         windowSize={5}
         maxToRenderPerBatch={10}
@@ -391,6 +431,9 @@ export const LiveTVScreenNew: React.FC<Props> = ({navigation, route}) => {
         rightAction={{
           icon: 'heartPulse',
           onPress: () => navigation.navigate('LiveTVFavoritesScreen'),
+          // A button that carries only an icon has no name, and a
+          // screen-reader user hears "button" for it.
+          accessibilityLabel: 'Live TV favorites',
         }}
       />
 
@@ -405,7 +448,7 @@ export const LiveTVScreenNew: React.FC<Props> = ({navigation, route}) => {
 
       <ActiveFilterChips
         filters={filters}
-        onClear={id => setFilter(id, '')}
+        onClear={handleClearFilter}
       />
 
       {content}
@@ -428,7 +471,7 @@ export const LiveTVScreenNew: React.FC<Props> = ({navigation, route}) => {
             title: 'Category',
             rows:
               tagsLoaded
-                ? tags.categories.map(c => ({key: c.id, label: c.name}))
+                ? tags.categories.map(c => ({key: c.name, label: c.name}))
                 : [],
           },
         ]}

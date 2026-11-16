@@ -24,6 +24,7 @@
 import {useCallback, useEffect, useMemo, useState} from 'react';
 import {type UseQueryResult} from '@tanstack/react-query';
 import {useApiQuery} from '../../../hooks/useApiQuery';
+import {usePullToRefresh} from '../../_shared/pullToRefresh';
 import {
   getAllIPTVChannels,
   searchIPTVChannels,
@@ -54,13 +55,6 @@ export interface LiveTVBrowseTags {
 }
 
 const EMPTY_FILTERS: LiveTVFilters = {category: null};
-const EMPTY_SCOPE: LiveTVScopeState = {
-  items: [],
-  hasLoaded: false,
-  isLoading: false,
-  isLoadingMore: false,
-  error: null,
-};
 
 function errorMessage(err: unknown): string | null {
   if (!err) return null;
@@ -90,15 +84,19 @@ export function useLiveTVBrowser(initialCategory?: string) {
     IPTVChannelResult[]
   >({
     queryKey: ['iptv', 'browse', filters.category, searchTerm.trim()],
-    queryFn: async () => {
+    queryFn: async ({signal}) => {
       const term = searchTerm.trim();
       if (term) {
-        return searchIPTVChannels(term, {limit: FULL_LIMIT});
+        return searchIPTVChannels(term, {limit: FULL_LIMIT}, signal);
       }
       if (filters.category) {
-        return getChannelsByCategory(filters.category, {limit: FULL_LIMIT});
+        return getChannelsByCategory(
+          filters.category,
+          {limit: FULL_LIMIT},
+          signal,
+        );
       }
-      return getAllIPTVChannels({limit: FULL_LIMIT});
+      return getAllIPTVChannels({limit: FULL_LIMIT}, signal);
     },
     staleTime: 60_000,
   });
@@ -109,6 +107,28 @@ export function useLiveTVBrowser(initialCategory?: string) {
     queryFn: () => getIPTVCategories(),
     staleTime: 5 * 60_000,
   });
+
+  /**
+   * The route param is a category ID; the source matches on the NAME.
+   *
+   * `getChannelsByCategory` filters with
+   * `c.category.toLowerCase() === category.toLowerCase()` — and
+   * `IPTVChannelResult.category` is the channel's category NAME. So an
+   * id was compared against a name, and any category whose id differed
+   * from its name filtered to zero channels. The chip's key had the same
+   * problem (it was the id), so the selection stored something the
+   * source could not match.
+   *
+   * The id is resolved to the name here, once the categories arrive, so
+   * both the deep link and the sheet speak the source's own vocabulary.
+   */
+  useEffect(() => {
+    if (!categoriesQuery.data || !initialCategory) return;
+    const match = categoriesQuery.data.find(c => c.id === initialCategory);
+    if (match && match.name !== filters.category) {
+      setFilters(prev => ({...prev, category: match.name}));
+    }
+  }, [categoriesQuery.data, initialCategory, filters.category]);
 
   // ── Display slice (client-side pagination) ──
   // Reset the slice when the scope changes — a fresh scope starts
@@ -143,7 +163,13 @@ export function useLiveTVBrowser(initialCategory?: string) {
   // ── Scope accessor (kept for the consumer's `getScope()` API) ──
   const getScope = useCallback((): LiveTVScopeState => ({
     items,
-    hasLoaded: !!channelQuery.data || !!channelQuery.error,
+    // "The query has settled WITH DATA" — not "the query settled".
+    //
+    // It used to be `!!data || !!error`, which is true when the FIRST
+    // page failed, and the screen's failure branch tested `!hasLoaded`.
+    // So a page-1 failure fell through every branch and rendered an
+    // EMPTY LIST: no message, no spinner, no button.
+    hasLoaded: !!channelQuery.data,
     isLoading: channelQuery.isFetching,
     isLoadingMore: false, // client-side pagination has no separate "loading more" state
     error: errorMessage(channelQuery.error),
@@ -159,9 +185,16 @@ export function useLiveTVBrowser(initialCategory?: string) {
     void channelQuery.refetch();
   }, [channelQuery]);
 
-  const handleRefresh = useCallback(() => {
-    void channelQuery.refetch();
-  }, [channelQuery]);
+  // The GESTURE owns the spinner, not the query. `isFetching` is also
+  // true for a background refetch (the query is stale, the app comes
+  // back to the foreground) — so binding the refresh control to it puts
+  // a spinner for work the user never asked for in the one place that
+  // says "refreshing". See `src/screens/_shared/pullToRefresh.ts`.
+  //
+  // It used to be a hardcoded `false`, so the pull-to-refresh spinner
+  // never appeared at all: the user pulled, the list refetched, and
+  // nothing said so.
+  const {refreshing, refresh} = usePullToRefresh(channelQuery.refetch);
 
   // ── Favorites ──
   // V23 W24 (2026-11-05) — select the stable array, derive outside the
@@ -195,9 +228,6 @@ export function useLiveTVBrowser(initialCategory?: string) {
       addedAt: new Date().toISOString(),
     });
   }, [favorites]);
-  const removeFavorite = useCallback((id: string) => {
-    useLiveFavoritesStore.getState().removeLiveFavorite({kind: 'tv', id});
-  }, []);
 
   return {
     // filters + search
@@ -214,21 +244,16 @@ export function useLiveTVBrowser(initialCategory?: string) {
     getScope,
     loadMore,
     retry,
-    refreshing: false, // no longer tracking a separate "refreshing" state — pull-to-refresh triggers refetch()
-    handleRefresh,
+    refreshing,
+    handleRefresh: refresh,
     tags: {categories: categoriesQuery.data ?? []} as LiveTVBrowseTags,
     tagsLoaded: !!categoriesQuery.data,
     // favorites
     isFavoriteId,
     toggleFavorite,
-    removeFavorite,
-    // expose `hasMore` for the screen's "show more" footer (the
-    // legacy `loadMore` callback still works for backwards compat
-    // — see LiveTVContent's `onEndReached`)
+    // `hasMore` for the screen's "show more" footer (the legacy `loadMore`
+    // callback still works for backwards compat — see LiveTVContent's
+    // `onEndReached`)
     hasMore,
   };
 }
-
-// `hasLoaded` was on the old EMPTY_SCOPE for the type export; keep
-// it as an alias so type-only consumers still compile.
-export type {IPTVChannelResult as IPTVChannelResultType} from '../../../types/api';

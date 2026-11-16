@@ -86,7 +86,7 @@ describe('jamendo adapter — V21 W6 P21c', () => {
   it('threads the AbortSignal to apiFetch on search', async () => {
     mockedApiFetch.mockResolvedValueOnce({
       headers: {status: 'success'},
-      results: [],
+      results: [validTrack(1)],
     });
     const controller = new AbortController();
     await searchJamendoTracks('test', undefined, controller.signal);
@@ -98,7 +98,7 @@ describe('jamendo adapter — V21 W6 P21c', () => {
   it('threads the AbortSignal on getJamendoTracksByGenre', async () => {
     mockedApiFetch.mockResolvedValueOnce({
       headers: {status: 'success'},
-      results: [],
+      results: [validTrack(1)],
     });
     const controller = new AbortController();
     await getJamendoTracksByGenre('rock', undefined, controller.signal);
@@ -192,6 +192,206 @@ describe('jamendo adapter — V21 W6 P21c', () => {
     await expect(getJamendoTrackById(1)).rejects.toBeInstanceOf(
       AdapterParseError,
     );
+  });
+});
+
+/**
+ * The EMPTY response is the defect this suite now pins.
+ *
+ * MEASURED on 2026-11-16 against the live API: the SAME url with the
+ * SAME parameters returns 20 rows on one call and 0 rows on the next. Over
+ * 30 requests (3 passes x 10 genres) a fixed-order request came back
+ * EMPTY TEN TIMES — a third of all requests — and an empty array is a
+ * SUCCESS to TanStack Query, so it was cached as the truth and the screen
+ * showed "No Rock tracks found" for a genre with thousands of tracks.
+ *
+ * The retry measured out as: 23 of 30 succeeded first time, 5 needed a
+ * second attempt, 1 a third and 1 a fourth — all 30 recovered.
+ */
+describe('jamendo adapter — an empty response is not an answer', () => {
+  it('retries the search when the API answers with nothing', async () => {
+    mockedApiFetch.mockResolvedValueOnce({
+      headers: {status: 'success'},
+      results: [],
+    });
+    mockedApiFetch.mockResolvedValueOnce({
+      headers: {status: 'success'},
+      results: [validTrack(1)],
+    });
+
+    const results = await searchJamendoTracks('test');
+
+    expect(results).toHaveLength(1);
+    expect(mockedApiFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('retries the genre query when the API answers with nothing', async () => {
+    mockedApiFetch.mockResolvedValueOnce({
+      headers: {status: 'success'},
+      results: [],
+    });
+    mockedApiFetch.mockResolvedValueOnce({
+      headers: {status: 'success'},
+      results: [validTrack(2)],
+    });
+
+    const results = await getJamendoTracksByGenre('rock');
+
+    expect(results).toHaveLength(1);
+    expect(mockedApiFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('repeats the request UNCHANGED — the order selects a pool, not a sort', async () => {
+    // MEASURED: `search=love` with no `order` and `search=love` with
+    // `order=popularity_total` share 0 of 20 tracks. Varying `order`
+    // would return DIFFERENT tracks, so the retry must vary nothing.
+    mockedApiFetch.mockResolvedValue({
+      headers: {status: 'success'},
+      results: [],
+    });
+
+    await searchJamendoTracks('test');
+
+    const calls = mockedApiFetch.mock.calls.map(
+      (c: [{params: Record<string, string | number>}]) => c[0].params,
+    );
+    expect(calls.length).toBeGreaterThan(1);
+    for (const params of calls) {
+      expect(params.order).toBeUndefined();
+      expect(params.search).toBe('test');
+      expect(typeof params.client_id).toBe('string');
+      expect(String(params.client_id).length).toBeGreaterThan(0);
+    }
+  });
+
+  it('gives up after four empty answers and returns empty', async () => {
+    mockedApiFetch.mockResolvedValue({
+      headers: {status: 'success'},
+      results: [],
+    });
+
+    const results = await searchJamendoTracks('test');
+
+    expect(results).toEqual([]);
+    expect(mockedApiFetch).toHaveBeenCalledTimes(4);
+  });
+
+  it('a genre query keeps its own order on every attempt', async () => {
+    mockedApiFetch.mockResolvedValue({
+      headers: {status: 'success'},
+      results: [],
+    });
+
+    await getJamendoTracksByGenre('rock');
+
+    const calls = mockedApiFetch.mock.calls.map(
+      (c: [{params: Record<string, string | number>}]) => c[0].params,
+    );
+    expect(calls.length).toBeGreaterThan(1);
+    for (const params of calls) {
+      expect(params.order).toBe('popularity_total');
+      expect(params.tags).toBe('rock');
+    }
+  });
+});
+
+/**
+ * Jamendo paginates with `offset`, NOT with `page`.
+ *
+ * MEASURED on 2026-11-16 against the live API (limit 30):
+ *
+ *   search=love           → 30 rows
+ *   search=love&page=2    → **0 rows**
+ *   search=love&offset=30 → 30 rows, **0 shared** with page 1
+ *
+ *   tags=rock&order=popularity_total            → 30 rows
+ *   tags=rock&order=popularity_total&page=2     → 30 rows, **30 shared**
+ *   tags=rock&order=popularity_total&offset=30  → 30 rows, **0 shared**
+ *
+ * The genre path therefore answered "page 2" with page 1's rows again —
+ * the screen's dedupe-by-id threw them away, the list never grew,
+ * `hasNextPage` stayed true forever, and the end-of-list footer never
+ * said "You're all caught up." The search path answered "page 2" with
+ * nothing at all, after four retried requests.
+ */
+describe('jamendo adapter — the page is turned into an offset', () => {
+  function paramsOfCall(index = 0): Record<string, string | number> {
+    return mockedApiFetch.mock.calls[index][0].params;
+  }
+
+  it('never sends a `page` parameter — Jamendo has no such parameter', async () => {
+    mockedApiFetch.mockResolvedValue({
+      headers: {status: 'success'},
+      results: [validTrack(1)],
+    });
+
+    await searchJamendoTracks('love', {limit: 20, page: 3});
+    await getJamendoTracksByGenre('rock', {limit: 20, page: 3});
+    await getPopularJamendoTracks(20, 3);
+
+    for (const call of mockedApiFetch.mock.calls) {
+      expect(call[0].params.page).toBeUndefined();
+    }
+  });
+
+  it('sends offset = (page - 1) * limit on the search path', async () => {
+    mockedApiFetch.mockResolvedValue({
+      headers: {status: 'success'},
+      results: [validTrack(1)],
+    });
+
+    await searchJamendoTracks('love', {limit: 20, page: 3});
+
+    expect(paramsOfCall()).toMatchObject({limit: 20, offset: 40, search: 'love'});
+  });
+
+  it('sends offset = (page - 1) * limit on the genre path', async () => {
+    mockedApiFetch.mockResolvedValue({
+      headers: {status: 'success'},
+      results: [validTrack(1)],
+    });
+
+    await getJamendoTracksByGenre('rock', {limit: 20, page: 2});
+
+    expect(paramsOfCall()).toMatchObject({
+      limit: 20,
+      offset: 20,
+      tags: 'rock',
+      order: 'popularity_total',
+    });
+  });
+
+  it('sends offset = (page - 1) * limit on the popular path', async () => {
+    mockedApiFetch.mockResolvedValue({
+      headers: {status: 'success'},
+      results: [validTrack(1)],
+    });
+
+    await getPopularJamendoTracks(20, 2);
+
+    expect(paramsOfCall()).toMatchObject({limit: 20, offset: 20});
+  });
+
+  it('sends offset 0 for the first page, whatever the page number means', async () => {
+    mockedApiFetch.mockResolvedValue({
+      headers: {status: 'success'},
+      results: [validTrack(1)],
+    });
+
+    await searchJamendoTracks('love', {limit: 20, page: 1});
+
+    expect(paramsOfCall()).toMatchObject({limit: 20, offset: 0});
+  });
+
+  it('never sends a negative offset', async () => {
+    mockedApiFetch.mockResolvedValue({
+      headers: {status: 'success'},
+      results: [validTrack(1)],
+    });
+
+    await searchJamendoTracks('love', {limit: 20, page: 0});
+
+    expect(Number(paramsOfCall().offset)).toBeGreaterThanOrEqual(0);
   });
 });
 

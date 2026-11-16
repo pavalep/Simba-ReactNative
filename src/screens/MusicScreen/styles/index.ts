@@ -3,6 +3,5 @@
 // here, so every consumer imports from this single entry point.
 
 export {createMusicScreenStyles} from './MusicScreen.styles';
-export {createMusicFooterStyles} from './MusicFooter.styles';
 export {createListStatesStyles} from './ListStates.styles';
 export {createTrackCardStyles} from './TrackCard.styles';

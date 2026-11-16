@@ -18,7 +18,10 @@ export const createMusicScreenStyles = () =>
       paddingHorizontal: spacing.lg,
     },
     listSlotGrow: {
+      // Let the empty/error slot fill the viewport so the centred
+      // EmptyState / ErrorState has real height to anchor against.
+      // It does NOT also centre the slot: the Movies and Podcasts screens
+      // anchor it to the top, so Music did too.
       flexGrow: 1,
-      justifyContent: 'center',
     },
   });

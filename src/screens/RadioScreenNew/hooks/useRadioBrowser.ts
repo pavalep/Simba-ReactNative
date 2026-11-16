@@ -31,9 +31,11 @@ import {
 } from '../../../infrastructure/api/radioBrowser/adapter';
 import {useApiQuery, useInfiniteApiQuery} from '../../../hooks/useApiQuery';
 import {useNetworkStatus} from '../../../hooks/useNetworkStatus';
+import {usePullToRefresh} from '../../_shared/pullToRefresh';
 import {useLiveFavoritesStore} from '../../../state';
 import type {RadioStationResult} from '../../../types/api';
 import type {RadioBrowseTag} from '../../../infrastructure/api/radioBrowser/adapter';
+import {stationSubtitle} from '../related/stationRow';
 
 const PAGE_SIZE = 30;
 const TAGS_LIMIT = 40;
@@ -77,26 +79,35 @@ interface UseRadioBrowserReturn {
   retry: () => void;
   refreshing: boolean;
   handleRefresh: () => void;
+  /**
+   * Whether the source has another page.
+   *
+   * The hook owns it — it is TanStack's own `hasNextPage`. The screen used
+   * to re-derive it from a SECOND copy of the page size
+   * (`rows.length % PAGE_SIZE === 0`), which says "maybe more" whenever
+   * the loaded count happens to be a multiple of 30 — including when the
+   * server has no more pages. The footer's "tap to retry" button then
+   * rendered and did nothing.
+   */
+  hasMore: boolean;
   tags: RadioBrowseTags;
   tagsLoaded: boolean;
+  /**
+   * Which tag groups have arrived.
+   *
+   * One group used to gate all three: a single failing tag query emptied
+   * every group in the sheet, with no error and no retry.
+   */
+  tagsReady: {genres: boolean; countries: boolean; languages: boolean};
   // favorites
   isFavoriteId: (id: string) => boolean;
   toggleFavorite: (station: RadioStationResult) => void;
-  removeFavorite: (id: string) => void;
 }
 
 const EMPTY_FILTERS: RadioFilters = {
   genre: null,
   country: null,
   language: null,
-};
-
-const EMPTY_SCOPE: RadioScopeState = {
-  items: [],
-  hasLoaded: false,
-  isLoading: false,
-  isLoadingMore: false,
-  error: null,
 };
 
 function errorMessage(err: unknown): string | null {
@@ -156,20 +167,20 @@ export function useRadioBrowser(initialTag?: string): UseRadioBrowserReturn {
       searchTerm.trim(),
     ],
     initialPageParam: 1,
-    queryFn: ({pageParam}) => {
+    queryFn: ({pageParam, signal}) => {
       const page = pageParam as number;
       const term = searchTerm.trim();
       if (term) {
-        return searchStations(term, {limit: PAGE_SIZE, page});
+        return searchStations(term, {limit: PAGE_SIZE, page}, signal);
       }
       const filterSet: RadioFilterSet = {};
       if (filters.genre) filterSet.genre = filters.genre;
       if (filters.country) filterSet.country = filters.country;
       if (filters.language) filterSet.language = filters.language;
       if (Object.keys(filterSet).length > 0) {
-        return getStationsByFilters(filterSet, {limit: PAGE_SIZE, page});
+        return getStationsByFilters(filterSet, {limit: PAGE_SIZE, page}, signal);
       }
-      return getTopStations({limit: PAGE_SIZE, page});
+      return getTopStations({limit: PAGE_SIZE, page}, signal);
     },
     getNextPageParam: (lastPage, _pages, lastPageParam) => {
       // If the page is short, there are no more — stop here.
@@ -204,7 +215,14 @@ export function useRadioBrowser(initialTag?: string): UseRadioBrowserReturn {
   // can be updated to use `data` directly in a follow-up.
   const getScope = useCallback((): RadioScopeState => ({
     items,
-    hasLoaded: !!stationsQ.data || !!stationsQ.error,
+    // "The query has settled WITH DATA" — not "the query settled".
+    //
+    // It used to be `!!data || !!error`, which is true when the FIRST
+    // page failed, and both of the screen's failure branches tested
+    // `!hasLoaded`. So a page-1 failure fell through every branch and
+    // rendered an EMPTY LIST: no message, no spinner, no button, and
+    // the "Could not load stations." toast never fired either.
+    hasLoaded: !!stationsQ.data,
     isLoading: stationsQ.isFetching,
     isLoadingMore: stationsQ.isFetchingNextPage,
     error: errorMessage(stationsQ.error),
@@ -220,10 +238,13 @@ export function useRadioBrowser(initialTag?: string): UseRadioBrowserReturn {
     void stationsQ.refetch();
   }, [stationsQ]);
 
-  const handleRefresh = useCallback(() => {
-    void stationsQ.refetch();
-  }, [stationsQ]);
-
+  // The GESTURE owns the spinner, not the query. `isFetching` is also
+  // true for a background refetch (the query is stale, the app comes
+  // back to the foreground) and for the next PAGE — so binding the
+  // refresh control to it puts a spinner for work the user never asked
+  // for in the one place that says "refreshing". See
+  // `src/screens/_shared/pullToRefresh.ts`.
+  const {refreshing, refresh} = usePullToRefresh(stationsQ.refetch);
   const tags: RadioBrowseTags = useMemo(
     () => ({
       genres: genresQ.data ?? [],
@@ -265,19 +286,21 @@ export function useRadioBrowser(initialTag?: string): UseRadioBrowserReturn {
         name: station.name,
         url: station.url,
         image: station.image,
-        subtitle: [station.country, station.tags?.split(',')[0]?.trim()]
-          .filter(Boolean)
-          .join(' · '),
+        // ONE rule for the subtitle — the same one the browse row uses.
+        // It used to be built twice with two different rules, so the same
+        // station read "Germany · pop,rock,news" in browse and
+        // "Germany · pop" in favourites.
+        subtitle: stationSubtitle(station),
+        // The codec and the bitrate were DROPPED on the way in, so the
+        // favourites row showed no "MP3 · 128 kbps" for a station whose
+        // browse row showed it — even though the store type carries both
+        // and the card renders them.
+        codec: station.codec,
+        bitrate: station.bitrate,
         addedAt: new Date().toISOString(),
       });
     },
     [favorites],
-  );
-  const removeFavorite = useCallback(
-    (id: string) => {
-      useLiveFavoritesStore.getState().removeLiveFavorite({kind: 'radio', id});
-    },
-    [],
   );
 
   return {
@@ -295,13 +318,18 @@ export function useRadioBrowser(initialTag?: string): UseRadioBrowserReturn {
     getScope,
     loadMore,
     retry,
-    refreshing: stationsQ.isFetching && items.length > 0,
-    handleRefresh,
+    refreshing,
+    handleRefresh: refresh,
+    hasMore,
     tags,
     tagsLoaded,
+    tagsReady: {
+      genres: !!genresQ.data,
+      countries: !!countriesQ.data,
+      languages: !!languagesQ.data,
+    },
     // favorites
     isFavoriteId,
     toggleFavorite,
-    removeFavorite,
   };
 }

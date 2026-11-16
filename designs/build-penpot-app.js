@@ -76,6 +76,12 @@ const {
   podcastDetailBoard,
   followedPodcastsBoard,
 } = require('./penpot/podcasts');
+const {
+  musicScreenBoard,
+  musicFilterBoard,
+  radioScreenBoard,
+  radioFilterBoard,
+} = require('./penpot/music-radio');
 const {SCREEN_W, SCREEN_H} = require('./penpot/kit');
 
 const OUT = path.join(__dirname, '.build');
@@ -339,6 +345,37 @@ for (const page of PODCASTS_STATES) {
   }
 }
 
+// The Music and Radio screens — DRAWN, each with its filter sheet as a
+// SEPARATE board.
+//
+// The wave that drew them is B13 (`md/WAVE_B13_MUSIC_RADIO.md`). Music
+// and Radio are the two surfaces the wave brought onto the family
+// grammar, and the boards are drawn from that grammar — the shared
+// `FilterChips` chip, the shell's 16/12 rhythm, the house row, the one
+// FAB and the shared sheet.
+//
+// Each page is drawn with ONE filter active ("Rock" on Music, "pop" on
+// Radio), because the ACTIVE-filter strip is invisible in the default
+// state and the strip is where a filter says so.
+const BROWSE_STATES = [
+  {route: 'MusicScreen', state: 'screen', draw: musicScreenBoard},
+  {route: 'MusicScreen', state: 'filter', draw: musicFilterBoard},
+  {route: 'RadioScreen', state: 'screen', draw: radioScreenBoard},
+  {route: 'RadioScreen', state: 'filter', draw: radioFilterBoard},
+];
+for (const page of BROWSE_STATES) {
+  for (const theme of ['light', 'dark']) {
+    const drawn = page.draw(theme);
+    boards.push({
+      name: boardName(page.route, theme) + ' — ' + page.state,
+      w: drawn.width,
+      h: drawn.height,
+      fill: (theme === 'dark' ? spec.darkColors : spec.colors).background.primary,
+      shapes: drawn.shapes,
+    });
+  }
+}
+
 // Every other route — a placeholder, in the light theme. The dark variants
 // of the other screens come with their own page pass.
 //
@@ -346,6 +383,7 @@ for (const page of PODCASTS_STATES) {
 // drew it as the two orb boards).
 const RC1_ROUTES = new Set(RC1_PAGES.map(p => p.route));
 const PODCASTS_ROUTES = new Set(PODCASTS_STATES.map(p => p.route));
+const BROWSE_ROUTES = new Set(BROWSE_STATES.map(p => p.route));
 for (const route of ROUTES) {
   if (route.route === 'Home') continue;
   if (route.route === 'Login') continue;
@@ -355,6 +393,8 @@ for (const route of ROUTES) {
   if (RC1_ROUTES.has(route.route)) continue;
   // The three Podcasts screens are drawn now, on their own boards.
   if (PODCASTS_ROUTES.has(route.route)) continue;
+  // Music and Radio are drawn now, on their own boards.
+  if (BROWSE_ROUTES.has(route.route)) continue;
   addPlaceholder(route.route, 'light');
 }
 
@@ -401,7 +441,7 @@ const DESIGNED = new Set([
  * results" and not "Search / light" — and the app's own edges leave the
  * Search screen from the RESULTS board, where the six result rows are.
  */
-const ROUTE_STATES = {Search: 'results', PodcastsScreen: 'screen', PodcastDetail: 'screen', FollowedPodcasts: 'screen'};
+const ROUTE_STATES = {Search: 'results', PodcastsScreen: 'screen', PodcastDetail: 'screen', FollowedPodcasts: 'screen', MusicScreen: 'screen', RadioScreen: 'screen'};
 
 /**
  * The state a route's edge ARRIVES at.
@@ -422,6 +462,8 @@ const ROUTE_ENTRY_STATES = {
   PodcastsScreen: 'screen',
   PodcastDetail: 'screen',
   FollowedPodcasts: 'screen',
+  MusicScreen: 'screen',
+  RadioScreen: 'screen',
 };
 
 /** The board a route's edge leaves from. */
@@ -449,6 +491,15 @@ for (const theme of ['light', 'dark']) {
 for (const theme of ['light', 'dark']) {
   DESIGNED.add(boardName('MoviesScreen', theme) + ' — screen');
   DESIGNED.add(boardName('MoviesScreen', theme) + ' — filter');
+}
+
+// The Music and Radio boards are drawn, so their edges carry a SHAPE
+// rather than the whole board, and their sheet's board can be reached
+// from the screen's own FAB.
+for (const theme of ['light', 'dark']) {
+  for (const page of BROWSE_STATES) {
+    DESIGNED.add(boardName(page.route, theme) + ' — ' + page.state);
+  }
 }
 
 // The Podcasts boards are drawn, so their edges carry a SHAPE rather than
@@ -536,6 +587,14 @@ link(LOGIN_PEAK, LOGIN_REST, 'click', {
 const EDGE_SHAPE_OVERRIDES = {
   // The catalogue's first row. The drawing names every row by its number.
   'PodcastsScreen>PodcastDetail': {shape: 'PodcastsScreen row 1 card'},
+  // The Radio screen's heart — the app's own favourite language, and the
+  // door to the favourites screen. The drawing names the header's right
+  // action, and the glyph sits ON TOP of the disc, so both carry the
+  // connector (rule P10: the whole unit is the target).
+  'RadioScreen>RadioFavoritesScreen': {
+    shape: 'RadioScreen right button',
+    family: 'RadioScreen right',
+  },
 };
 
 /** The shape an edge's connector lands on. */
@@ -584,6 +643,30 @@ for (const theme of ['light', 'dark']) {
     shape: 'MoviesScreen FAB disc',
     family: 'MoviesScreen FAB',
     label: 'Filter movies',
+  });
+}
+
+// The Music and Radio filter sheets — the app's own transitions.
+//
+// The sheet is a MODAL over the page, not a route, so it is not in the
+// app's edge list. But the app really does make this transition: the FAB
+// opens the sheet (`BrowseLayout.tsx:240-249` for Music,
+// `RadioContent.tsx:443-449` for Radio).
+//
+// The destination is the LIGHT board, like every other edge in the walk.
+for (const theme of ['light', 'dark']) {
+  link(boardName('MusicScreen', theme) + ' — screen', boardName('MusicScreen', 'light') + ' — filter', 'click', {
+    // The FAB's glyph sits ON TOP of the disc, and the Play viewer gives
+    // the click to the topmost shape — so the glyph carries the connector
+    // as well (rule P10: the whole unit is the target).
+    shape: 'MusicScreen FAB disc',
+    family: 'MusicScreen FAB',
+    label: 'Filter music',
+  });
+  link(boardName('RadioScreen', theme) + ' — screen', boardName('RadioScreen', 'light') + ' — filter', 'click', {
+    shape: 'RadioScreen FAB disc',
+    family: 'RadioScreen FAB',
+    label: 'Filter radio stations',
   });
 }
 
@@ -1806,3 +1889,8 @@ console.log(
       ? '  — run the media calls first'
       : '  — ready to build'),
 );
+// The missing keys BY NAME: "run the media calls first" is a sentence the
+// reader has to act on, and the keys are what they need.
+if (missingMedia.length) {
+  console.log('  missing media: ' + missingMedia.join(', '));
+}

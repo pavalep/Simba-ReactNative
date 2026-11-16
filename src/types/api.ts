@@ -35,6 +35,18 @@ export interface ApiSearchOptions {
   language?: string;
   /** Optional provider-specific sort (e.g. Internet Archive "downloads desc"). */
   sort?: string;
+  /**
+   * Optional provider-specific tag filter.
+   *
+   * Jamendo's `/tracks/` accepts `search` AND `tags` together, and
+   * MEASURED on 2026-11-16 the two are honoured at the same time:
+   * `search=love&tags=rock` returns the rock pool filtered by the term
+   * (`(search+genre) ∩ genre = 3`, `(search+genre) ∩ search = 0`, while
+   * `search ∩ genre = 0`). So a browse screen can keep a genre filter
+   * applied while the user searches, instead of dropping the filter and
+   * leaving a chip that looks applied and is not.
+   */
+  tags?: string;
 }
 
 /**

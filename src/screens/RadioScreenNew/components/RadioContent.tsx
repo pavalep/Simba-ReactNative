@@ -7,6 +7,22 @@
 //     three simultaneous single-select groups)
 //   • header right action (heart) → RadioFavoritesScreen
 // Long-press → favorite / playlist / bookmark / share; press → AudioPlayer.
+//
+// THE GRAMMAR
+// -----------
+// This page is one of the surfaces that was never moved onto the shared
+// `BrowseLayout`, so it keeps its own shell — but it now FOLLOWS the
+// same nine-element grammar the Movies, Podcasts and Music pages follow
+// (see `md/WAVE_B13_MUSIC_RADIO.md` §2). The gaps that were closed here:
+//
+//   • the filter rows now carry a real KEY (they were all `undefined`),
+//     so the Genre / Country / Language filters work at all;
+//   • a page-1 failure shows the house `ErrorState` with its retry
+//     button, instead of an empty list with no message at all;
+//   • the gutter is `spacing.lg` (16), the same as the shell's;
+//   • the list's bottom padding follows the app's ONE bottom-chrome
+//     rule, so it grows with the mini-player dock;
+//   • the chip row is a stable callback, so its `React.memo` works.
 
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
@@ -17,11 +33,14 @@ import {
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../../theme';
+import {spacing} from '../../../theme/tokens';
 import type {RootStackScreenProps} from '../../../navigation/types';
 import {useRadioBrowser} from '../hooks/useRadioBrowser';
-import {RadioStationCard, toRow} from './RadioStationCard';
+import {RadioStationCard, toRow, type StationRow} from './RadioStationCard';
+import {toRadioTagRow} from '../related/stationRow';
 import {FilterSheet} from '../../../components/sheets/FilterSheet/FilterSheet';
-import {Fab} from '../../../components/core/Fab/Fab';
+import {Fab, FAB_SIZE} from '../../../components/core/Fab/Fab';
+import {useBottomChromeInset} from '../../../infrastructure/player/miniPlayerChrome';
 import {useKeyboard} from '../../../hooks/useKeyboard';
 import {SimbaStatusBar} from '../../../components/StatusBar';
 import {InternalHeader} from '../../../components/layout/InternalHeader/InternalHeader';
@@ -29,35 +48,31 @@ import {AppText} from '../../../components/core/AppText/AppText';
 import {SearchBar} from '../../../components/core/SearchBar/SearchBar';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
 import {ActivityOrb} from '../../../components/feedback/ActivityOrb/ActivityOrb';
+import {ErrorState} from '../../../components/feedback/ErrorState/ErrorState';
 import {Placeholder} from '../../../components/feedback/Placeholder';
 import {shareContent} from '../../../services/shareService';
-import {useBookmarks} from '../../../hooks/useBookmarks';
+import {useBookmarks} from '../../../features/bookmarks';
+import {confirmBookmarkAdd} from '../../../features/bookmarks/confirmAdd';
 import {useToast} from '../../../components/feedback/Toast';
 import {useHaptics} from '../../../hooks/useHaptics';
-import { resolveStreamType, useResumeAwareLaunch } from '../../../infrastructure/player';
+import { resolveStreamType, useResumeAwareLaunch} from '../../../infrastructure/player';
 import {PlaylistSheet} from '../../../components/sheets/PlaylistSheet/PlaylistSheet';
 import {OptionSheetDialog} from '../../../components/core/OptionSheetDialog/OptionSheetDialog';
 import {styles} from '../styles';
+import {BrowseFooter} from '../../_shared/BrowseListFooter';
 import type {
   RadioFilterId,
   RadioFilters,
-  StationRow,
 } from '../types';
+import type {RadioBrowseTag} from '../../../infrastructure/api/radioBrowser/adapter';
 
 type Props = RootStackScreenProps<'RadioScreen'>;
 
-const PAGE_SIZE = 30;
-
 /**
- * Radio's browse metadata items are sometimes plain strings and
- * sometimes {id, name} records (depending on the endpoint). Flatten
- * them into FilterSheet's uniform {key, label} row shape.
+ * Radio's browse metadata items are the API's `{name, stationCount}`
+ * records, and the mapping to a filter sheet row lives with the data —
+ * see `related/stationRow.ts`.
  */
-function toRadioTagRow(t: unknown): {key: string; label: string} {
-  return typeof t === 'string'
-    ? {key: t, label: t}
-    : {key: (t as {id: string}).id, label: (t as {name: string}).name};
-}
 
 // ─── Active-filter chip row ────────────────────────────────────────────
 // Feedback + quick-clear: one gold pill per active filter; tap clears it.
@@ -89,16 +104,21 @@ const ActiveFilterChips: React.FC<{
           style={[
             styles.chip,
             {
-              backgroundColor: colors.accent.goldDim,
+              // The shared `FilterChips` chip's ACTIVE state: a gold fill
+              // with inverse text and a gold border. This chip used to be
+              // gold-dim with gold text — a different language from every
+              // other browse surface's strip. The family now speaks ONE
+              // chip language.
+              backgroundColor: colors.accent.gold,
               borderColor: colors.accent.gold,
             },
           ]}>
           <AppText
             variant="caption"
-            style={[styles.chipText, {color: colors.accent.gold}]}>
+            style={[styles.chipText, {color: colors.text.inverse}]}>
             {label}
           </AppText>
-          <SvgIcon name="close" size={12} color={colors.accent.gold} />
+          <SvgIcon name="close" size={12} color={colors.text.inverse} />
         </TouchableOpacity>
       ))}
     </View>
@@ -110,6 +130,10 @@ const ActiveFilterChips: React.FC<{
 export const RadioScreenNew: React.FC<Props> = ({navigation, route}) => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
+  // The app's ONE bottom-chrome rule: the safe area, or the mini-player
+  // dock if one is up. The FAB's own height goes on top so the last row
+  // clears the BUTTON.
+  const bottomChromeInset = useBottomChromeInset();
   // The button steps aside while the keyboard is up — the sheet it
   // opens needs the room, and a floating button over the keyboard is
   // a control nobody can reach.
@@ -134,11 +158,11 @@ export const RadioScreenNew: React.FC<Props> = ({navigation, route}) => {
     retry,
     refreshing,
     handleRefresh,
+    hasMore,
     tags,
-    tagsLoaded,
+    tagsReady,
     isFavoriteId,
     toggleFavorite,
-    removeFavorite,
   } = useRadioBrowser(route.params?.initialTag);
 
   const [sheetVisible, setSheetVisible] = useState(false);
@@ -151,9 +175,8 @@ export const RadioScreenNew: React.FC<Props> = ({navigation, route}) => {
   const scope = getScope();
   const {items, hasLoaded, isLoading, isLoadingMore, error} = scope;
   const rows = useMemo<StationRow[]>(() => items.map(toRow), [items]);
-  const hasMore = rows.length > 0 && rows.length % PAGE_SIZE === 0;
 
-  // ── Page-1 failure toast (with Retry) ──
+  // ── Page-1 failure (with Retry) ──
   const lastShownErrorRef = useRef<string | null>(null);
   useEffect(() => {
     const shouldShow = !hasLoaded && !isLoading && !!error;
@@ -186,6 +209,15 @@ export const RadioScreenNew: React.FC<Props> = ({navigation, route}) => {
         uri: row.url,
         title: row.name,
         type: resolveStreamType('radio'),
+        // The KIND and the LANE, not just the lane.
+        //
+        // `resolveStreamType('radio')` is the LANE ('audio'), and the seam
+        // defaults the kind to the lane — so the station was recorded in
+        // Recently Played as type 'audio' instead of 'radio', even though
+        // the app HAS a label for it (`src/types/media.ts`: radio → 'Radio').
+        mediaKind: 'radio',
+        mediaLane: 'audio',
+        ...(row.image ? {thumbnailPath: row.image} : {}),
       });
     },
     [openPlayer],
@@ -203,13 +235,14 @@ export const RadioScreenNew: React.FC<Props> = ({navigation, route}) => {
       switch (value) {
         case 'favorite': {
           const station = items.find(s => s.id === row.id);
+          // The station is always in `items` — `rows` is derived from it —
+          // so the old `else { removeFavorite(...) }` branch was
+          // unreachable, and the hook's `removeFavorite` had no live
+          // caller at all.
           if (station) {
             const wasFavorite = isFavoriteId(row.id);
             toggleFavorite(station);
             toast.show(wasFavorite ? 'Removed from favorites' : 'Saved to favorites');
-          } else {
-            removeFavorite(row.id);
-            toast.show('Removed from favorites');
           }
           haptics.light();
           break;
@@ -223,27 +256,48 @@ export const RadioScreenNew: React.FC<Props> = ({navigation, route}) => {
             source: 'api',
             provider: 'radio',
             mediaType: 'audio',
+            // The KIND. Without it a radio station was filed as
+            // `type: 'video'` by the playlist/bookmark path that reads
+            // the kind back.
+            type: 'radio',
           });
           break;
-        case 'bookmark':
-          addBookmark({
+        case 'bookmark': {
+          const input = {
             fileUri: row.url,
             title: row.name,
             position: 0,
             duration: 0,
             label: '',
             thumbnailPath: row.image || undefined,
-            mediaType: 'audio',
-            source: 'api',
+            mediaType: 'audio' as const,
+            source: 'api' as const,
             provider: 'radio',
-            type: 'radio',
-          });
-          toast.show('Station bookmarked');
+            type: 'radio' as const,
+          };
+          // The cap is the store's business, and the confirmation is ONE
+          // owner's. The result used to be discarded here, so adding a
+          // bookmark past the cap did NOTHING and still toasted
+          // "Station bookmarked".
+          confirmBookmarkAdd(
+            addBookmark(input),
+            row.name,
+            addBookmark,
+            () => toast.show('Station bookmarked'),
+          );
           break;
+        }
         case 'share':
+          // ONE share target for the whole feature, and the params the
+          // linking config actually parses: `SongScreen` parses
+          // `fileUri` and `title` (`navigation/linking.ts:130-138`).
+          // The old code sent `fileTitle` — not a declared param — and
+          // the favourites screen sent `route: 'RadioScreen'`, whose
+          // linking config parses only `initialTab`, so the station was
+          // lost entirely.
           shareContent({
             route: 'SongScreen',
-            params: {fileUri: row.url, fileTitle: row.name, source: 'radio'},
+            params: {fileUri: row.url, title: row.name, source: 'radio'},
             title: row.name,
             subtitle: row.subtitle,
           });
@@ -251,7 +305,7 @@ export const RadioScreenNew: React.FC<Props> = ({navigation, route}) => {
       }
       setMenuRow(null);
     },
-    [menuRow, items, isFavoriteId, removeFavorite, toggleFavorite, addBookmark, toast, haptics],
+    [menuRow, items, isFavoriteId, toggleFavorite, addBookmark, toast, haptics],
   );
 
   const handleOptionChange = useCallback(
@@ -262,20 +316,37 @@ export const RadioScreenNew: React.FC<Props> = ({navigation, route}) => {
     [setFilter, haptics],
   );
 
+  // A STABLE callback — the chip row is memoized, and an inline arrow
+  // meant the memo never hit.
+  const handleClearFilter = useCallback(
+    (id: RadioFilterId) => setFilter(id, ''),
+    [setFilter],
+  );
+
   // ── Content states ──
   let content: React.ReactNode;
   if (!hasLoaded && isLoading) {
     content = (
       <Placeholder variant="loading" anchor="top-third" title="Loading stations…" />
     );
-  } else if (!hasLoaded && !isLoading && error && rows.length === 0) {
+  } else if (error && rows.length === 0) {
+    // The house error card, with its OWN retry button.
+    //
+    // It used to be a `Placeholder` whose message said "Use Retry at the
+    // bottom of the screen to try again." — there is no bottom retry,
+    // and the branch was unreachable besides: `hasLoaded` was true when
+    // the first page failed, so a page-1 failure fell through every
+    // branch and rendered a BLANK LIST.
     content = (
-      <Placeholder
-        variant="empty"
-        anchor="top-third"
-        icon="alertCircle"
-        title={isOnline ? "Couldn't load stations." : "You're offline."}
-        message="Use Retry at the bottom of the screen to try again."
+      <ErrorState
+        title={isOnline ? 'Could not load stations' : "You're offline"}
+        message={
+          isOnline
+            ? 'We could not reach the station directory.'
+            : 'Check your connection and try again.'
+        }
+        errorDetail={error ?? undefined}
+        onRetry={retry}
       />
     );
   } else if (hasLoaded && !error && rows.length === 0) {
@@ -306,7 +377,10 @@ export const RadioScreenNew: React.FC<Props> = ({navigation, route}) => {
             onLongPress={handleLongPress}
           />
         )}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[
+          styles.listContent,
+          {paddingBottom: bottomChromeInset + FAB_SIZE + spacing.md},
+        ]}
         showsVerticalScrollIndicator={false}
         ItemSeparatorComponent={ItemSeparator}
         refreshControl={
@@ -320,23 +394,14 @@ export const RadioScreenNew: React.FC<Props> = ({navigation, route}) => {
         onEndReached={() => hasMore && loadMore()}
         onEndReachedThreshold={0.4}
         ListFooterComponent={
-          isLoadingMore || (hasMore && error) ? (
-            <View style={styles.footer}>
-              {isLoadingMore ? (
-                <ActivityOrb size={22} />
-              ) : (
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={() => loadMore()}
-                  style={[styles.loadMoreRetry, {borderColor: colors.border.subtle}]}
-                  accessibilityRole="button">
-                  <AppText variant="caption" color="secondary">
-                    Could not load more — tap to retry
-                  </AppText>
-                </TouchableOpacity>
-              )}
-            </View>
-          ) : null
+          <BrowseFooter
+            isLoadingMore={isLoadingMore}
+            hasLoaded={hasLoaded}
+            error={error}
+            reachedEnd={!hasMore}
+            shown={rows.length}
+            onLoadMore={loadMore}
+          />
         }
         windowSize={5}
         maxToRenderPerBatch={10}
@@ -356,6 +421,9 @@ export const RadioScreenNew: React.FC<Props> = ({navigation, route}) => {
         rightAction={{
           icon: 'heartPulse',
           onPress: () => navigation.navigate('RadioFavoritesScreen'),
+          // A button that carries only an icon has no name, and a
+          // screen-reader user hears "button" for it.
+          accessibilityLabel: 'Radio favorites',
         }}
       />
 
@@ -368,10 +436,7 @@ export const RadioScreenNew: React.FC<Props> = ({navigation, route}) => {
         />
       </View>
 
-      <ActiveFilterChips
-        filters={filters}
-        onClear={id => setFilter(id, '')}
-      />
+      <ActiveFilterChips filters={filters} onClear={handleClearFilter} />
 
       {content}
 
@@ -391,23 +456,19 @@ export const RadioScreenNew: React.FC<Props> = ({navigation, route}) => {
           {
             id: 'genre',
             title: 'Genre',
-            rows: tagsLoaded
-              ? (tags.genres as unknown[]).map(toRadioTagRow)
-              : [],
+            // Each group gates on ITS OWN query. One failing tag endpoint
+            // used to empty all three groups, with no error and no retry.
+            rows: tagsReady.genres ? tags.genres.map(toRadioTagRow) : [],
           },
           {
             id: 'country',
             title: 'Country',
-            rows: tagsLoaded
-              ? (tags.countries as unknown[]).map(toRadioTagRow)
-              : [],
+            rows: tagsReady.countries ? tags.countries.map(toRadioTagRow) : [],
           },
           {
             id: 'language',
             title: 'Language',
-            rows: tagsLoaded
-              ? (tags.languages as unknown[]).map(toRadioTagRow)
-              : [],
+            rows: tagsReady.languages ? tags.languages.map(toRadioTagRow) : [],
           },
         ]}
         value={{

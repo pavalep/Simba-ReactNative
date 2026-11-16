@@ -28,6 +28,8 @@ import {
   getGenres,
   getCountries,
   getLanguages,
+  browseTagsFromRaw,
+  drawableBrowseTagsFromRaw,
   RADIO_BROWSER_RETRIES,
 } from '../../../../src/infrastructure/api/radioBrowser/adapter';
 import {AdapterParseError} from '../../../../src/infrastructure/api/adapterErrors';
@@ -187,9 +189,13 @@ describe('radio-browser adapter — V21 W6 P21c', () => {
     await expect(getGenres()).rejects.toBeInstanceOf(AdapterParseError);
   });
 
-  it('browseTagsFromRaw throws AdapterParseError when a tag has an empty name', async () => {
-    mockedApiFetch.mockResolvedValueOnce([{name: '', stationcount: 50}]);
-    await expect(getGenres()).rejects.toBeInstanceOf(AdapterParseError);
+  it('browseTagsFromRaw throws AdapterParseError when a tag has an empty name', () => {
+    // The STRICT convertor keeps the W6 P21c contract: a malformed tag is
+    // an error, not a silently skipped row. The MENU path (the one the
+    // tag sheets use) is the separate function below.
+    expect(() =>
+      browseTagsFromRaw([{name: '', stationcount: 50}]),
+    ).toThrow(/expected non-empty string/);
   });
 
   it('returns parsed stations on a valid payload', async () => {
@@ -229,5 +235,114 @@ describe('radio-browser adapter — V21 W6 P21c', () => {
   it('getStationById returns null on a not-found (empty stations)', async () => {
     mockedApiFetch.mockResolvedValueOnce([]);
     expect(await getStationById('missing')).toBeNull();
+  });
+});
+
+/**
+ * The MENU path — a bulk tag list must survive a bulk list's bad rows.
+ *
+ * MEASURED on 2026-11-16 against the live API: `/json/countries` answers
+ * with 225 records, and **2 of them have an EMPTY `name`** (the ISO codes
+ * `UN` and `ZZ`). The strict parser rejects an empty name and the strict
+ * batch convertor maps over the WHOLE batch — so ONE unusable record
+ * voided all 223 good countries, and the Radio screen's COUNTRY group
+ * rendered its header with no chips under it, with no error and no retry.
+ *
+ * Proven on device on 2026-11-16: the sheet's COUNTRY group was empty
+ * while GENRE and LANGUAGE were full.
+ */
+describe('radio-browser adapter — the tag menus survive a bad row', () => {
+  it('drawableBrowseTagsFromRaw keeps the drawable rows and drops the rest', () => {
+    const tags = drawableBrowseTagsFromRaw([
+      {name: 'Germany', stationcount: 5604},
+      {name: '', stationcount: 1},
+      {name: 'France', stationcount: 2801},
+      null,
+    ]);
+    expect(tags).toEqual([
+      {name: 'Germany', stationCount: 5604},
+      {name: 'France', stationCount: 2801},
+    ]);
+  });
+
+  it('drawableBrowseTagsFromRaw still rejects a payload that is not an array', () => {
+    expect(() => drawableBrowseTagsFromRaw({not: 'an array'})).toThrow(
+      AdapterParseError,
+    );
+  });
+
+  it('getCountries keeps 223 good countries when 2 have no name', async () => {
+    // The live payload's shape: 223 named countries + the two unnamed
+    // ones (UN, ZZ).
+    const payload = [
+      ...Array.from({length: 223}, (_v, i) => ({
+        name: `Country ${i}`,
+        stationcount: 100,
+      })),
+      {name: '', stationcount: 1},
+      {name: '', stationcount: 1},
+    ];
+    mockedApiFetch.mockResolvedValueOnce(payload);
+
+    const countries = await getCountries(30);
+
+    expect(countries).toHaveLength(30);
+    expect(countries.every(c => c.name.length > 0)).toBe(true);
+  });
+
+  it('getGenres drops an unnamed tag instead of voiding the whole menu', async () => {
+    mockedApiFetch.mockResolvedValueOnce([
+      validTag('pop', 900),
+      {name: '', stationcount: 1},
+      validTag('rock', 700),
+    ]);
+
+    const genres = await getGenres(40);
+
+    expect(genres).toEqual([
+      {name: 'pop', stationCount: 900},
+      {name: 'rock', stationCount: 700},
+    ]);
+  });
+
+  it('getLanguages drops an unnamed language instead of voiding the menu', async () => {
+    mockedApiFetch.mockResolvedValueOnce([
+      validTag('english', 11334),
+      {name: '', stationcount: 1},
+      validTag('german', 3979),
+    ]);
+
+    const languages = await getLanguages(30);
+
+    expect(languages).toHaveLength(2);
+  });
+
+  it('orders the country menu by station count', async () => {
+    // MEASURED: without an order the API answers in an arbitrary order
+    // (Andorra, 5 stations, first). With `order=stationcount&reverse=true`
+    // the list opens with the United States, Germany, France.
+    mockedApiFetch.mockResolvedValueOnce([validTag('Germany', 5604)]);
+
+    await getCountries(30);
+
+    expect(mockedApiFetch.mock.calls[0][0].params).toMatchObject({
+      order: 'stationcount',
+      reverse: 'true',
+    });
+  });
+
+  it('orders the language menu by station count, not alphabetically', async () => {
+    // MEASURED: in the API's own order the language menu opens with
+    // "1", "111", "123" — the stations that report a numeric language
+    // code. Ordered by station count it opens with english, german,
+    // spanish.
+    mockedApiFetch.mockResolvedValueOnce([validTag('english', 11334)]);
+
+    await getLanguages(30);
+
+    expect(mockedApiFetch.mock.calls[0][0].params).toMatchObject({
+      order: 'stationcount',
+      reverse: 'true',
+    });
   });
 });

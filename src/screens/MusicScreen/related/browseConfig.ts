@@ -9,11 +9,18 @@ import {MUSIC_CATEGORIES} from '../../../constants/musicCategories';
 import type {SectionBrowseConfig} from '../types';
 
 /**
- * The Genre group — multi-select (the selected genres OR together).
+ * The Genre group — SINGLE-select.
  *
- * `collapsedRowLimit: 6` is the sheet's one rule across the three
- * browse screens: the sheet shows six chips and a SHOW MORE toggle, so
- * the panel stays a panel instead of running past the screen.
+ * It used to be `multiSelect: true`, with a comment claiming "the
+ * selected genres OR together". Nothing OR'd them: the consumer read
+ * `filter[0]` and used that one genre, so the user could hold "Rock" AND
+ * "Jazz" in the chip strip while the list answered Rock only — a filter
+ * that looked applied and was not. Jamendo's `/tracks/` takes ONE tag per
+ * request, so a second genre has nothing to be OR'd with.
+ *
+ * `collapsedRowLimit: 6` is the sheet's one rule across the three browse
+ * screens: the sheet shows six chips and a SHOW MORE toggle, so the
+ * panel stays a panel instead of running past the screen.
  *
  * The rows carry no icon: the filter sheet draws text pills, and the
  * genre icons were being copied into the option model and then thrown
@@ -23,7 +30,7 @@ function musicFilterGroup() {
   return {
     id: 'filter',
     title: 'Genre',
-    multiSelect: true,
+    multiSelect: false,
     collapsedRowLimit: 6,
     options: MUSIC_CATEGORIES.filter(g => g.id !== 'all').map(g => ({
       key: String(g.id),

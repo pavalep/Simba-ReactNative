@@ -124,6 +124,54 @@ export function browseTagsFromRaw(raw: unknown): RadioBrowseTag[] {
 }
 
 /**
+ * The MENU path — the tags that can be DRAWN as a chip.
+ *
+ * MEASURED on 2026-11-16 against the live API: `/json/countries` answers
+ * with **225 records, and 2 of them have an EMPTY `name`** — the ISO codes
+ * `UN` and `ZZ`, which are the stations that report an unknown country.
+ * The strict parser rejects an empty name, and `browseTagsFromRaw` maps
+ * over the WHOLE batch — so ONE unusable record voided all 223 good
+ * countries.
+ *
+ * The Radio screen's COUNTRY group then rendered its HEADER with no chips
+ * under it at all, with no error, no spinner and no retry — proven on
+ * device on 2026-11-16, and the reason the third group of the sheet was
+ * silently empty while the other two were full.
+ *
+ * An unnamed country cannot be drawn AND cannot be selected: the filter's
+ * key would be the empty string, which the hook reads as "no filter"
+ * (`key || null`). So the record is not information the user could have
+ * used — it is a dead row in a menu, and dropping it loses nothing.
+ *
+ * The strict convertor stays strict (`browseTagsFromRaw`): the contract
+ * test pins it, and a caller that asks for ONE tag still wants to hear
+ * about a malformed one. The MENU path is the one place where a bulk list
+ * must survive a bulk list's bad rows.
+ */
+export function drawableBrowseTagsFromRaw(raw: unknown): RadioBrowseTag[] {
+  if (raw === undefined || raw === null) return [];
+  if (!Array.isArray(raw)) {
+    throw new AdapterParseError(
+      'radioBrowser',
+      'envelope',
+      'expected array of tags',
+    );
+  }
+  const drawable: RadioBrowseTag[] = [];
+  for (const t of raw) {
+    try {
+      drawable.push(parseRawBrowseTag(t, 'tag'));
+    } catch (e) {
+      // Only a shape failure is dropped — a transport or programming
+      // error must still travel up.
+      if (e instanceof AdapterParseError) continue;
+      throw e;
+    }
+  }
+  return drawable;
+}
+
+/**
  * V21 W6 P21c — per-station shape validation.
  */
 function parseRawStation(
@@ -310,6 +358,21 @@ export async function getStationById(
   return stationsFromRaw(raw)[0] ?? null;
 }
 
+/**
+ * The GENRE menu.
+ *
+ * MEASURED on 2026-11-16: radio-browser's `/json/tags` **ignores its
+ * `type` parameter**. Five requests — no `type` at all, `type=genre`,
+ * `type=country`, `type=language`, `type=tag` — returned the IDENTICAL 80
+ * records, with the identical name sequence. So `type: 'genre'` below is
+ * not a filter that works; it is a request the API does not answer.
+ *
+ * The param is still sent, because it is the documented way to ask and a
+ * future radio-browser may honour it. What the group actually contains is
+ * the full tag list ordered by station count — whose top 40 are the
+ * genres a listener means by "genre" (pop, music, news, rock, talk,
+ * dance, hits, oldies, 80s, classical, jazz).
+ */
 export async function getGenres(
   limit = 40,
   signal?: AbortSignal,
@@ -326,9 +389,23 @@ export async function getGenres(
     },
     signal,
   });
-  return browseTagsFromRaw(raw).slice(0, limit);
+  return drawableBrowseTagsFromRaw(raw).slice(0, limit);
 }
 
+/**
+ * The COUNTRY menu.
+ *
+ * MEASURED on 2026-11-16: `/json/countries` answers with 225 records, and
+ * **2 of them have an empty `name`** (the ISO codes `UN` and `ZZ`) — which
+ * the strict parser rejects, voiding the whole batch. See
+ * `drawableBrowseTagsFromRaw`.
+ *
+ * The order matters too: without it the API answers in an arbitrary order
+ * (Andorra with 5 stations first). With `order=stationcount&reverse=true`
+ * the list opens with The United States Of America (7000), Germany (5604),
+ * France (2801) — the countries a listener actually looks for, and the
+ * order the menu is read in.
+ */
 export async function getCountries(
   limit = 30,
   signal?: AbortSignal,
@@ -336,11 +413,29 @@ export async function getCountries(
   const raw = await apiFetch<RadioBrowseTagRaw[]>({
     config: API_CONFIG.radioBrowser,
     path: '/json/countries',
+    params: {
+      order: 'stationcount',
+      reverse: 'true',
+    },
     signal,
   });
-  return browseTagsFromRaw(raw).slice(0, limit);
+  return drawableBrowseTagsFromRaw(raw).slice(0, limit);
 }
 
+/**
+ * The LANGUAGE menu.
+ *
+ * MEASURED on 2026-11-16: `/json/languages` answers with 586 records, and
+ * in its own order the first ones are `1`, `111`, `123`, `128 brazilian
+ * portuguese`, `17 addtional languages` — stations that report a numeric
+ * language code. A menu that opens with "1" and "111" is a menu nobody
+ * reads.
+ *
+ * With `order=stationcount&reverse=true` the same 586 records open with
+ * english (11334), german (3979), spanish (3881), french (2486),
+ * chinese (2029), russian (1408) — and the numeric leftovers sink to the
+ * bottom, out of the first screen.
+ */
 export async function getLanguages(
   limit = 30,
   signal?: AbortSignal,
@@ -348,9 +443,13 @@ export async function getLanguages(
   const raw = await apiFetch<RadioBrowseTagRaw[]>({
     config: API_CONFIG.radioBrowser,
     path: '/json/languages',
+    params: {
+      order: 'stationcount',
+      reverse: 'true',
+    },
     signal,
   });
-  return browseTagsFromRaw(raw).slice(0, limit);
+  return drawableBrowseTagsFromRaw(raw).slice(0, limit);
 }
 
 // V21 W6 P21 (T21.04): documented retries for TanStack Query.

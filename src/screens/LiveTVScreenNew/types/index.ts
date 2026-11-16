@@ -7,9 +7,3 @@ export interface ActiveFilterChipsProps {
 }
 
 export type {RootStackScreenProps} from '../../../navigation/types';
-export type LiveTVScreenProps = import('../../../navigation/types').RootStackScreenProps<'LiveTVScreen'>;
-export type LiveTVFilterId = 'category';
-export type LiveTVMediaType = 'video';
-export type LiveTVSource = 'iptv';
-export type LiveTVScopeState = import('../hooks/useLiveTVBrowser').LiveTVScopeState;
-export type LiveTVBrowseTags = import('../hooks/useLiveTVBrowser').LiveTVBrowseTags;
