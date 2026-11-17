@@ -53,6 +53,16 @@ export interface BrowseFooterProps {
   shown: number;
   /** Retry the page that failed. */
   onLoadMore: () => void;
+  /**
+   * The line to say when the list ends — for a source whose end is not
+   * simply "everything".
+   *
+   * The archive refuses to page past 10,000 rows (measured: HTTP 507 on
+   * page 251), so the Movies list ends at a WINDOW and says so, with both
+   * numbers, instead of claiming "You're all caught up." That is a LABEL
+   * on this footer, not a second footer: the branches are the same four.
+   */
+  endLabel?: string;
   /** Optional overrides — the branches are the same, the words may not be. */
   loadingMoreLabel?: string;
   loadMoreRetryLabel?: string;
@@ -72,6 +82,7 @@ export const BrowseFooter: React.FC<BrowseFooterProps> = ({
   reachedEnd,
   shown,
   onLoadMore,
+  endLabel,
   loadingMoreLabel = DEFAULT_LABELS.loadingMore,
   loadMoreRetryLabel = DEFAULT_LABELS.loadMoreRetry,
   caughtUpLabel = DEFAULT_LABELS.caughtUp,
@@ -103,8 +114,10 @@ export const BrowseFooter: React.FC<BrowseFooterProps> = ({
         // Only when there IS a list — an empty result set already says
         // "No popular tracks found." above it, and a second end-of-list
         // line under an empty list says nothing.
+        //
+        // `endLabel` is the source's own ending, when it has one.
         <AppText variant="caption" color="secondary" style={styles.footerText}>
-          {caughtUpLabel}
+          {endLabel ?? caughtUpLabel}
         </AppText>
       ) : (
         // Idle spacer — the same footprint as the active branches, so the

@@ -52,18 +52,12 @@ export const styles = StyleSheet.create({
     lineHeight: 13,
   },
   listContent: {padding: spacing.lg},
+  listSlotGrow: {
+    // Let the state slot fill the viewport, so the error card and the
+    // empty state have real height to anchor against. The list itself
+    // does not grow — the Movies and Podcasts screens anchor the slot to
+    // the top, so this one does too.
+    flexGrow: 1,
+  },
   separator: {height: spacing.sm},
-  footer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.lg,
-    minHeight: 56,
-  },
-  loadMoreRetry: {
-    borderWidth: 1,
-    borderRadius: radius.pill,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    minHeight: 44,
-  },
 });

@@ -1,17 +1,17 @@
 /**
- * V18 — convertor tests for the 3 paginated service adapters
- * (iptv, radioBrowser, podcastIndex). Each describe block covers
- * the per-adapter convertor contracts (happy / missing / undefined).
+ * V18 — convertor tests for the paginated service adapters
+ * (radioBrowser, podcastIndex). Each describe block covers the
+ * per-adapter convertor contracts (happy / missing / undefined).
  *
  * Note: the actual HTTP endpoints are exercised in V18.4.4 (manual
  * smoke + the migrated useApiQuery hooks). These are pure-unit
  * convertor tests.
+ *
+ * WAVE B13.1: IPTV left this file. It has no JSON convertor any more —
+ * the catalogue is read from the M3U playlist (see
+ * `__tests__/infrastructure/api/iptv/m3u.test.ts` and
+ * `__tests__/infrastructure/api/iptv/catalogue.test.ts`).
  */
-import {
-  channelResultFromRaw as iptvChannelFromRaw,
-  channelResultsFromRaw as iptvChannelsFromRaw,
-  categoryResultFromRaw as iptvCategoryFromRaw,
-} from '../src/infrastructure/api/iptv/adapter';
 import {
   browseTagFromRaw as radioBrowseTagFromRaw,
   browseTagsFromRaw as radioBrowseTagsFromRaw,
@@ -21,84 +21,6 @@ import {
   podcastResultsFromRaw as podResultsFromRaw,
   podcastEpisodeResultFromRaw as podEpisodeFromRaw,
 } from '../src/infrastructure/api/podcastIndex/adapter';
-
-describe('iptvAdapter', () => {
-  it('channelResultFromRaw maps a complete channel', () => {
-    expect(
-      iptvChannelFromRaw({
-        id: 'c1',
-        name: 'CNN',
-        url: 'http://x/stream',
-        logo: 'http://x/logo',
-        country: 'United States',
-        country_code: 'US',
-        languages: ['en'],
-        categories: ['news'],
-        is_playable: true,
-      }),
-    ).toEqual({
-      id: 'c1',
-      name: 'CNN',
-      url: 'http://x/stream',
-      image: 'http://x/logo',
-      country: 'United States',
-      countryCode: 'US',
-      language: 'en',
-      category: 'news',
-      isPlayable: true,
-    });
-  });
-
-  it('channelResultFromRaw throws AdapterParseError for undefined (V21 W6 P21c)', () => {
-    // Pre-W22 returned `null` (silent-skip pattern that masked
-    // upstream API breakages). The new contract throws.
-    expect(() => iptvChannelFromRaw(undefined)).toThrow(/expected channel object/);
-  });
-
-  it('channelResultFromRaw defaults isPlayable to true when missing', () => {
-    const result = iptvChannelFromRaw({
-      id: 'c1',
-      name: 'X',
-      url: 'http://x',
-      logo: '',
-      country: '',
-      country_code: '',
-      languages: [],
-      categories: [],
-    } as any);
-    expect(result?.isPlayable).toBe(true);
-  });
-
-  it('channelResultsFromRaw throws AdapterParseError on a malformed entry (V21 W6 P21c)', () => {
-    // Pre-W22 silently filtered out malformed entries and the
-    // caller saw fewer channels than the API returned, with no
-    // diagnostic. The new contract rejects the whole batch.
-    expect(() =>
-      iptvChannelsFromRaw([
-        {
-          id: '1',
-          name: 'A',
-          url: 'u',
-          logo: '',
-          country: '',
-          country_code: '',
-          languages: [],
-          categories: [],
-          is_playable: true,
-        },
-        undefined as any,
-      ]),
-    ).toThrow(/expected channel object/);
-  });
-
-  it('categoryResultFromRaw renames channel_count → channelCount', () => {
-    expect(iptvCategoryFromRaw({id: 'cat1', name: 'News', channel_count: 42})).toEqual({
-      id: 'cat1',
-      name: 'News',
-      channelCount: 42,
-    });
-  });
-});
 
 describe('radioBrowserAdapter', () => {
   it('browseTagFromRaw renames stationcount → stationCount', () => {

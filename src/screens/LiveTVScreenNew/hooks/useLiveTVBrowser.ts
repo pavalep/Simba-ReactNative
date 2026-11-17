@@ -1,45 +1,69 @@
 // ─── Live TV Browser Hook ──────────────────────────────────────────────
-// V18.6.2b: rewritten on `useApiQuery` (TanStack's single-query
-// primitive) per the V18 ideal. The pre-V18 implementation was
-// 361 lines with a per-scope `Map<key, ScopeState>`, `seqRef` for
-// stale-request cancellation, `guardRef` for in-flight dedup,
-// and a client-side `loadMore` that re-fetched with an
-// ever-larger limit. The V18-ideal version is ~120 lines:
 //
-//   - The "scope" is just a TanStack queryKey. Every
-//     (category, searchTerm) combination is its own cache entry;
-//     revisiting a combination shows its cached list instantly.
-//   - The "loadMore" is now client-side: we fetch the full
-//     list (or filtered subset) once per scope and slice it
-//     in a `useMemo`. The slice size grows as the user scrolls.
-//   - The "stale-request cancellation" is TanStack's own
-//     dedup — the queryKey changes when filters change, the
-//     in-flight query is cancelled, the new one fires.
-//   - The "in-flight dedup" is TanStack's per-key dedup —
-//     only one fetch per (category, searchTerm) at a time.
+// WAVE B13.1 (2026-11-17) — rewritten on the catalogue.
 //
-// The public surface (returned shape) is unchanged so
-// `LiveTVContent.tsx` doesn't move.
+// WHAT IT USED TO DO
+// ------------------
+// One TanStack query per (category, searchTerm) tuple, and EVERY query
+// downloaded `api/channels.json` — 1,047,201 bytes on the wire, 8 MB
+// decoded — and then rejected the whole answer, because that file has no
+// stream URL. So every scope change cost a download and produced an
+// error card.
+//
+// WHAT IT DOES NOW
+// ----------------
+// ONE query — `['iptv', 'catalogue']` — that downloads the playlist the
+// source publishes for players (2,822,591 bytes) plus the two tiny maps
+// that turn its ids into words, and builds the whole directory once.
+// Everything after that is a filter over memory:
+//
+//   - a category filter is a comparison on the channel's category ID,
+//   - a search is a comparison on the name, the country and the category,
+//   - the page is a client-side slice of the rows in the scope.
+//
+// The scope used to be a QUERY KEY, so changing it was a download. It is
+// now a `useMemo` over the catalogue, so changing it costs nothing.
+//
+// The catalogue is kept for an hour after the last screen stops watching
+// it (`gcTime`), so leaving Live TV and coming back does not pay the
+// download again.
 
 import {useCallback, useEffect, useMemo, useState} from 'react';
 import {type UseQueryResult} from '@tanstack/react-query';
 import {useApiQuery} from '../../../hooks/useApiQuery';
 import {usePullToRefresh} from '../../_shared/pullToRefresh';
 import {
-  getAllIPTVChannels,
-  searchIPTVChannels,
-  getChannelsByCategory,
-  getIPTVCategories,
+  getIPTVCatalogue,
+  type IPTVCatalogue,
 } from '../../../infrastructure/api/iptv/adapter';
+import {filterIPTVChannels} from '../../../infrastructure/api/iptv/catalogue';
 import {useNetworkStatus} from '../../../hooks/useNetworkStatus';
 import type {IPTVChannelResult, IPTVCategory} from '../../../types/api';
 import {useLiveFavoritesStore} from '../../../state';
 
 const PAGE_SIZE = 50;
-const FULL_LIMIT = 1000; // IPTV-org returns the full list; we slice client-side
+
+/**
+ * How long the catalogue stays fresh, and how long it stays in the cache.
+ *
+ * The source rebuilds its directory daily, so 30 minutes of freshness is
+ * generous. The `gcTime` is the one that matters for the user: TanStack
+ * drops a query after 5 minutes of nobody watching it by default, and
+ * that would mean paying the 2.8 MB again on every visit.
+ */
+const CATALOGUE_STALE_MS = 30 * 60_000;
+const CATALOGUE_GC_MS = 60 * 60_000;
 
 export interface LiveTVFilters {
-  category: string | null; // category name; null = all
+  /**
+   * The category ID (`news`) — the source's own slug.
+   *
+   * It used to hold the category's NAME, and the deep link carried an
+   * ID, so the two had to be translated into each other before a filter
+   * could match anything. Now both sides speak the ID and the NAME is
+   * only ever displayed.
+   */
+  category: string | null;
 }
 
 export interface LiveTVScopeState {
@@ -62,13 +86,19 @@ function errorMessage(err: unknown): string | null {
   return String(err);
 }
 
+/** The route param is an id; the ids are lower case. */
+function normalizeCategoryId(value?: string): string | null {
+  const trimmed = (value ?? '').trim().toLowerCase();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
 // ─── Hook ────────────────────────────────────────────────────
 
 export function useLiveTVBrowser(initialCategory?: string) {
   const {isOnline} = useNetworkStatus();
 
   const [filters, setFilters] = useState<LiveTVFilters>({
-    category: initialCategory ?? null,
+    category: normalizeCategoryId(initialCategory),
   });
   const [searchQuery, setSearchQuery] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -78,76 +108,63 @@ export function useLiveTVBrowser(initialCategory?: string) {
   /** Number of channels to display in the current scope (client-side slice). */
   const [displayCount, setDisplayCount] = useState(PAGE_SIZE);
 
-  // ── The big one: one query per (category, searchTerm) tuple.
-  //    Every combination is its own TanStack cache entry. ──
-  const channelQuery: UseQueryResult<IPTVChannelResult[]> = useApiQuery<
-    IPTVChannelResult[]
+  // ── The ONE query. The whole directory, fetched once. ──
+  const catalogueQuery: UseQueryResult<IPTVCatalogue> = useApiQuery<
+    IPTVCatalogue
   >({
-    queryKey: ['iptv', 'browse', filters.category, searchTerm.trim()],
-    queryFn: async ({signal}) => {
-      const term = searchTerm.trim();
-      if (term) {
-        return searchIPTVChannels(term, {limit: FULL_LIMIT}, signal);
-      }
-      if (filters.category) {
-        return getChannelsByCategory(
-          filters.category,
-          {limit: FULL_LIMIT},
-          signal,
-        );
-      }
-      return getAllIPTVChannels({limit: FULL_LIMIT}, signal);
-    },
-    staleTime: 60_000,
-  });
-
-  // ── Categories (tags for the filter sheet) ──
-  const categoriesQuery = useApiQuery<IPTVCategory[]>({
-    queryKey: ['iptv', 'categories'],
-    queryFn: () => getIPTVCategories(),
-    staleTime: 5 * 60_000,
+    queryKey: ['iptv', 'catalogue'],
+    queryFn: ({signal}) => getIPTVCatalogue(signal),
+    staleTime: CATALOGUE_STALE_MS,
+    gcTime: CATALOGUE_GC_MS,
   });
 
   /**
-   * The route param is a category ID; the source matches on the NAME.
+   * The categories the sheet offers.
    *
-   * `getChannelsByCategory` filters with
-   * `c.category.toLowerCase() === category.toLowerCase()` — and
-   * `IPTVChannelResult.category` is the channel's category NAME. So an
-   * id was compared against a name, and any category whose id differed
-   * from its name filtered to zero channels. The chip's key had the same
-   * problem (it was the id), so the selection stored something the
-   * source could not match.
-   *
-   * The id is resolved to the name here, once the categories arrive, so
-   * both the deep link and the sheet speak the source's own vocabulary.
+   * Only the ones that ANSWER: `/api/categories.json` serves 30 ids, and
+   * one of them (`xxx`) has no channels at all — its playlist is empty
+   * (measured: status 200, 0 entries). Offering it would put a filter in
+   * the sheet that can only ever produce "No channels match your
+   * filters." The count is the app's own, computed from the catalogue.
    */
-  useEffect(() => {
-    if (!categoriesQuery.data || !initialCategory) return;
-    const match = categoriesQuery.data.find(c => c.id === initialCategory);
-    if (match && match.name !== filters.category) {
-      setFilters(prev => ({...prev, category: match.name}));
-    }
-  }, [categoriesQuery.data, initialCategory, filters.category]);
+  const categories = useMemo(
+    () =>
+      (catalogueQuery.data?.categories ?? []).filter(c => c.channelCount > 0),
+    [catalogueQuery.data],
+  );
 
-  // ── Display slice (client-side pagination) ──
+  /** The category's NAME — what the chip reads. */
+  const categoryName = useMemo(
+    () => categories.find(c => c.id === filters.category)?.name ?? '',
+    [categories, filters.category],
+  );
+
+  // ── The scope, in memory. A category and a term, over the catalogue. ──
+  const scopedChannels = useMemo(
+    () =>
+      filterIPTVChannels(catalogueQuery.data?.channels ?? [], {
+        categoryId: filters.category,
+        term: searchTerm,
+      }),
+    [catalogueQuery.data, filters.category, searchTerm],
+  );
+
   // Reset the slice when the scope changes — a fresh scope starts
   // at PAGE_SIZE again.
   useEffect(() => {
     setDisplayCount(PAGE_SIZE);
   }, [filters.category, searchTerm]);
 
-  const allItems = channelQuery.data ?? [];
   const items = useMemo(
-    () => allItems.slice(0, displayCount),
-    [allItems, displayCount],
+    () => scopedChannels.slice(0, displayCount),
+    [scopedChannels, displayCount],
   );
-  const hasMore = allItems.length > displayCount;
+  const hasMore = scopedChannels.length > displayCount;
 
   // ── Filter actions ──
   const setFilter = useCallback(
     (id: 'category', key: string) => {
-      const next = key ? key : null;
+      const next = normalizeCategoryId(key);
       if (id === 'category') {
         setFilters(prev =>
           prev.category === next ? prev : {...prev, category: next},
@@ -161,19 +178,22 @@ export function useLiveTVBrowser(initialCategory?: string) {
   }, []);
 
   // ── Scope accessor (kept for the consumer's `getScope()` API) ──
-  const getScope = useCallback((): LiveTVScopeState => ({
-    items,
-    // "The query has settled WITH DATA" — not "the query settled".
-    //
-    // It used to be `!!data || !!error`, which is true when the FIRST
-    // page failed, and the screen's failure branch tested `!hasLoaded`.
-    // So a page-1 failure fell through every branch and rendered an
-    // EMPTY LIST: no message, no spinner, no button.
-    hasLoaded: !!channelQuery.data,
-    isLoading: channelQuery.isFetching,
-    isLoadingMore: false, // client-side pagination has no separate "loading more" state
-    error: errorMessage(channelQuery.error),
-  }), [items, channelQuery.data, channelQuery.error, channelQuery.isFetching]);
+  const getScope = useCallback(
+    (): LiveTVScopeState => ({
+      items,
+      // "The query has settled WITH DATA" — not "the query settled".
+      //
+      // It used to be `!!data || !!error`, which is true when the FIRST
+      // page failed, and the screen's failure branch tested `!hasLoaded`.
+      // So a page-1 failure fell through every branch and rendered an
+      // EMPTY LIST: no message, no spinner, no button.
+      hasLoaded: !!catalogueQuery.data,
+      isLoading: catalogueQuery.isFetching,
+      isLoadingMore: false, // client-side pagination has no separate "loading more" state
+      error: errorMessage(catalogueQuery.error),
+    }),
+    [items, catalogueQuery.data, catalogueQuery.error, catalogueQuery.isFetching],
+  );
 
   // ── Pagination actions ──
   const loadMore = useCallback(() => {
@@ -182,8 +202,8 @@ export function useLiveTVBrowser(initialCategory?: string) {
   }, [hasMore]);
 
   const retry = useCallback(() => {
-    void channelQuery.refetch();
-  }, [channelQuery]);
+    void catalogueQuery.refetch();
+  }, [catalogueQuery]);
 
   // The GESTURE owns the spinner, not the query. `isFetching` is also
   // true for a background refetch (the query is stale, the app comes
@@ -194,7 +214,7 @@ export function useLiveTVBrowser(initialCategory?: string) {
   // It used to be a hardcoded `false`, so the pull-to-refresh spinner
   // never appeared at all: the user pulled, the list refetched, and
   // nothing said so.
-  const {refreshing, refresh} = usePullToRefresh(channelQuery.refetch);
+  const {refreshing, refresh} = usePullToRefresh(catalogueQuery.refetch);
 
   // ── Favorites ──
   // V23 W24 (2026-11-05) — select the stable array, derive outside the
@@ -235,6 +255,8 @@ export function useLiveTVBrowser(initialCategory?: string) {
     setFilter,
     resetFilters,
     activeFilterCount,
+    /** The category's NAME — the chip's label. */
+    categoryName,
     searchQuery,
     setSearchQuery,
     setSearchTerm,
@@ -246,8 +268,8 @@ export function useLiveTVBrowser(initialCategory?: string) {
     retry,
     refreshing,
     handleRefresh: refresh,
-    tags: {categories: categoriesQuery.data ?? []} as LiveTVBrowseTags,
-    tagsLoaded: !!categoriesQuery.data,
+    tags: {categories} as LiveTVBrowseTags,
+    tagsLoaded: !!catalogueQuery.data,
     // favorites
     isFavoriteId,
     toggleFavorite,

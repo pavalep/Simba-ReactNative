@@ -161,6 +161,15 @@ interface FetchOptions {
   headers?: Record<string, string>;
   /** AbortSignal for timeout (passed to axios). */
   signal?: AbortSignal;
+  /**
+   * How the body should be read.
+   *
+   * `'json'` (the default) is right for every JSON API. `'text'` is for
+   * the sources that serve a plain document — the IPTV playlists
+   * (`audio/x-mpegurl`) are 2.8 MB of text, and asking axios to parse
+   * them would be asking the wrong question of the body.
+   */
+  responseType?: 'json' | 'text';
 }
 
 // ─── apiFetch ───────────────────────────────────────────────────────────
@@ -169,7 +178,7 @@ interface FetchOptions {
 // TanStack Query at the `useApiQuery` layer (`staleTime`).
 
 export async function apiFetch<T>(opts: FetchOptions): Promise<T> {
-  const {config, path, params, headers, signal} = opts;
+  const {config, path, params, headers, signal, responseType} = opts;
 
   const url = `${config.baseUrl}${path}`;
 
@@ -185,6 +194,12 @@ export async function apiFetch<T>(opts: FetchOptions): Promise<T> {
     timeout: config.timeoutMs ?? 10_000,
     signal,
   };
+
+  // A non-JSON body — the IPTV playlists. Without this axios would try
+  // to parse the text as JSON and hand back an object.
+  if (responseType) {
+    axiosConfig.responseType = responseType;
+  }
 
   // Merge URL params (query string)
   const mergedParams: Record<string, string> = {};

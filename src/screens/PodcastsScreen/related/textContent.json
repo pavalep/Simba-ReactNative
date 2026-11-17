@@ -1,12 +1,6 @@
 {
-  "footer": {
-    "loadingMore": "Loading more…",
-    "loadMoreRetry": "Couldn't load more — tap to retry",
-    "caughtUp": "You're all caught up"
-  },
   "pills": {
-    "loading": "Loading podcasts…",
-    "refreshing": "Refreshing…"
+    "loading": "Loading podcasts…"
   },
   "errors": {
     "hookLoadFailed": "Failed to load podcasts",

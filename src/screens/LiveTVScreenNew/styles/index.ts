@@ -50,5 +50,12 @@ export const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
   },
+  listSlotGrow: {
+    // Let the state slot fill the viewport, so the error card and the
+    // empty state have real height to anchor against. The list itself
+    // does not grow — the Movies and Podcasts screens anchor the slot to
+    // the top, so this one does too.
+    flexGrow: 1,
+  },
   separator: {height: spacing.sm},
 });

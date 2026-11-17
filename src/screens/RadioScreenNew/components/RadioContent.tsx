@@ -47,7 +47,6 @@ import {InternalHeader} from '../../../components/layout/InternalHeader/Internal
 import {AppText} from '../../../components/core/AppText/AppText';
 import {SearchBar} from '../../../components/core/SearchBar/SearchBar';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
-import {ActivityOrb} from '../../../components/feedback/ActivityOrb/ActivityOrb';
 import {ErrorState} from '../../../components/feedback/ErrorState/ErrorState';
 import {Placeholder} from '../../../components/feedback/Placeholder';
 import {shareContent} from '../../../services/shareService';
@@ -60,6 +59,7 @@ import {PlaylistSheet} from '../../../components/sheets/PlaylistSheet/PlaylistSh
 import {OptionSheetDialog} from '../../../components/core/OptionSheetDialog/OptionSheetDialog';
 import {styles} from '../styles';
 import {BrowseFooter} from '../../_shared/BrowseListFooter';
+import {BrowseLoadingState} from '../../_shared/BrowseLoadingState';
 import type {
   RadioFilterId,
   RadioFilters,
@@ -324,20 +324,33 @@ export const RadioScreenNew: React.FC<Props> = ({navigation, route}) => {
   );
 
   // ── Content states ──
-  let content: React.ReactNode;
-  if (!hasLoaded && isLoading) {
-    content = (
-      <Placeholder variant="loading" anchor="top-third" title="Loading stations…" />
-    );
-  } else if (error && rows.length === 0) {
-    // The house error card, with its OWN retry button.
-    //
-    // It used to be a `Placeholder` whose message said "Use Retry at the
-    // bottom of the screen to try again." — there is no bottom retry,
-    // and the branch was unreachable besides: `hasLoaded` was true when
-    // the first page failed, so a page-1 failure fell through every
-    // branch and rendered a BLANK LIST.
-    content = (
+  //
+  // The list is ALWAYS mounted and the states live INSIDE it — the way
+  // Music, Movies and Podcasts do it. It used to be REPLACED by the
+  // state, which meant there was no list, and so no pull-to-refresh,
+  // while the first page was loading — and none after a failed first
+  // load either. The gesture the user reaches for was not there.
+  const listState: 'loading' | 'error' | 'empty' | 'ready' =
+    !hasLoaded && isLoading
+      ? 'loading'
+      : !!error && rows.length === 0
+        ? 'error'
+        : rows.length === 0
+          ? 'empty'
+          : 'ready';
+
+  const listEmptyState =
+    listState === 'loading' ? (
+      // The browse family's ONE loading component.
+      <BrowseLoadingState label="Loading stations…" />
+    ) : listState === 'error' ? (
+      // The house error card, with its OWN retry button.
+      //
+      // It used to be a `Placeholder` whose message said "Use Retry at the
+      // bottom of the screen to try again." — there is no bottom retry,
+      // and the branch was unreachable besides: `hasLoaded` was true when
+      // the first page failed, so a page-1 failure fell through every
+      // branch and rendered a BLANK LIST.
       <ErrorState
         title={isOnline ? 'Could not load stations' : "You're offline"}
         message={
@@ -348,9 +361,7 @@ export const RadioScreenNew: React.FC<Props> = ({navigation, route}) => {
         errorDetail={error ?? undefined}
         onRetry={retry}
       />
-    );
-  } else if (hasLoaded && !error && rows.length === 0) {
-    content = (
+    ) : listState === 'empty' ? (
       <Placeholder
         variant="empty"
         anchor="top-third"
@@ -363,51 +374,55 @@ export const RadioScreenNew: React.FC<Props> = ({navigation, route}) => {
               : 'No stations found.'
         }
       />
-    );
-  } else {
-    content = (
-      <FlatList
-        data={rows}
-        keyExtractor={item => item.id}
-        renderItem={({item}) => (
-          <RadioStationCard
-            row={item}
-            isFavorite={isFavoriteId(item.id)}
-            onPress={handleStationPress}
-            onLongPress={handleLongPress}
-          />
-        )}
-        contentContainerStyle={[
-          styles.listContent,
-          {paddingBottom: bottomChromeInset + FAB_SIZE + spacing.md},
-        ]}
-        showsVerticalScrollIndicator={false}
-        ItemSeparatorComponent={ItemSeparator}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor={colors.accent.gold}
-            colors={[colors.accent.gold]}
-          />
-        }
-        onEndReached={() => hasMore && loadMore()}
-        onEndReachedThreshold={0.4}
-        ListFooterComponent={
-          <BrowseFooter
-            isLoadingMore={isLoadingMore}
-            hasLoaded={hasLoaded}
-            error={error}
-            reachedEnd={!hasMore}
-            shown={rows.length}
-            onLoadMore={loadMore}
-          />
-        }
-        windowSize={5}
-        maxToRenderPerBatch={10}
-      />
-    );
-  }
+    ) : null;
+
+  const content = (
+    <FlatList
+      testID="section-RadioScreen-list"
+      data={rows}
+      keyExtractor={item => item.id}
+      renderItem={({item}) => (
+        <RadioStationCard
+          row={item}
+          isFavorite={isFavoriteId(item.id)}
+          onPress={handleStationPress}
+          onLongPress={handleLongPress}
+        />
+      )}
+      contentContainerStyle={[
+        styles.listContent,
+        {paddingBottom: bottomChromeInset + FAB_SIZE + spacing.md},
+        // The state slot fills the viewport, so the error card and the
+        // empty state have real height to anchor against.
+        listState === 'ready' ? null : styles.listSlotGrow,
+      ]}
+      showsVerticalScrollIndicator={false}
+      ItemSeparatorComponent={ItemSeparator}
+      ListEmptyComponent={listEmptyState}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
+          tintColor={colors.accent.gold}
+          colors={[colors.accent.gold]}
+        />
+      }
+      onEndReached={() => hasMore && loadMore()}
+      onEndReachedThreshold={0.4}
+      ListFooterComponent={
+        <BrowseFooter
+          isLoadingMore={isLoadingMore}
+          hasLoaded={hasLoaded}
+          error={error}
+          reachedEnd={!hasMore}
+          shown={rows.length}
+          onLoadMore={loadMore}
+        />
+      }
+      windowSize={5}
+      maxToRenderPerBatch={10}
+    />
+  );
 
   return (
     <View

@@ -212,7 +212,16 @@ export interface IPTVChannelResult extends ApiMediaClassification {
   country: string;
   countryCode: string;
   language: string;
+  /** The category's NAME, as the source spells it ("News"). */
   category: string;
+  /**
+   * The category's ID — the source's own slug ("news").
+   *
+   * The filter compares THIS, not the name: a deep link arrives with an
+   * id, the sheet's rows are keyed by the id, and the channel's own
+   * group-title is the id. `category` is what the user reads.
+   */
+  categoryId: string;
   isPlayable: boolean;
 }
 

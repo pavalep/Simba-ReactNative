@@ -2,20 +2,14 @@
 // Renders through the FlatList ListEmptyComponent — loading / error /
 // empty share one layout path (no flicker when the API resolves).
 //
-// The centered loading pill mirrors `PodcastsOverlays.centerLoader` from
-// PodcastsScreen — same `ActivityOrb + caption` language, same elevated
-// pill surface, anchored at ~20% from the top so it reads as a status
-// pill, not a splash-screen placeholder. Co-located here (instead of a
-// separate overlays component) to keep the screen KISS.
+// The loading pill is the SHARED one (`_shared/BrowseLoadingState.tsx`):
+// the browse family speaks ONE loading language, and Movies' own copy of
+// the geometry is gone.
 
-import React, {useMemo} from 'react';
-import {View} from 'react-native';
-import {useTheme} from '../../../theme';
-import {AppText} from '../../../components/core/AppText/AppText';
-import {ActivityOrb} from '../../../components/feedback/ActivityOrb/ActivityOrb';
+import React from 'react';
 import {ErrorState} from '../../../components/feedback/ErrorState/ErrorState';
 import {EmptyState} from '../../../components/feedback/EmptyState/EmptyState';
-import {createListStatesStyles} from '../styles';
+import {BrowseLoadingState} from '../../_shared/BrowseLoadingState';
 import text from '../related/textContent.json';
 
 interface Props {
@@ -41,27 +35,8 @@ export const ListStates: React.FC<Props> = ({
   onRetry,
   errorMessage,
 }) => {
-  const {colors} = useTheme();
-  const styles = useMemo(() => createListStatesStyles(), []);
-
   if (state === 'loading') {
-    return (
-      <View style={styles.centerLoader}>
-        <View
-          style={[
-            styles.centerLoaderPill,
-            {backgroundColor: colors.background.elevated},
-          ]}>
-          <ActivityOrb size={24} />
-          <AppText
-            variant="caption"
-            color="secondary"
-            style={styles.centerLoaderText}>
-            {text.pills.loading}
-          </AppText>
-        </View>
-      </View>
-    );
+    return <BrowseLoadingState label={text.pills.loading} />;
   }
 
   if (state === 'error') {

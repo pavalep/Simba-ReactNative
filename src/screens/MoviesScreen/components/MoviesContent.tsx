@@ -13,9 +13,10 @@ import {useTheme} from '../../../theme';
 import {spacing} from '../../../theme/tokens';
 import {MovieCard} from './MovieCard';
 import {MoviesDataProvider, useMoviesData} from './MoviesDataProvider';
-import {MoviesFooter} from './MoviesFooter';
+import {BrowseFooter} from '../../_shared/BrowseListFooter';
 import {ListStates} from './ListStates';
 import {createMoviesScreenStyles} from '../styles';
+import text from '../related/textContent.json';
 import type {InternetArchiveVideoResult} from '../../../types/api';
 import type {SectionBrowseConfig, SectionRenderContext} from '../types';
 
@@ -69,6 +70,21 @@ export const MoviesContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => {
   // footer's own copy distinguishes "that is everything" from "the
   // archive refuses to page further".
   const reachedEnd = hasLoaded && !error && !hasMore;
+
+  // The archive refuses to page past 10,000 rows (measured: HTTP 507 on
+  // page 251), so this list can end at a WINDOW and not at "everything".
+  // That is the footer's own ENDING — and it is a LABEL on the shared
+  // footer, not a second footer. Without it the list would claim "You're
+  // all caught up." while the archive still had rows it would not serve.
+  const windowEndLabel = useMemo(
+    () =>
+      numFound > items.length
+        ? text.footer.windowEnd
+            .replace('{shown}', items.length.toLocaleString())
+            .replace('{total}', numFound.toLocaleString())
+        : undefined,
+    [items.length, numFound],
+  );
 
   // The list tells the shell when it is finished AND the user is at its
   // end, so the shell can get the floating filter button out of the way
@@ -293,14 +309,14 @@ export const MoviesContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => {
             )
         }
         ListFooterComponent={
-          <MoviesFooter
+          <BrowseFooter
             isLoadingMore={isLoadingMore}
             hasLoaded={hasLoaded}
             error={error}
             reachedEnd={reachedEnd}
             shown={items.length}
-            total={numFound}
             onLoadMore={loadMore}
+            endLabel={windowEndLabel}
           />
         }
         onEndReached={() => {

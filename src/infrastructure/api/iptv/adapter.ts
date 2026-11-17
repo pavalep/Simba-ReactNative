@@ -1,270 +1,147 @@
 /**
- * V18 + V21 W6 P21c — iptvAdapter
+ * ─── iptvAdapter — the IPTV-org catalogue ────────────────────────────
  *
- * Replaces `iptvService.ts`. IPTV-org returns an array of channel
- * metadata; the convertor flattens the array and applies the
- * per-channel field renames. Pagination is in-memory (the API
- * returns the full list, the client slices by `options.limit`).
+ * The channel directory, as ONE fetch.
  *
- * Type contract (see SPEC §2):
+ * WAVE B13.1 (2026-11-17) — this file was rewritten. It used to read
+ * `api/channels.json` and demand a `url` from every record. That file has
+ * no `url` — it is a directory of NAMES, and the stream URL lives in
+ * `api/streams.json`. The convertor threw on the first row, the whole
+ * batch was rejected, and Live TV showed an error card for every channel
+ * (the screenshot the user sent). The Search screen's "TV" group was
+ * broken the same way and had always been empty.
+ *
+ * The source also publishes the playlist it publishes FOR PLAYERS:
+ * `iptv/index.category.m3u` — one file in which every entry carries the
+ * id, the logo, the category AND the stream URL. Measured 2026-11-17:
+ *
+ *   - `index.category.m3u` — 2,822,591 bytes, 12,269 entries,
+ *     11,558 unique `tvg-id`, 11,543 with a playable http(s) URL.
+ *   - `api/categories.json` — 856 bytes, 30 categories (id → name).
+ *   - `api/countries.json`  — 4,248 bytes, 250 countries (code → name).
+ *
+ * That is 2,827,695 bytes ONCE. The old route downloaded 1,047,201 bytes
+ * on EVERY scope change (the query key carried the category and the
+ * search term) and rendered nothing, every time.
+ *
+ * Type contract (unchanged from V21 W6 P21c):
  *   *Raw DTOs are file-local. *Result types are re-exported.
  *   Convertors are pure, exported, named. Service functions always
  *   return Promise<DomainType>.
  *
- * **V21 W6 P21c (T21.04) — typed `AdapterParseError` + signal:**
- * `channelResultFromRaw` validates per-channel shape and throws
- * `AdapterParseError` for malformed records (was silent `null`
- * skip pre-W22 — the user saw fewer channels than the API returned,
- * with no diagnostic). `categoryResultFromRaw` follows the same
- * pattern. The list convertors (`channelResultsFromRaw` /
- * `categoryResultsFromRaw`) reject the whole batch on malformed
- * records. All 6 service functions accept `signal?: AbortSignal`
- * so TanStack Query can cancel stale requests on screen unmount /
- * query-key change.
- *
- * The Jamendo / Audius / Internet Archive adapters are the
- * proof-of-pattern references for the W6 P21c shape; this file
- * follows the same pattern.
+ * The playlist text lives in `./m3u` (pure) and the domain lives in
+ * `./catalogue` (pure). This file is the only thing that touches the
+ * network.
  */
 import {apiFetch} from '../apiClient';
 import {API_CONFIG} from '../../../constants/api';
 import {AdapterParseError} from '../adapterErrors';
-import type {IPTVChannelResult, IPTVCategory, ApiSearchOptions} from '../../../types/api';
+import {parseIPTVM3U} from './m3u';
+import {buildIPTVCatalogue, type IPTVCatalogue} from './catalogue';
+import type {IPTVChannelResult, IPTVCategory} from '../../../types/api';
 
 export type {IPTVChannelResult, IPTVCategory};
+export type {IPTVCatalogue};
 
-interface IPTVChannelRaw {
-  id: string;
-  name: string;
-  url: string;
-  logo: string;
-  country: string;
-  country_code: string;
-  languages: string[];
-  categories: string[];
-  is_playable: boolean;
-}
-
+/** A category as the source serves it: `id`, `name`, `description`. */
 interface IPTVCategoryRaw {
   id: string;
   name: string;
-  channel_count: number;
 }
+
+/** A country as the source serves it: `name`, `code`, `languages`, `flag`. */
+interface IPTVCountryRaw {
+  name: string;
+  code: string;
+}
+
+/** The playlist the catalogue is built from. */
+const CATALOGUE_PLAYLIST_PATH = '/index.category.m3u';
 
 /**
- * V21 W6 P21c — per-channel shape validation.
- * Throws `AdapterParseError` for malformed records (was silent
- * `null` skip pre-W22).
+ * The category id → name map.
+ *
+ * A MENU, not a record: a row that cannot be drawn (no id, no name) is
+ * dropped and the rest of the menu survives. The old adapter's strict
+ * per-record convertor rejected the WHOLE batch for one bad row, which
+ * voided every category because the source happened to serve one.
  */
-function parseRawIPTVChannel(
-  raw: unknown,
-  path: string,
-): IPTVChannelResult {
-  if (typeof raw !== 'object' || raw === null) {
-    throw new AdapterParseError('iptv', path, 'expected channel object');
-  }
-  const c = raw as Partial<IPTVChannelRaw>;
-  if (typeof c.id !== 'string' || c.id.length === 0) {
-    throw new AdapterParseError(
-      'iptv',
-      `${path}.id`,
-      'expected non-empty string',
-    );
-  }
-  if (typeof c.name !== 'string') {
-    throw new AdapterParseError(
-      'iptv',
-      `${path}.name`,
-      'expected string',
-    );
-  }
-  if (typeof c.url !== 'string' || c.url.length === 0) {
-    throw new AdapterParseError(
-      'iptv',
-      `${path}.url`,
-      'expected non-empty stream url',
-    );
-  }
-  return {
-    id: c.id,
-    name: c.name,
-    url: c.url,
-    image: c.logo || '',
-    country: c.country || '',
-    countryCode: c.country_code || '',
-    language: c.languages?.[0] || '',
-    category: c.categories?.[0] || '',
-    isPlayable: c.is_playable !== false,
-  };
-}
-
-/**
- * V21 W6 P21c — thin wrapper for the V18 convertor name.
- * Pre-W22 returned `null` for malformed / undefined input and
- * the caller filtered it out. Now throws `AdapterParseError`.
- * The wrapper keeps the convertor-name `channelResultFromRaw`
- * exported for any consumer that imports it by name.
- */
-export function channelResultFromRaw(
-  raw: unknown,
-  path: string = 'channel',
-): IPTVChannelResult {
-  return parseRawIPTVChannel(raw, path);
-}
-
-export function channelResultsFromRaw(
-  raw: unknown,
-): IPTVChannelResult[] {
-  if (raw === undefined || raw === null) return [];
+export function categoryNameMapFromRaw(raw: unknown): Map<string, string> {
+  if (raw === undefined || raw === null) return new Map();
   if (!Array.isArray(raw)) {
-    throw new AdapterParseError(
-      'iptv',
-      'envelope',
-      'expected array of channels',
-    );
+    throw new AdapterParseError('iptv', 'categories', 'expected array of categories');
   }
-  return raw.map((c, i) => parseRawIPTVChannel(c, `channels[${i}]`));
+  const map = new Map<string, string>();
+  for (const row of raw as Partial<IPTVCategoryRaw>[]) {
+    if (typeof row?.id !== 'string' || row.id.length === 0) continue;
+    if (typeof row.name !== 'string' || row.name.length === 0) continue;
+    map.set(row.id.toLowerCase(), row.name);
+  }
+  return map;
 }
 
 /**
- * V21 W6 P21c — per-category shape validation.
+ * The country code → name map.
+ *
+ * Also a menu: a row without a code or without a name is dropped.
  */
-function parseRawIPTVCategory(
-  raw: unknown,
-  path: string,
-): IPTVCategory {
-  if (typeof raw !== 'object' || raw === null) {
-    throw new AdapterParseError('iptv', path, 'expected category object');
-  }
-  const c = raw as Partial<IPTVCategoryRaw>;
-  if (typeof c.id !== 'string' || c.id.length === 0) {
-    throw new AdapterParseError(
-      'iptv',
-      `${path}.id`,
-      'expected non-empty string',
-    );
-  }
-  if (typeof c.name !== 'string') {
-    throw new AdapterParseError(
-      'iptv',
-      `${path}.name`,
-      'expected string',
-    );
-  }
-  if (typeof c.channel_count !== 'number' || c.channel_count < 0) {
-    throw new AdapterParseError(
-      'iptv',
-      `${path}.channel_count`,
-      `expected non-negative number, got ${c.channel_count}`,
-    );
-  }
-  return {id: c.id, name: c.name, channelCount: c.channel_count};
-}
-
-/**
- * V21 W6 P21c — thin wrapper for the V18 convertor name.
- */
-export function categoryResultFromRaw(
-  raw: unknown,
-  path: string = 'category',
-): IPTVCategory {
-  return parseRawIPTVCategory(raw, path);
-}
-
-function categoryResultsFromRaw(raw: unknown): IPTVCategory[] {
-  if (raw === undefined || raw === null) return [];
+export function countryNameMapFromRaw(raw: unknown): Map<string, string> {
+  if (raw === undefined || raw === null) return new Map();
   if (!Array.isArray(raw)) {
-    throw new AdapterParseError(
-      'iptv',
-      'envelope',
-      'expected array of categories',
-    );
+    throw new AdapterParseError('iptv', 'countries', 'expected array of countries');
   }
-  return raw.map((c, i) => parseRawIPTVCategory(c, `categories[${i}]`));
-}
-
-export async function getAllIPTVChannels(
-  options?: ApiSearchOptions,
-  signal?: AbortSignal,
-): Promise<IPTVChannelResult[]> {
-  const raw = await apiFetch<IPTVChannelRaw[]>({
-    config: API_CONFIG.iptv,
-    path: '/channels.json',
-    signal,
-  });
-  const all = channelResultsFromRaw(raw);
-  // In-memory pagination (the API returns the full list).
-  const limit = options?.limit ?? 50;
-  return all.slice(0, limit);
-}
-
-export async function searchIPTVChannels(
-  query: string,
-  options?: ApiSearchOptions,
-  signal?: AbortSignal,
-): Promise<IPTVChannelResult[]> {
-  const all = await getAllIPTVChannels({...options, limit: 500}, signal);
-  const q = query.toLowerCase();
-  return all.filter(
-    c =>
-      c.name.toLowerCase().includes(q) ||
-      c.country.toLowerCase().includes(q) ||
-      c.category.toLowerCase().includes(q),
-  );
-}
-
-export async function getChannelsByCountry(
-  countryCode: string,
-  options?: ApiSearchOptions,
-  signal?: AbortSignal,
-): Promise<IPTVChannelResult[]> {
-  const all = await getAllIPTVChannels({...options, limit: 500}, signal);
-  return all.filter(
-    c => c.countryCode.toUpperCase() === countryCode.toUpperCase(),
-  );
-}
-
-export async function getChannelsByCategory(
-  category: string,
-  options?: ApiSearchOptions,
-  signal?: AbortSignal,
-): Promise<IPTVChannelResult[]> {
-  const all = await getAllIPTVChannels({...options, limit: 500}, signal);
-  return all.filter(
-    c => c.category.toLowerCase() === category.toLowerCase(),
-  );
-}
-
-export async function getIPTVCategories(
-  signal?: AbortSignal,
-): Promise<IPTVCategory[]> {
-  const raw = await apiFetch<IPTVCategoryRaw[]>({
-    config: API_CONFIG.iptv,
-    path: '/categories.json',
-    signal,
-  });
-  return categoryResultsFromRaw(raw);
+  const map = new Map<string, string>();
+  for (const row of raw as Partial<IPTVCountryRaw>[]) {
+    if (typeof row?.code !== 'string' || row.code.length === 0) continue;
+    if (typeof row.name !== 'string' || row.name.length === 0) continue;
+    map.set(row.code.toLowerCase(), row.name);
+  }
+  return map;
 }
 
 /**
- * Get full channel details. Returns `null` on a not-found
- * (channel id doesn't match any entry); transport failures
- * are swallowed, wire-shape failures propagate.
+ * The whole channel directory, as the app understands it.
+ *
+ * One call, one query key, one download. The three requests go out
+ * together: the playlist carries the channels, and the two tiny JSON maps
+ * turn the playlist's ids into the words the app shows ("News",
+ * "United States").
+ *
+ * @param signal AbortSignal — TanStack Query cancels a stale catalogue
+ *   fetch on unmount.
  */
-export async function getIPTVChannelById(
-  id: string,
+export async function getIPTVCatalogue(
   signal?: AbortSignal,
-): Promise<IPTVChannelResult | null> {
-  try {
-    const all = await getAllIPTVChannels({limit: 1000}, signal);
-    return all.find(c => c.id === id) ?? null;
-  } catch (e) {
-    // V21 W6 P21c: transport failures swallowed, shape
-    // failures propagate so the caller can distinguish "server
-    // down" from "server returned garbage".
-    if (e instanceof AdapterParseError) throw e;
-    return null;
-  }
+): Promise<IPTVCatalogue> {
+  const [playlist, categories, countries] = await Promise.all([
+    apiFetch<string>({
+      config: API_CONFIG.iptvPlaylist,
+      path: CATALOGUE_PLAYLIST_PATH,
+      // The playlist is not JSON. Without this the client would try to
+      // parse it, and the `Accept` header would claim JSON to a server
+      // that is handing over a playlist.
+      headers: {Accept: 'audio/x-mpegurl, text/plain, */*'},
+      responseType: 'text',
+      signal,
+    }),
+    apiFetch<IPTVCategoryRaw[]>({
+      config: API_CONFIG.iptv,
+      path: '/categories.json',
+      signal,
+    }),
+    apiFetch<IPTVCountryRaw[]>({
+      config: API_CONFIG.iptv,
+      path: '/countries.json',
+      signal,
+    }),
+  ]);
+
+  const entries = parseIPTVM3U(playlist ?? '');
+  return buildIPTVCatalogue(
+    entries,
+    categoryNameMapFromRaw(categories),
+    countryNameMapFromRaw(countries),
+  );
 }
 
 // V21 W6 P21 (T21.04): documented retries for TanStack Query.

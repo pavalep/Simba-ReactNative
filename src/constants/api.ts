@@ -28,7 +28,20 @@ export const API_CONFIG = {
   },
   iptv: {
     baseUrl: 'https://iptv-org.github.io/api',
-    m3uBaseUrl: 'https://iptv-org.github.io/iptv',
+  },
+  // The playlist host — the M3U the source publishes FOR PLAYERS.
+  //
+  // This is the catalogue the app reads: one file in which every entry
+  // carries the id, the logo, the category AND the stream URL. The JSON
+  // API above has no stream URL at all (measured 2026-11-17: 31,843
+  // records, 0 occurrences of `url`), which is why Live TV could never
+  // render a channel from it.
+  //
+  // The playlist is 2.8 MB and GitHub Pages serves it UNCOMPRESSED, so
+  // the 10 s client default can abort a cold fetch on a slow link.
+  iptvPlaylist: {
+    baseUrl: 'https://iptv-org.github.io/iptv',
+    timeoutMs: 30_000,
   },
   jamendo: {
     baseUrl: 'https://api.jamendo.com/v3.0',

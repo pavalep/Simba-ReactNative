@@ -47,6 +47,7 @@ import {useKeyboard} from '../../../hooks/useKeyboard';
 import {ChannelCard, toRow} from './ChannelCard';
 import {FilterSheet} from '../../../components/sheets/FilterSheet/FilterSheet';
 import {BrowseFooter} from '../../_shared/BrowseListFooter';
+import {BrowseLoadingState} from '../../_shared/BrowseLoadingState';
 import {spacing} from '../../../theme/tokens';
 import type {
   ActiveFilterChipsProps,
@@ -58,7 +59,7 @@ type Props = RootStackScreenProps<'LiveTVScreen'>;
 // ─── Active-filter chip row ───────────────────────────────────────────
 
 const ActiveFilterChips: React.FC<ActiveFilterChipsProps> = React.memo(
-  ({filters, onClear}) => {
+  ({filters, label, onClear}) => {
     const {colors} = useTheme();
     if (!filters.category) return null;
     return (
@@ -67,7 +68,7 @@ const ActiveFilterChips: React.FC<ActiveFilterChipsProps> = React.memo(
           activeOpacity={0.8}
           onPress={() => onClear('category')}
           accessibilityRole="button"
-          accessibilityLabel={`Clear ${filters.category} filter`}
+          accessibilityLabel={`Clear ${label} filter`}
           style={[
             styles.chip,
             {
@@ -81,7 +82,7 @@ const ActiveFilterChips: React.FC<ActiveFilterChipsProps> = React.memo(
           <AppText
             variant="caption"
             style={[styles.chipText, {color: colors.text.inverse}]}>
-            {filters.category}
+            {label}
           </AppText>
           <SvgIcon
             name="close"
@@ -127,6 +128,7 @@ export const LiveTVScreenNew: React.FC<Props> = ({navigation, route}) => {
     setFilter,
     resetFilters,
     activeFilterCount,
+    categoryName,
     searchQuery,
     setSearchQuery,
     setSearchTerm,
@@ -327,24 +329,33 @@ export const LiveTVScreenNew: React.FC<Props> = ({navigation, route}) => {
   );
 
   // ── Content states ──
-  let content: React.ReactNode;
-  if (!hasLoaded && isLoading) {
-    content = (
-      <Placeholder
-        variant="loading"
-        anchor="top-third"
-        title="Loading channels…"
-      />
-    );
-  } else if (error && rows.length === 0) {
-    // The house error card, with its OWN retry button.
-    //
-    // It used to be a `Placeholder` whose message said "Use Retry at the
-    // bottom of the screen to try again." — there is no bottom retry —
-    // and the branch was unreachable besides: `hasLoaded` was true when
-    // the first page failed, so a page-1 failure fell through every
-    // branch and rendered a BLANK LIST.
-    content = (
+  //
+  // The list is ALWAYS mounted and the states live INSIDE it — the way
+  // Music, Movies and Podcasts do it. It used to be REPLACED by the
+  // state, which meant there was no list, and so no pull-to-refresh,
+  // while the first page was loading — and none after a failed first
+  // load either. The gesture the user reaches for was not there.
+  const listState: 'loading' | 'error' | 'empty' | 'ready' =
+    !hasLoaded && isLoading
+      ? 'loading'
+      : !!error && rows.length === 0
+        ? 'error'
+        : rows.length === 0
+          ? 'empty'
+          : 'ready';
+
+  const listEmptyState =
+    listState === 'loading' ? (
+      // The browse family's ONE loading component.
+      <BrowseLoadingState label="Loading channels…" />
+    ) : listState === 'error' ? (
+      // The house error card, with its OWN retry button.
+      //
+      // It used to be a `Placeholder` whose message said "Use Retry at the
+      // bottom of the screen to try again." — there is no bottom retry —
+      // and the branch was unreachable besides: `hasLoaded` was true when
+      // the first page failed, so a page-1 failure fell through every
+      // branch and rendered a BLANK LIST.
       <ErrorState
         title={isOnline ? 'Could not load channels' : "You're offline"}
         message={
@@ -355,9 +366,7 @@ export const LiveTVScreenNew: React.FC<Props> = ({navigation, route}) => {
         errorDetail={error ?? undefined}
         onRetry={retry}
       />
-    );
-  } else if (hasLoaded && !error && rows.length === 0) {
-    content = (
+    ) : listState === 'empty' ? (
       <Placeholder
         variant="empty"
         anchor="top-third"
@@ -370,51 +379,59 @@ export const LiveTVScreenNew: React.FC<Props> = ({navigation, route}) => {
               : 'No channels found.'
         }
       />
-    );
-  } else {
-    content = (
-      <FlatList
-        data={rows}
-        keyExtractor={item => item.id}
-        renderItem={({item}) => (
-          <ChannelCard
-            row={item}
-            isFavorite={isFavoriteId(item.id)}
-            onPress={handleChannelPress}
-            onLongPress={handleLongPress}
-          />
-        )}
-        contentContainerStyle={[
-          styles.listContent,
-          {paddingBottom: bottomChromeInset + FAB_SIZE + spacing.md},
-        ]}
-        showsVerticalScrollIndicator={false}
-        ItemSeparatorComponent={ItemSeparator}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor={colors.accent.gold}
-            colors={[colors.accent.gold]}
-          />
-        }
-        onEndReached={() => hasMore && loadMore()}
-        onEndReachedThreshold={0.4}
-        ListFooterComponent={
-          <BrowseFooter
-            isLoadingMore={isLoadingMore}
-            hasLoaded={hasLoaded}
-            error={error}
-            reachedEnd={!hasMore}
-            shown={rows.length}
-            onLoadMore={loadMore}
-          />
-        }
-        windowSize={5}
-        maxToRenderPerBatch={10}
-      />
-    );
-  }
+    ) : null;
+
+  const content = (
+    <FlatList
+      testID="section-LiveTVScreen-list"
+      data={rows}
+      keyExtractor={item => item.id}
+      renderItem={({item}) => (
+        <ChannelCard
+          row={item}
+          isFavorite={isFavoriteId(item.id)}
+          onPress={handleChannelPress}
+          onLongPress={handleLongPress}
+        />
+      )}
+      contentContainerStyle={[
+        styles.listContent,
+        {paddingBottom: bottomChromeInset + FAB_SIZE + spacing.md},
+        // The state slot fills the viewport, so the error card and the
+        // empty state have real height to anchor against.
+        listState === 'ready' ? null : styles.listSlotGrow,
+      ]}
+      showsVerticalScrollIndicator={false}
+      ItemSeparatorComponent={ItemSeparator}
+      ListEmptyComponent={listEmptyState}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
+          tintColor={colors.accent.gold}
+          colors={[colors.accent.gold]}
+        />
+      }
+      onEndReached={() => hasMore && loadMore()}
+      onEndReachedThreshold={0.4}
+      ListFooterComponent={
+        <BrowseFooter
+          isLoadingMore={isLoadingMore}
+          hasLoaded={hasLoaded}
+          // The catalogue is already IN MEMORY — there is no next page to
+          // fail, so the footer's "couldn't load more" branch would be
+          // a lie here. The failure belongs to the error card above,
+          // which owns its own Retry.
+          error={null}
+          reachedEnd={!hasMore}
+          shown={rows.length}
+          onLoadMore={loadMore}
+        />
+      }
+      windowSize={5}
+      maxToRenderPerBatch={10}
+    />
+  );
 
   return (
     <View
@@ -448,6 +465,7 @@ export const LiveTVScreenNew: React.FC<Props> = ({navigation, route}) => {
 
       <ActiveFilterChips
         filters={filters}
+        label={categoryName}
         onClear={handleClearFilter}
       />
 
@@ -469,9 +487,15 @@ export const LiveTVScreenNew: React.FC<Props> = ({navigation, route}) => {
           {
             id: 'category',
             title: 'Category',
+            // The row's KEY is the category's ID — the source's own slug,
+            // the same thing the deep link carries and the same thing the
+            // channel's own group-title is. The label is the NAME. The
+            // filter used to be keyed by the name, so a deep link's id
+            // had to be translated into a name before it could match
+            // anything.
             rows:
               tagsLoaded
-                ? tags.categories.map(c => ({key: c.name, label: c.name}))
+                ? tags.categories.map(c => ({key: c.id, label: c.name}))
                 : [],
           },
         ]}

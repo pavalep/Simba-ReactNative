@@ -11,7 +11,7 @@ import type {SectionBrowseConfig, SectionRenderContext} from '../types';
 import {ListStates} from './ListStates';
 import {PodcastRow} from './PodcastRow';
 import {PodcastsDataProvider, usePodcastsData} from './PodcastsDataProvider';
-import {PodcastsFooter} from './PodcastsFooter';
+import {BrowseFooter} from '../../_shared/BrowseListFooter';
 import {PodcastsOverlays} from './PodcastsOverlays';
 
 interface PodcastsContentProps {
@@ -140,12 +140,16 @@ export const PodcastsContent: React.FC<PodcastsContentProps> = ({
           )
         }
         ListFooterComponent={
-          <PodcastsFooter
+          <BrowseFooter
             isLoadingMore={isLoadingMore}
             hasLoaded={hasLoaded}
-            pageError={pageError}
+            // The LOAD-MORE error, not the list's error: a first-load
+            // failure is the error card's business, and the footer saying
+            // it too announced the same failure twice — and wrongly
+            // ("Couldn't load MORE" for a load-more that never started).
+            error={pageError}
             reachedEnd={reachedEnd}
-            hasItems={items.length > 0}
+            shown={items.length}
             onLoadMore={() => loadMore()}
           />
         }

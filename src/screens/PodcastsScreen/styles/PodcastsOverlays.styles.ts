@@ -1,11 +1,13 @@
 // ─── Podcasts — overlay pill styles ───────────────────────────────────
 // Floating status pills rendered by components/PodcastsOverlays.
+//
+// The pill's GEOMETRY belongs to the shared loading state
+// (`screens/_shared/BrowseLoadingState.tsx`) — this file owns only the
+// OVERLAY's own box: the layer that floats above the list.
 
 import {StyleSheet} from 'react-native';
-import {spacing, radius} from '../../../theme/tokens';
-import type {ColorTokens} from '../../../theme/tokens';
 
-export const createPodcastsOverlaysStyles = (colors: ColorTokens) =>
+export const createPodcastsOverlaysStyles = () =>
   StyleSheet.create({
     centerLoader: {
       position: 'absolute',
@@ -14,48 +16,11 @@ export const createPodcastsOverlaysStyles = (colors: ColorTokens) =>
       left: 0,
       right: 0,
       alignItems: 'center',
-      // Anchor the pill at ~20% from the top of the list area so it reads
-      // as a status pill, not a splash-screen placeholder.
+      // The shared loading state anchors its own pill at ~20 % from the
+      // top of the area it is given, so it reads as a status pill and not
+      // as a splash-screen placeholder. This layer is only the box it
+      // floats in.
       justifyContent: 'flex-start',
-      paddingTop: '20%',
       zIndex: 10,
-    },
-    centerLoaderPill: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.sm,
-      borderRadius: radius.full,
-      paddingHorizontal: spacing.md,
-      paddingVertical: spacing.sm,
-      backgroundColor: colors.background.elevated,
-    },
-    centerLoaderText: {
-      opacity: 0.85,
-    },
-    refreshPillWrap: {
-      position: 'absolute',
-      top: spacing.sm,
-      left: 0,
-      right: 0,
-      alignItems: 'center',
-      zIndex: 10,
-    },
-    refreshPill: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.sm,
-      borderRadius: radius.full,
-      paddingHorizontal: spacing.md,
-      paddingVertical: spacing.sm,
-      backgroundColor: colors.background.elevated,
-      // Soft elevation so the pill reads as floating above the cards.
-      shadowColor: colors.shadow,
-      shadowOffset: {width: 0, height: 2},
-      shadowOpacity: 0.2,
-      shadowRadius: 6,
-      elevation: 4,
-    },
-    refreshPillText: {
-      opacity: 0.85,
     },
   });

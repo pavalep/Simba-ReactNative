@@ -13,10 +13,11 @@
 // source is its own `useQuery`, and TanStack owns the loading
 // / error / stale-request cancellation logic.
 
-import {useEffect, useState} from 'react';
+import {useEffect, useMemo, useState} from 'react';
 import {useApiQueries} from '../../../hooks/useApiQuery';
 import {searchAudiobooks} from '../../../infrastructure/api/librivox/adapter';
-import {searchIPTVChannels} from '../../../infrastructure/api/iptv/adapter';
+import {getIPTVCatalogue, type IPTVCatalogue} from '../../../infrastructure/api/iptv/adapter';
+import {filterIPTVChannels} from '../../../infrastructure/api/iptv/catalogue';
 import {searchJamendoTracks} from '../../../infrastructure/api/jamendo/adapter';
 import {searchInternetArchiveAudio} from '../../../infrastructure/api/internetArchive/adapter';
 import {searchAudiusTracks} from '../../../infrastructure/api/audius/adapter';
@@ -39,12 +40,22 @@ export interface AggregatedSearch {
 /**
  * How many channels one IPTV search answers with.
  *
- * The other four sources each ask their API for six. The IPTV adapter
- * filters the first 500 channels client-side and returns every match,
- * so the count is applied to the RESULT here — the one place that owns
- * it.
+ * The other four sources each ask their API for six. The IPTV source has
+ * no search endpoint — the whole directory is one catalogue, and the term
+ * is matched over it in memory — so the count is applied to the RESULT
+ * here, the one place that owns it.
  */
 const IPTV_RESULT_LIMIT = 6;
+
+/**
+ * The catalogue is 2.8 MB, so it is fetched once and kept: the query key
+ * carries NO term, and the term is matched over the cached channels.
+ *
+ * The same cache entry is the one Live TV reads (`['iptv','catalogue']`),
+ * so a user who has been to Live TV searches channels without a download.
+ */
+const IPTV_CATALOGUE_STALE_MS = 30 * 60_000;
+const IPTV_CATALOGUE_GC_MS = 60 * 60_000;
 
 /**
  * Run a debounced search across the 5 free-content APIs.
@@ -101,9 +112,10 @@ export function useAggregatedSearch(
         staleTime: 60_000,
       },
       {
-        queryKey: ['iptv', 'search', debouncedQuery, IPTV_RESULT_LIMIT] as const,
-        // IPTV-org has no search endpoint — the API returns the full
-        // channel list and it is filtered client-side.
+        queryKey: ['iptv', 'catalogue'] as const,
+        // IPTV-org has no search endpoint. The whole directory is ONE
+        // catalogue — the playlist the source publishes for players —
+        // and the term is matched over it in memory.
         //
         // 2026-11-12 (SEARCH_PAGE_REDESIGN): this used to call
         // `getAllIPTVChannels({limit: 6})`, which returns the FIRST SIX
@@ -113,17 +125,16 @@ export function useAggregatedSearch(
         // So a search for "music" answered with six unrelated TV
         // channels under a "TV" heading.
         //
-        // `searchIPTVChannels` is the adapter that does the filtering,
-        // and it existed and was unused. It filters the first 500
-        // channels by name / country / category and returns EVERY match
-        // — its own `limit` applies to the fetch, not to the result —
-        // so the result is sliced here, at the one place that owns it.
-        queryFn: () =>
-          searchIPTVChannels(debouncedQuery, {limit: IPTV_RESULT_LIMIT}).then(
-            list => list.slice(0, IPTV_RESULT_LIMIT),
-          ),
+        // 2026-11-17 (WAVE B13.1): `searchIPTVChannels` read
+        // `api/channels.json` and demanded a stream URL from every
+        // record — a field that file does not have — so the query threw
+        // for EVERY term and the "TV" group of the search page was
+        // permanently empty. It reads the catalogue now, and the same
+        // cache entry is the one Live TV reads.
+        queryFn: () => getIPTVCatalogue(),
         enabled,
-        staleTime: 60_000,
+        staleTime: IPTV_CATALOGUE_STALE_MS,
+        gcTime: IPTV_CATALOGUE_GC_MS,
       },
       {
         queryKey: ['jamendo', 'search', debouncedQuery, 6] as const,
@@ -147,7 +158,7 @@ export function useAggregatedSearch(
     ],
     combine: ([
       audiobooks,
-      iptvChannels,
+      iptvCatalogue,
       jamendoTracks,
       internetArchiveItems,
       audiusTracks,
@@ -156,20 +167,38 @@ export function useAggregatedSearch(
         podcasts: [], // Podcast Index uses SHA1 auth; excluded from raw aggregator
         radioStations: [], // Radio Browser needs name-based query; skipped here
         audiobooks: (audiobooks.data as AudiobookResult[] | undefined) ?? [],
-        iptvChannels: (iptvChannels.data as IPTVChannelResult[] | undefined) ?? [],
+        // Filled in below, from the catalogue — the term is matched over
+        // it there, where the term is in scope.
+        iptvChannels: [] as IPTVChannelResult[],
         jamendoTracks: (jamendoTracks.data as JamendoTrackResult[] | undefined) ?? [],
         internetArchiveItems:
           (internetArchiveItems.data as InternetArchiveItemResult[] | undefined) ?? [],
         audiusTracks: (audiusTracks.data as AudiusTrackResult[] | undefined) ?? [],
       },
+      // The whole catalogue, kept out of `results` so the consumer never
+      // sorts 11,543 channels to show six.
+      iptvCatalogue: (iptvCatalogue.data as IPTVCatalogue | undefined) ?? null,
       isLoading:
         audiobooks.isFetching ||
-        iptvChannels.isFetching ||
+        iptvCatalogue.isFetching ||
         jamendoTracks.isFetching ||
         internetArchiveItems.isFetching ||
         audiusTracks.isFetching,
     }),
   });
+
+  // The term is matched over the cached catalogue — the same match the
+  // Live TV screen makes, so a channel found here and a channel found
+  // there agree.
+  const iptvMatches = useMemo(
+    () =>
+      combined.iptvCatalogue
+        ? filterIPTVChannels(combined.iptvCatalogue.channels, {
+            term: debouncedQuery,
+          }).slice(0, IPTV_RESULT_LIMIT)
+        : [],
+    [combined.iptvCatalogue, debouncedQuery],
+  );
 
   // ── Trending (empty query) — real API data, no hardcoded lists (P40.7) ──
   const [trending, setTrending] = useState<JamendoTrackResult[]>([]);
@@ -197,7 +226,7 @@ export function useAggregatedSearch(
   // render). The legacy 3-tier array-by-reference check against
   // a module-level `EMPTY` is gone.
   return {
-    results: combined.results,
+    results: {...combined.results, iptvChannels: iptvMatches},
     isLoading: enabled && combined.isLoading,
     trending,
   };
