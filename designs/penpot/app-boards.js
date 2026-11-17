@@ -9,9 +9,14 @@
  *
  *    "Actually being used" is the rule: a screen is in the registry if an
  *    in-app tap can reach it, or if it is part of the auth flow. That
- *    excludes four routes which are deep-link-only (`SongScreen`,
- *    `AllVideosScreen`, `MusicDetail`, `NowPlaying`) — `NowPlaying`
- *    additionally renders `null`, so it has nothing to draw.
+ *    excludes three routes which are deep-link-only (`SongScreen`,
+ *    `AllVideosScreen`, `NowPlaying`) — `NowPlaying` additionally renders
+ *    `null`, so it has nothing to draw.
+ *
+ *    `MusicDetail` was one of the four until 2026-11-17: the Music row was
+ *    the play action, so a track had no page of its own. The owner decided
+ *    to promote it to a real detail screen, so the row now opens it and it
+ *    is in the registry like any other reachable screen.
  *
  * 2. **The connector graph** — every navigation edge, taken from the app's
  *    own source. The edges are the app's `navigate(...)` calls; the
@@ -104,6 +109,7 @@ const ROUTES = [
   {route: 'PodcastsScreen', title: 'Podcasts', group: 'Browse'},
   {route: 'PodcastDetail', title: 'Podcast', group: 'Browse'},
   {route: 'MusicScreen', title: 'Music', group: 'Browse'},
+  {route: 'MusicDetail', title: 'Track', group: 'Browse'},
   {route: 'RadioScreen', title: 'Live Radio', group: 'Browse'},
   {route: 'RadioFavoritesScreen', title: 'Radio Favourites', group: 'Browse'},
   {route: 'LiveTVScreen', title: 'Live TV', group: 'Browse'},
@@ -281,6 +287,15 @@ const EDGES = [
   {from: 'ArchiveScreen', to: 'ArchiveItemDetail', trigger: 'click', shape: 'Archive audio row', label: 'audio'},
   {from: 'RadioScreen', to: 'RadioFavoritesScreen', trigger: 'click', shape: 'RadioScreen right button', family: 'RadioScreen right', label: 'favourites'},
   {from: 'LiveTVScreen', to: 'LiveTVFavoritesScreen', trigger: 'click', shape: 'Live TV heart', label: 'favourites'},
+  // The Music row opens the TRACK'S OWN PAGE (B13-9). The row used to be the
+  // play action; it is the navigation now, and the play action lives on the
+  // detail screen.
+  //
+  // The `family` is what makes the WHOLE row the target (rule P10): the row
+  // is drawn as six shapes, and the title and the duration sit ON TOP of the
+  // card — so a connector on the card alone would be dead wherever the text
+  // is.
+  {from: 'MusicScreen', to: 'MusicDetail', trigger: 'click', shape: 'MusicScreen track 1 title', family: 'MusicScreen track 1', label: 'track'},
 
   // ── Search ──
   //

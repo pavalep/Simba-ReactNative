@@ -63,7 +63,7 @@ was decorative (folded into B13-14).
 | id | verdict | evidence | action |
 |---|---|---|---|
 | **B13-3** | **NOT-A-CODE-FIX** (design wave) | The shared `BrowseLayout` lacks `rightAction`, group-aware labels, multi-group routing and a keyboard-aware FAB. Moving Radio/Live TV as-is would **lose** the header heart, the chip × clear glyph and the keyboard-aware FAB, and would **misroute** genre/country/language into `sort`/`view`. | Carried forward — design wave (Phase 5). |
-| **B13-4** | **VALID** — but *"~90%"* is wrong | Longest-common-subsequence over the two files: **298 of 409 lines identical (73%)**; the hooks are only **27%** similar. | Phase 2 — extract the **4 identical blocks**, never merge the screens. |
+| **B13-4** | **VALID** — but *"~90%"* is wrong | Longest-common-subsequence over the two files: **298 of 409 lines identical (73%)**; the hooks are only **27%** similar. | Phase 6 — extract the **4 identical blocks**, never merge the screens. **NOT DONE**: `RadioContent.tsx` and `LiveTVContent.tsx` still each carry their own copies; the only shared pieces are `_shared/BrowseListFooter` and `_shared/BrowseLoadingState`, which were already shared before this wave. |
 | **B13-5** | **VALID** | `FilterSheet.title` is dead: 5 call sites; `FilterSheet.tsx:274` destructures it and `:365` passes `title={undefined}`. | **Fixed** — the prop is **deleted, not rendered** (no board draws a sheet heading; rendering it would make 8 boards wrong). |
 | **B13-6** | **NOT-A-CODE-FIX** (design) | The 44 dp floor is applied **nowhere**; the shared chip is **23 dp** (not 21 as carried) and the sheet chip is **32 dp**. A 44 dp chip changes the shell rhythm and 8 boards. | Carried forward — design wave (Phase 7). |
 | **B13-7** | **VALID** | The retry pill is **28 dp** (`BrowseListFooter.tsx:159-165` + caption `lineHeight` 18) against the house floor of 44 (`PlayerControl.tsx:135-136`, *"Never smaller"*). | **Fixed** — one style; the footer slot is `minHeight: 56` so nothing moves and no board draws it. |
@@ -695,5 +695,128 @@ literal, and that made jest's **hoist plugin** refuse the file: the plugin lifts
 out-of-scope variable whose name does not start with `mock` (or whose initialiser is not a
 pure literal). The fixture is named `mockTracks` for that reason — the prefix is the
 exemption, and renaming it back breaks the suite.
+
+---
+
+## 10. Phase 6 — the Music DETAIL board (the design half of B13-9)
+
+The code half landed in phase 5. The design half is this section: the track's own page is
+now a **drawn board** on the Penpot page, it is in the **route registry**, and the Music
+row **connects** to it.
+
+### 10.1 The board — `MusicDetail / light` and `MusicDetail / dark`
+
+`designs/penpot/music-radio.js` grew a `musicDetailBoard()`. It draws the app's own screen
+(`src/screens/MusicDetailScreen/components/MusicDetailScreen.tsx`), and **every number is
+read out of that file**, not eyeballed:
+
+| the thing | the app's own rule |
+|---|---|
+| the cover | `maxWidth: 300`, `aspectRatio: 1`, `borderRadius: radius.lg` (16), centred in the container's 379 dp |
+| the title | `displaySerif` — Cormorant Garamond Bold 48/56, `numberOfLines={2}` |
+| the artist | `body2` — Inter 15/22, under the title with the block's own 4 dp gap |
+| the badges | `caption` (13/18) on a `goldDim` pill, 12 dp horizontal / 4 dp vertical padding, 8 dp apart |
+| the play button | a gold pill, 12 dp of vertical padding, a 22 dp glyph and the label centred as a pair |
+| the second button | the same shape, outlined in 1.5 dp of gold, a 20 dp list glyph |
+| the section title | `displaySans` — Manrope SemiBold 22/28 |
+| the rows | `StreamingRow` — 14 dp of padding, a 44 dp thumb, 12 dp gaps, a 40 dp download disc, a 28 dp options button |
+
+The **text is measured, not guessed**: `designs/penpot/text-metrics.js` measures the app's
+own TTF files on Android's pixel grid, and the board's own `fit()` cuts a label exactly the
+way the app's `numberOfLines={1}` cuts it. Two measurements decided the layout:
+
+* the hero title **"Wish You Were Here"** measures **405.3 dp** against a 347 dp column, so
+  it wraps to **two lines** ("Wish You Were" / "Here") — and the board wraps it the same way;
+* the header's title gutter is 411 − 2 × 96 = **219 dp** and the title measures **215.2 dp**
+  in Manrope SemiBold 22 — it fits, but only just.
+
+**The board is the whole scrolling page**, not a device frame: the detail page is 1208 dp
+tall, and a board that quietly dropped the rows below the fold would be a lie. The Home
+board's full page is the same idea.
+
+**The content is the app's own, measured live on 2026-11-17** against Jamendo v3.0 with the
+app's own client id:
+
+* the track is the Music board's **first row** — id **1214935**, "Wish You Were Here" by
+  The.madpix.project, 270 s → **4:30**, album "Wish You Were Here". The Music board's list
+  is a frozen snapshot of `tags=rock&order=popularity_total`, and the live order has moved
+  since, so the board's own first row is the track the detail board draws — not whatever
+  the live page returns today;
+* the "More From The.madpix.project" rows are the app's own query —
+  `useMoreFromArtist(artist, trackId, 5)` → `searchJamendoTracks` →
+  `search=<artist>&limit=5&offset=0`, with the current track filtered out by id.
+
+### 10.2 The registry, the exclusion and the connector
+
+* `app-boards.js` gained `{route: 'MusicDetail', title: 'Track', group: 'Browse'}`.
+* `check-board-routes.js`'s `DELIBERATELY_WITHOUT_A_BOARD` lost `MusicDetail` — it is no
+  longer deep-link-only, and the gate's own doc comment says the list is a list of routes
+  that have no board **on purpose**.
+* The connector: `{from: 'MusicScreen', to: 'MusicDetail', shape: 'MusicScreen track 1
+  title', family: 'MusicScreen track 1'}`. The `family` is what makes the **whole row** the
+  target (rule P10): the row is six shapes and the title and the duration sit on top of the
+  card, so a connector on the card alone would be dead wherever the text is.
+
+### 10.3 The genre badge is DEAD for a Jamendo track — a new finding
+
+The detail screen draws a genre badge from `genreName`. The board does **not** draw one, and
+the reason is measured, not assumed:
+
+**Jamendo's v3.0 track row has no `genre_name` field at all.** The live response for the
+track carries `id`, `name`, `duration`, `artist_name`, `album_name`, `image`, `audio` — and
+the genre lives in `musicinfo.tags.genres` (`["dance", "electronic", "house"]`), which the
+app's adapter does not read. The adapter's `genreName: decodeJamendoText(t.genre_name ??
+'')` therefore yields **''**, and the screen's `genreName ? <Badge/> : null` draws nothing.
+
+So the genre badge is **dead code for every Jamendo track** — the app's only Music source.
+It would only ever draw for an Audius track, and no caller navigates to `MusicDetail` with
+`source: 'audius'` today.
+
+**This is recorded, not fixed.** The board draws what the app draws (two badges: the
+duration and the album), and the fix — the adapter reading `musicinfo.tags.genres`, which
+would need `include=musicinfo` on every track request — is a behaviour change to the music
+adapter that is outside this wave. It is carried forward below.
+
+### 10.4 A stale comment that the board pass caught
+
+The Music row's own comment said *"There is no play disc: the row IS the play action"*. The
+row stopped being the play action in phase 5, so the comment now says what the row does:
+it opens the track's own page.
+
+### 10.5 The two new media
+
+* `ph.musicCover1` — the detail cover's 300 dp picture (600 px, 2x). A Penpot board cannot
+  fetch the remote album art, so it carries the app's **own** bundled audio placeholder, the
+  same rule the Music row's thumb already follows.
+* `ico.slidersTertiary` — the streaming row's options glyph is the `sliders` file in
+  `text.tertiary` (`StreamingRow.tsx:108`), and the icon the registry already had was the
+  FAB's glyph in the **inverse** ink (it sits on the gold disc). Same file, different colour,
+  so it is a second entry in the icon registry rather than a new asset.
+
+### 10.6 The build's shape cap had no margin against the ceiling
+
+The board build ran in **30 calls** and **one of them died**: the batch that drew the two
+Movies boards crossed the endpoint's 120-second ceiling, and a call that crosses it does not
+fail alone — the renderer suspends itself and takes the rest of the run with it.
+
+`designs/build-penpot-app.js` capped a call at 240 shapes, and its comment explained why
+that was safe: *"240 shapes is ~31 s of drawing, which with the page setup and the layout
+settle leaves the call well inside the ceiling."* **That reasoning is falsified.** The
+measurement behind it is from 2026-11-10, when the page carried far fewer boards; today it
+carries 88. The same **126 shapes** took **98.7 s** in one call and crossed the ceiling in
+another, and the worst call that succeeded took **108.6 s** — so the cap left *no* margin at
+all. The shape count is not the whole story either: the cost grows with what the page
+already holds.
+
+The cap is now **80 shapes**, and the comment carries today's numbers instead of the old
+one. It does not change **what** is drawn — the same 84 boards, the same 160 connectors — only
+how many calls carry them (47 instead of 30), and that is the cheaper failure.
+
+The two Movies boards were drawn by hand-splitting that one batch into two calls (12.5 s and
+12.3 s), which is safe because a board's place on the grid comes from the batch's
+`index` plus the board's offset inside it — so the split puts each board on exactly the
+same cell.
+
+
 
 

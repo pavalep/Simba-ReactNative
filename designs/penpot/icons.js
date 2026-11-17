@@ -280,6 +280,10 @@ const ICONS = [
   // The detail header's share glyph — 18 px in `text.secondary`
   // (`PodcastDetailScreen/index.tsx:190`).
   { name: 'shareAction', file: 'ic_share.svg', size: 18, light: 'secondary', dark: 'secondary' },
+  // The streaming row's "options" glyph — 14 px in `text.tertiary`
+  // (`StreamingRow.tsx:108`). The `sliders` above is the FAB's glyph: the same
+  // file, but in the INVERSE ink because it sits on the gold disc.
+  { name: 'slidersTertiary', file: 'ic_sliders.svg', size: 14, light: 'tertiary', dark: 'tertiary' },
 ];
 
 function resolveColor(spec, theme) {

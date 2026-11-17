@@ -81,6 +81,7 @@ const {
   musicFilterBoard,
   radioScreenBoard,
   radioFilterBoard,
+  musicDetailBoard,
 } = require('./penpot/music-radio');
 const {SCREEN_W, SCREEN_H} = require('./penpot/kit');
 
@@ -376,6 +377,27 @@ for (const page of BROWSE_STATES) {
   }
 }
 
+// The Music DETAIL page — the track's own page.
+//
+// It is a board of its own and it has NO state suffix: the page has one
+// state (the loaded track), and the row that opens it is the Music screen's
+// own first row.
+//
+// The board is the WHOLE scrolling page, not a device frame: the detail
+// page is taller than the screen, and a board that quietly dropped the rows
+// below the fold would be a lie — the same reason the Home board has a full
+// page of its own.
+for (const theme of ['light', 'dark']) {
+  const drawn = musicDetailBoard(theme);
+  boards.push({
+    name: boardName('MusicDetail', theme),
+    w: drawn.width,
+    h: drawn.height,
+    fill: (theme === 'dark' ? spec.darkColors : spec.colors).background.primary,
+    shapes: drawn.shapes,
+  });
+}
+
 // Every other route — a placeholder, in the light theme. The dark variants
 // of the other screens come with their own page pass.
 //
@@ -395,6 +417,8 @@ for (const route of ROUTES) {
   if (PODCASTS_ROUTES.has(route.route)) continue;
   // Music and Radio are drawn now, on their own boards.
   if (BROWSE_ROUTES.has(route.route)) continue;
+  // The Music track's own page is drawn too, on its own board.
+  if (route.route === 'MusicDetail') continue;
   addPlaceholder(route.route, 'light');
 }
 
@@ -870,11 +894,23 @@ const BUILD_MAX_BOARDS = 8;
  * (the task timed out, and the renderer suspended itself afterwards, which
  * took the rest of the run with it).
  *
- * So the batches are capped by shape COUNT as well: 240 shapes is ~31 s of
- * drawing, which with the page setup and the layout settle leaves the call
- * well inside the ceiling.
+ * RE-MEASURED on 2026-11-17, with the page carrying 88 boards: a shape no
+ * longer costs 0.13 s. The same 126 shapes took 98.7 s in one call and
+ * crossed the 120-second ceiling in another — the cost grows with what the
+ * page ALREADY holds, so the shape count is not the whole story. The
+ * 240-shape cap therefore left NO margin against the ceiling, and a call
+ * that crosses it does not fail alone: the renderer suspends itself and
+ * takes the rest of the run with it.
+ *
+ * So the cap is 80 shapes. The worst call measured on 2026-11-17 (110
+ * shapes, 108.6 s) splits into two calls of about 55 shapes, and the whole
+ * run stays inside the ceiling. It costs more calls, and that is the
+ * cheaper failure.
+ *
+ * It does not change WHAT is drawn — the boards are the same 84 either
+ * way; only the grouping into calls changes.
  */
-const BUILD_MAX_SHAPES = 240;
+const BUILD_MAX_SHAPES = 80;
 
 /**
  * The boards, split into batches that each stay inside the endpoint's

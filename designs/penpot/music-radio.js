@@ -2,7 +2,7 @@
 /**
  * music-radio.js — the Music and Radio boards, and their filter sheets.
  *
- * FOUR BOARDS, SEPARATELY
+ * FIVE BOARDS, SEPARATELY
  * -----------------------
  * The Movies page established the pattern (2026-11-13): the page and its
  * filter are two boards of their own, in both themes. Music and Radio
@@ -12,6 +12,11 @@
  *   • "MusicScreen / light — filter"  — the page with the app's own sheet.
  *   • "RadioScreen / light — screen"  — the page as it opens.
  *   • "RadioScreen / light — filter"  — the page with the app's own sheet.
+ *
+ * And the Music screen's fifth board:
+ *
+ *   • "MusicDetail / light" — the TRACK'S OWN PAGE (B13-9). The Music row
+ *     opens it, and the play action lives there.
  *
  * WHY THE PAGES ARE DRAWN WITH ONE FILTER ACTIVE
  * ----------------------------------------------
@@ -430,8 +435,10 @@ function browseKit(themeName) {
  * makes the row its height — which is why the app's own row keeps the
  * album line.
  *
- * There is no play disc: the row IS the play action, and a second
- * affordance inside it read as a button that did nothing.
+ * There is no play disc: the row OPENS THE TRACK'S OWN PAGE, and the play
+ * action lives on that page (`MusicDetailScreen.tsx`). A row that carried
+ * both would be two actions in one target, and a second affordance inside
+ * it read as a button that did nothing.
  */
 function trackRow(S, name, o) {
   const y = o.y;
@@ -1089,16 +1096,491 @@ function radioSheetContent() {
   return {titleY, chipsTop, genreRows, dividerY, countryTitleY, height: y};
 }
 
+// ─── the Music DETAIL page ─────────────────────────────────────────────────
+
+/**
+ * THE TRACK'S OWN PAGE — the Music detail screen (B13-9).
+ *
+ * The Music row used to BE the play action, so a track had no page of its
+ * own. It does now: the row opens this page and the PLAY action lives here,
+ * where the Movie detail and the Podcast detail keep theirs.
+ *
+ * THE GRAMMAR IT FOLLOWS — the app's own screen
+ * (`src/screens/MusicDetailScreen/components/MusicDetailScreen.tsx`):
+ *
+ *   header (title + share) → the 300 dp cover → the title → the artist →
+ *   the badges → the play button → the "Add to Playlist" button →
+ *   "More From <artist>" → the streaming rows.
+ *
+ * Every number below is the app's own, read out of that file:
+ *
+ *   • the cover is `maxWidth: 300` with `aspectRatio: 1` and
+ *     `borderRadius: radius.lg` (16), centred in the container's 379 dp;
+ *   • the title is `displaySerif` — Cormorant Garamond Bold 48/56 — and
+ *     `numberOfLines={2}`;
+ *   • the artist is `body2` — Inter 15/22 — under it, with the title
+ *     block's own 4 dp gap;
+ *   • the badges are `caption` (13/18) on a `goldDim` pill with 12 dp of
+ *     horizontal and 4 dp of vertical padding, 8 dp apart;
+ *   • the play button is a gold pill with 12 dp of vertical padding and a
+ *     22 dp glyph, and the second button is the same shape outlined;
+ *   • the section title is `displaySans` — Manrope SemiBold 22/28;
+ *   • the rows are `StreamingRow` — 14 dp of padding, a 44 dp thumb, 12 dp
+ *     gaps, a 40 dp download disc and a 28 dp options button.
+ *
+ * THE BOARD IS THE WHOLE SCROLLING PAGE, not a device frame: the page is
+ * taller than the screen (the Home board's full page is the same idea), and
+ * a board that quietly dropped the rows below the fold would be a lie.
+ */
+
+/**
+ * The track the Music board's FIRST ROW shows.
+ *
+ * The Music board's list is a frozen snapshot of Jamendo's
+ * `tags=rock&order=popularity_total` page, fetched on 2026-11-16. This is
+ * that page's first track, re-fetched on 2026-11-17: id **1214935**,
+ * "Wish You Were Here" by The.madpix.project, 270 s, album "Wish You Were
+ * Here".
+ *
+ * `genre` is EMPTY ON PURPOSE. Jamendo's v3.0 track row has **no**
+ * `genre_name` field — the genre lives in `musicinfo.tags.genres`, which
+ * the app's adapter does not read — so the adapter's `t.genre_name ?? ''`
+ * yields '' and the detail screen's genre badge is NOT drawn for a Jamendo
+ * track. The board draws the badges the app actually draws.
+ */
+const DETAIL_TRACK = {
+  title: 'Wish You Were Here',
+  artist: 'The.madpix.project',
+  album: 'Wish You Were Here',
+  duration: '4:30',
+  genre: '',
+  artwork: 'ph.musicCover1',
+};
+
+/**
+ * The "More From <artist>" rows.
+ *
+ * The section is `useMoreFromArtist(artistName, trackId, 5)`, whose query is
+ * the app's own `searchJamendoTracks(artistName, {limit: 5})` — so the
+ * request is `search=<artist>&limit=5&offset=0`, and the current track is
+ * then filtered OUT by id. Measured on 2026-11-17.
+ */
+const DETAIL_ROWS = [
+  {title: 'SOS - (Ft. The Madpix Project)', album: 'SOS - (Ft. The Madpix Project)', artwork: 'ph.musicRow2'},
+  {title: 'La nuit - (Ft. The Madpix Project)', album: 'La nuit - (Ft. The Madpix Project)', artwork: 'ph.musicRow3'},
+  {title: 'Les oies sauvages - (Ft. The Madpix Project)', album: 'Les oies sauvages - (Ft. The Madpix Project)', artwork: 'ph.musicRow4'},
+  {title: 'Greenland', album: 'Histoire Naturelle', artwork: 'ph.musicRow5'},
+  {title: 'Leave - (Ft. The.madpix.project)', album: 'The riverside - (Deluxe Edition)', artwork: 'ph.musicRow6'},
+];
+
+/** The detail page's own metrics, from the app's stylesheet. */
+const DETAIL = {
+  /** `coverWrap` — `maxWidth: 300`, `aspectRatio: 1`. */
+  cover: 300,
+  coverRadius: radius.lg, // 16
+  coverMargin: spacing.lg, // 16
+  /** The title — `displaySerif`. */
+  titleSize: 48,
+  titleLine: 56,
+  /** The artist — `body2`. */
+  artistSize: 15,
+  artistLine: 22,
+  /** The title block's own gap. */
+  titleGap: spacing.xs, // 4
+  /** The badges — `caption` on a `goldDim` pill. */
+  badgeSize: 13,
+  badgeLine: 18,
+  badgePadX: spacing.md, // 12
+  badgePadY: spacing.xs, // 4
+  badgeGap: spacing.sm, // 8
+  /** The action buttons — `variant="button"`. */
+  buttonSize: 15,
+  buttonLine: 22,
+  buttonPadY: spacing.md, // 12
+  buttonGap: spacing.md, // 12
+  playIcon: 22,
+  addIcon: 20,
+  /** The section title — `displaySans`. */
+  sectionSize: 22,
+  sectionLine: 28,
+  /** The streaming row (`StreamingRow.tsx:159-194`). */
+  row: {
+    pad: 14,
+    art: 44,
+    gap: spacing.md, // 12
+    download: 40,
+    more: 28,
+    radius: radius.md, // 12
+    titleSize: 15,
+    titleLine: 22,
+    metaSize: 13,
+    metaLine: 18,
+    downloadGlyph: 16,
+    moreGlyph: 14,
+    marginBottom: spacing.sm, // 8
+  },
+  /** The list's own bottom padding (`listContent`). */
+  listPadBottom: spacing.xxxl, // 32
+};
+
+/**
+ * Cut a label to a width, the way the app's `numberOfLines={1}` does.
+ *
+ * The width is measured from the app's own font files on Android's pixel
+ * grid (`text-metrics.js`), so the cut is the cut the DEVICE makes.
+ */
+function fit(text, maxW, family, size) {
+  const str = String(text);
+  if (measure(str, {family, size}) <= maxW) return str;
+  const chars = Array.from(str);
+  let out = '';
+  for (const ch of chars) {
+    if (measure(out + ch + '…', {family, size}) > maxW) break;
+    out += ch;
+  }
+  return out.trimEnd() + '…';
+}
+
+/**
+ * Wrap a title to a column, the way the app's `numberOfLines={2}` does.
+ *
+ * The break is at a space, and the measure is the same one the device uses.
+ */
+function wrapTitle(text, maxW, family, size, maxLines) {
+  const words = String(text).split(' ');
+  const lines = [];
+  let line = '';
+  for (const word of words) {
+    const candidate = line ? line + ' ' + word : word;
+    if (measure(candidate, {family, size}) <= maxW) {
+      line = candidate;
+      continue;
+    }
+    if (line) lines.push(line);
+    line = word;
+    if (lines.length === maxLines) return lines.slice(0, maxLines);
+  }
+  if (line) lines.push(line);
+  return lines.slice(0, maxLines);
+}
+
+/**
+ * One "More From" row (`StreamingRow.tsx`).
+ *
+ * The card is 72 dp tall — 14 dp of padding, the 44 dp thumb, 14 dp of
+ * padding — and the text column is `flex: 1`, so its width is what is left
+ * after the thumb, the 40 dp download disc, the 28 dp options button and
+ * the three 12 dp gaps.
+ */
+function streamingRow(S, name, row, y) {
+  const R = DETAIL.row;
+  const x = GUTTER;
+  const w = SCREEN_W - GUTTER * 2; // 379
+  const artX = x + R.pad;
+  const artY = y + R.pad;
+  const infoX = artX + R.art + R.gap;
+  const infoW = w - R.pad * 2 - R.art - R.download - R.more - R.gap * 3;
+  const downloadX = infoX + infoW + R.gap;
+  const moreX = downloadX + R.download + R.gap;
+  const cardH = R.pad * 2 + R.art;
+
+  // The text column is `alignItems: 'center'` in the card, so it is centred
+  // against the 44 dp thumb.
+  const textH = R.titleLine + R.metaLine;
+  const textY = y + R.pad + (R.art - textH) / 2;
+
+  return [
+    S.k.rect(name + ' card', {
+      x,
+      y,
+      w,
+      h: cardH,
+      radius: R.radius,
+      fill: S.c.background.elevated,
+      stroke: S.c.border.subtle,
+      strokeWidth: 1,
+    }),
+    S.k.image(name + ' artwork', {
+      x: artX,
+      y: artY,
+      w: R.art,
+      h: R.art,
+      radius: radius.sm,
+      media: row.artwork,
+    }),
+    S.k.text(name + ' title', fit(row.title, infoW, 'Inter', R.titleSize), {
+      x: infoX,
+      y: textY,
+      family: 'Inter',
+      weight: 400,
+      size: R.titleSize,
+      lineHeight: R.titleLine,
+      fill: S.c.text.primary,
+    }),
+    S.k.text(name + ' album', fit(row.album, infoW, 'Inter', R.metaSize), {
+      x: infoX,
+      y: textY + R.titleLine,
+      family: 'Inter',
+      weight: 400,
+      size: R.metaSize,
+      lineHeight: R.metaLine,
+      fill: S.c.text.tertiary,
+    }),
+    // The download disc — the app's 40 dp circle with a hairline border.
+    S.k.ellipse(name + ' download disc', {
+      x: downloadX,
+      y: y + R.pad + (R.art - R.download) / 2,
+      w: R.download,
+      h: R.download,
+      fill: S.c.background.elevated,
+      stroke: S.c.border.subtle,
+      strokeWidth: 1,
+    }),
+    S.k.image(name + ' download glyph', {
+      x: downloadX + (R.download - R.downloadGlyph) / 2,
+      y: y + R.pad + (R.art - R.downloadGlyph) / 2,
+      w: R.downloadGlyph,
+      h: R.downloadGlyph,
+      media: S.iconKey('download'),
+    }),
+    // The options button — the sliders glyph in `text.tertiary`.
+    S.k.image(name + ' more glyph', {
+      x: moreX + (R.more - R.moreGlyph) / 2,
+      y: y + R.pad + (R.art - R.moreGlyph) / 2,
+      w: R.moreGlyph,
+      h: R.moreGlyph,
+      media: S.iconKey('slidersTertiary'),
+    }),
+  ];
+}
+
+/** THE MUSIC DETAIL BOARD — the track's own page. */
+function musicDetailBoard(themeName) {
+  const S = browseKit(themeName);
+  const shapes = [];
+
+  // The container's own gutter (`ScreenContainer`'s `paddingHorizontal: 16`),
+  // and the hero's own 16 dp inside it — so the text column starts at 32.
+  const contentW = SCREEN_W - GUTTER * 2; // 379
+  const columnX = GUTTER + spacing.lg; // 32
+  const columnW = contentW - spacing.lg * 2; // 347
+
+  // ── the header ─────────────────────────────────────────────────────────
+  // The track's name, and the share action on the right — the Movie detail's
+  // treatment.
+  shapes.push(
+    ...shiftDown(
+      S.P.header('MusicDetail', DETAIL_TRACK.title, {rightIcon: 'shareAction'}),
+      STATUS_INSET,
+    ),
+  );
+
+  let y = STATUS_INSET + HEADER_H;
+
+  // ── the cover ──────────────────────────────────────────────────────────
+  y += DETAIL.coverMargin;
+  shapes.push(
+    S.k.image('MusicDetail hero cover', {
+      x: GUTTER + (contentW - DETAIL.cover) / 2,
+      y,
+      w: DETAIL.cover,
+      h: DETAIL.cover,
+      radius: DETAIL.coverRadius,
+      media: DETAIL_TRACK.artwork,
+    }),
+  );
+  y += DETAIL.cover + DETAIL.coverMargin;
+
+  // ── the title and the artist ───────────────────────────────────────────
+  const titleLines = wrapTitle(
+    DETAIL_TRACK.title,
+    columnW,
+    'Cormorant Garamond',
+    DETAIL.titleSize,
+    2,
+  );
+  shapes.push(
+    S.k.text('MusicDetail hero title', titleLines.join('\n'), {
+      x: columnX,
+      y,
+      family: 'Cormorant Garamond',
+      weight: 700,
+      size: DETAIL.titleSize,
+      lineHeight: DETAIL.titleLine,
+      fill: S.c.text.primary,
+    }),
+  );
+  y += DETAIL.titleLine * titleLines.length + DETAIL.titleGap;
+
+  shapes.push(
+    S.k.text('MusicDetail hero artist', DETAIL_TRACK.artist, {
+      x: columnX,
+      y,
+      family: 'Inter',
+      weight: 400,
+      size: DETAIL.artistSize,
+      lineHeight: DETAIL.artistLine,
+      fill: S.c.text.secondary,
+    }),
+  );
+  y += DETAIL.artistLine;
+
+  // ── the badges ─────────────────────────────────────────────────────────
+  y += spacing.md;
+  const badges = [DETAIL_TRACK.duration, DETAIL_TRACK.genre, DETAIL_TRACK.album]
+    .filter(Boolean);
+  const badgeH = DETAIL.badgeLine + DETAIL.badgePadY * 2;
+  let bx = columnX;
+  badges.forEach((label, i) => {
+    const w =
+      measure(label, {family: 'Inter', size: DETAIL.badgeSize}) +
+      DETAIL.badgePadX * 2;
+    shapes.push(
+      S.k.rect('MusicDetail hero badge ' + (i + 1), {
+        x: bx,
+        y,
+        w,
+        h: badgeH,
+        radius: radius.pill,
+        fill: S.c.accent.goldDim,
+      }),
+      S.k.text('MusicDetail hero badge text ' + (i + 1), label, {
+        x: bx + DETAIL.badgePadX,
+        y: y + DETAIL.badgePadY,
+        family: 'Inter',
+        weight: 400,
+        size: DETAIL.badgeSize,
+        lineHeight: DETAIL.badgeLine,
+        fill: S.c.accent.gold,
+      }),
+    );
+    bx += w + DETAIL.badgeGap;
+  });
+  y += badgeH;
+
+  // ── the actions ────────────────────────────────────────────────────────
+  y += spacing.xl;
+  const actionH = DETAIL.buttonLine + DETAIL.buttonPadY * 2;
+
+  // The play button — the app's GOLD pill with the play glyph and the label
+  // centred as a pair.
+  const playLabel = 'Play';
+  const playLabelW = measure(playLabel, {
+    family: 'Inter SemiBold',
+    size: DETAIL.buttonSize,
+  });
+  const playContentW = DETAIL.playIcon + spacing.sm + playLabelW;
+  const playContentX = columnX + (columnW - playContentW) / 2;
+  shapes.push(
+    S.k.rect('MusicDetail play button', {
+      x: columnX,
+      y,
+      w: columnW,
+      h: actionH,
+      radius: radius.md,
+      fill: S.c.accent.gold,
+    }),
+    S.k.image('MusicDetail play button glyph', {
+      x: playContentX,
+      y: y + DETAIL.buttonPadY,
+      w: DETAIL.playIcon,
+      h: DETAIL.playIcon,
+      media: S.iconKey('play'),
+    }),
+    S.k.text('MusicDetail play button label', playLabel, {
+      x: playContentX + DETAIL.playIcon + spacing.sm,
+      y: y + DETAIL.buttonPadY,
+      family: 'Inter SemiBold',
+      weight: 600,
+      size: DETAIL.buttonSize,
+      lineHeight: DETAIL.buttonLine,
+      fill: S.c.text.inverse,
+    }),
+  );
+  y += actionH + DETAIL.buttonGap;
+
+  // The second button — the same shape, outlined, with the list glyph.
+  const addLabel = 'Add to Playlist';
+  const addLabelW = measure(addLabel, {
+    family: 'Inter SemiBold',
+    size: DETAIL.buttonSize,
+  });
+  const addContentW = DETAIL.addIcon + spacing.sm + addLabelW;
+  const addContentX = columnX + (columnW - addContentW) / 2;
+  shapes.push(
+    S.k.rect('MusicDetail add to playlist button', {
+      x: columnX,
+      y,
+      w: columnW,
+      h: actionH,
+      radius: radius.md,
+      fill: null,
+      stroke: S.c.accent.gold,
+      strokeWidth: 1.5,
+    }),
+    S.k.image('MusicDetail add to playlist button glyph', {
+      x: addContentX,
+      y: y + DETAIL.buttonPadY + (DETAIL.buttonLine - DETAIL.addIcon) / 2,
+      w: DETAIL.addIcon,
+      h: DETAIL.addIcon,
+      media: S.iconKey('listMusic'),
+    }),
+    S.k.text('MusicDetail add to playlist button label', addLabel, {
+      x: addContentX + DETAIL.addIcon + spacing.sm,
+      y: y + DETAIL.buttonPadY,
+      family: 'Inter SemiBold',
+      weight: 600,
+      size: DETAIL.buttonSize,
+      lineHeight: DETAIL.buttonLine,
+      fill: S.c.accent.gold,
+    }),
+  );
+  y += actionH;
+
+  // ── the section below ──────────────────────────────────────────────────
+  y += spacing.xxl;
+  shapes.push(
+    S.k.text(
+      'MusicDetail section More From',
+      'More From ' + DETAIL_TRACK.artist,
+      {
+        x: columnX,
+        y,
+        family: 'Manrope SemiBold',
+        weight: 600,
+        size: DETAIL.sectionSize,
+        lineHeight: DETAIL.sectionLine,
+        fill: S.c.text.primary,
+      },
+    ),
+  );
+  y += DETAIL.sectionLine + spacing.sm;
+
+  // ── the rows ───────────────────────────────────────────────────────────
+  for (let i = 0; i < DETAIL_ROWS.length; i++) {
+    shapes.push(
+      ...streamingRow(S, 'MusicDetail row ' + (i + 1), DETAIL_ROWS[i], y),
+    );
+    y += DETAIL.row.pad * 2 + DETAIL.row.art + DETAIL.row.marginBottom;
+  }
+  y += DETAIL.listPadBottom;
+
+  return {width: SCREEN_W, height: Math.round(y), shapes};
+}
+
 module.exports = {
   browseKit,
   musicScreenBoard,
   musicFilterBoard,
   radioScreenBoard,
   radioFilterBoard,
+  musicDetailBoard,
   TRACKS,
   STATIONS,
   MUSIC_GENRES,
   RADIO_GENRES,
   RADIO_COUNTRIES,
   RADIO_LANGUAGES,
+  DETAIL_TRACK,
+  DETAIL_ROWS,
 };

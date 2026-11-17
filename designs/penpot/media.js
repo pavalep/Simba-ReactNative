@@ -151,6 +151,17 @@ const ASSETS = {
   'ph.musicRow5': {file: 'placeholders/audio/studio.jpg', box: [104, 104]},
   'ph.musicRow6': {file: 'placeholders/audio/mic.jpg', box: [104, 104]},
 
+  // ── the Music DETAIL cover (300 dp square) ─────────────────────────
+  //
+  // The track's own page draws the REAL album art as a 300 dp square
+  // (`MusicDetailScreen.tsx:219-229` — `maxWidth: 300`, `aspectRatio: 1`).
+  // A Penpot board cannot fetch a remote image, so the cover carries one of
+  // the app's OWN bundled audio placeholders — the same picture the Music
+  // row's thumb uses, at the cover's own size.
+  //
+  // 300 dp at 2x is 600 px.
+  'ph.musicCover1': {file: 'placeholders/audio/vinyl.jpg', box: [600, 600]},
+
   // ── the Radio row's artwork (48 dp square favicons) ───────────────
   //
   // The Radio row draws the station's favicon, which is a remote

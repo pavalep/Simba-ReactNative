@@ -41,14 +41,18 @@ const TYPES = path.join(ROOT, 'src', 'navigation', 'types.ts');
 /**
  * The routes that have NO board, and why.
  *
- * These four are deep-link-only: nothing in the app navigates to them from
+ * These three are deep-link-only: nothing in the app navigates to them from
  * a tap, so a board would be a screen no prototype walk can reach. The
  * registry's own comment (`app-boards.js`) has said so from day one.
+ *
+ * `MusicDetail` was the fourth until 2026-11-17: the Music row was the play
+ * action, so the track's own page was unreachable. The owner decided to
+ * promote it to a real detail screen, so the row opens it now — and it has
+ * a board.
  */
 const DELIBERATELY_WITHOUT_A_BOARD = {
   SongScreen: 'deep-link only — nothing navigates to it from a tap',
   AllVideosScreen: 'deep-link only — the Library reaches its contents',
-  MusicDetail: 'deep-link only — nothing navigates to it from a tap',
   NowPlaying: 'deep-link only, and the screen renders null',
 };
 
