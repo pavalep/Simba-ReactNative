@@ -47,8 +47,6 @@
 
 const spec = require('./app-spec');
 
-const {variant} = spec;
-
 /** The phone the app is designed for — the emulator's viewport. */
 const SCREEN_W = 411;
 const SCREEN_H = 914;

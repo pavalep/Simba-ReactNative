@@ -11,6 +11,7 @@ import {useApiQuery, useInfiniteApiQuery} from '../../../hooks/useApiQuery';
 import {
   searchAudiobooks,
   searchByGenre,
+  LIBRIVOX_RETRIES,
 } from '../../../infrastructure/api/librivox/adapter';
 import type {AudiobookResult} from '../../../types/api';
 import {useNetworkStatus} from '../../../hooks/useNetworkStatus';
@@ -64,6 +65,7 @@ export function useAudiobooksScreen(
     },
     enabled: isSearchActive,
     staleTime: SEARCH_CACHE_TTL,
+    retry: LIBRIVOX_RETRIES,
   });
 
   const genreQ = useInfiniteApiQuery<AudiobookResult[]>({
@@ -80,6 +82,7 @@ export function useAudiobooksScreen(
     },
     enabled: !!selectedGenre && !isSearchActive,
     staleTime: SEARCH_CACHE_TTL,
+    retry: LIBRIVOX_RETRIES,
   });
 
   // Term takes priority over genre (matches the pre-V18 behavior).

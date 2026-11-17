@@ -21,6 +21,7 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import {useBottomChromeInset} from '../../../infrastructure/player/miniPlayerChrome';
 import {useTheme} from '../../../theme';
 import {spacing, radius} from '../../../theme/tokens';
+import {FONT_FAMILY} from '../../../constants/fontFamily';
 import {useAnimatedEntrance} from '../../../hooks/useAnimatedEntrance';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
@@ -280,7 +281,13 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
     borderWidth: 1,
   },
-  chipText: {fontSize: 13, fontWeight: '700'},
+  chipText: {
+    fontSize: 13,
+    // 'Inter SemiBold' + 700 opens a file that is not shipped; the plain
+    // 'Inter' family + 700 is what reaches Inter_bold.ttf.
+    fontFamily: FONT_FAMILY.inter.bold,
+    fontWeight: '700',
+  },
   trackItem: {
     flexDirection: 'row',
     alignItems: 'center',

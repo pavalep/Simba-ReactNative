@@ -22,6 +22,7 @@ import {useBottomChromeInset} from '../../../infrastructure/player/miniPlayerChr
 import LinearGradient from 'react-native-linear-gradient';
 import {useTheme} from '../../../theme';
 import {spacing, radius} from '../../../theme/tokens';
+import {FONT_FAMILY} from '../../../constants/fontFamily';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {AppButton} from '../../../components/core/AppButton/AppButton';
 import {AppTextInput} from '../../../components/core/AppTextInput/AppTextInput';
@@ -610,7 +611,8 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xs,
   },
   sectionTitle: {
-    fontWeight: '600',
+    // 600 lives in the family key ('Inter' + 600 opens the 400 Regular).
+    fontFamily: FONT_FAMILY.inter.semibold,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
@@ -675,7 +677,8 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     fontSize: 9,
-    fontWeight: '600',
+    // 600 lives in the family key ('Inter' + 600 opens the 400 Regular).
+    fontFamily: FONT_FAMILY.inter.semibold,
   },
   historyActions: {
     flexDirection: 'row',
@@ -687,7 +690,8 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   playNextText: {
-    fontWeight: '600',
+    // 600 lives in the family key ('Inter' + 600 opens the 400 Regular).
+    fontFamily: FONT_FAMILY.inter.semibold,
   },
   modalOverlay: {
     flex: 1,

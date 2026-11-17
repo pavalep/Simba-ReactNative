@@ -13,6 +13,7 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import {useTheme} from '../../../theme';
 import {radius, spacing} from '../../../theme/tokens';
+import {FONT_FAMILY} from '../../../constants/fontFamily';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
 
@@ -154,7 +155,8 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   albumName: {
-    fontWeight: '600',
+    // 600 lives in the family key — see src/constants/fontFamily.ts
+    fontFamily: FONT_FAMILY.inter.semibold,
   },
   metaRow: {
     flexDirection: 'row',

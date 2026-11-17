@@ -9,6 +9,7 @@ import {
 import {useTheme} from '../../../theme';
 import {radius, spacing} from '../../../theme/tokens';
 import {AppText} from '../../core/AppText/AppText';
+import {FONT_FAMILY} from '../../../constants/fontFamily';
 import {AppTextInput} from '../../core/AppTextInput/AppTextInput';
 import {SvgIcon} from '../../utility/SvgIcon';
 import {usePlaylists} from '../../../features/playlists';
@@ -163,7 +164,7 @@ export const PlaylistCreateModal: React.FC<PlaylistCreateModalProps> = ({
             activeOpacity={0.8}
             onPress={handleCreate}
             accessibilityRole="button">
-            <AppText variant="body2" style={{color: colors.text.inverse, fontWeight: '600'}}>
+            <AppText variant="body2" style={{color: colors.text.inverse, fontFamily: FONT_FAMILY.inter.semibold}}>
               Create
             </AppText>
           </TouchableOpacity>
@@ -208,7 +209,8 @@ const styles = StyleSheet.create({
   },
   label: {
     marginBottom: spacing.sm,
-    fontWeight: '600',
+    // Weight 600 now lives in the family key — Android picks the file from it.
+    fontFamily: FONT_FAMILY.inter.semibold,
   },
   kindRow: {
     flexDirection: 'row',

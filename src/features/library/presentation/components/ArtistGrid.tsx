@@ -4,6 +4,7 @@ import {useTheme} from '../../../../theme';
 import {AppText} from '../../../../components/core/AppText/AppText';
 import {AppCard} from '../../../../components/core/AppCard/AppCard';
 import {radius} from '../../../../theme/tokens';
+import {FONT_FAMILY} from '../../../../constants/fontFamily';
 import {useMediaArtists} from '../../../../state';
 
 interface ArtistGridProps {
@@ -85,7 +86,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   name: {
-    fontWeight: '600',
+    // 600 lives in the family key — see src/constants/fontFamily.ts
+    fontFamily: FONT_FAMILY.inter.semibold,
     marginBottom: 2,
   },
   initials: {

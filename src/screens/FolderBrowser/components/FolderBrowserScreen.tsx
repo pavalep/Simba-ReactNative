@@ -14,6 +14,7 @@ import RNFS from 'react-native-fs';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useBottomChromeInset} from '../../../infrastructure/player/miniPlayerChrome';
 import {useTheme} from '../../../theme';
+import {FONT_FAMILY} from '../../../constants/fontFamily';
 import {isVideoFile} from '../../../utils/timeAgo';
 import {getMediaType} from '../../../services/fileService';
 import {linkedMediaFolderIdFromPath, normalizeMediaClassification} from '../../../types/media';
@@ -469,7 +470,8 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
         },
         batchBarText: {
           fontSize: 16,
-          fontWeight: '600',
+          // 600 lives in the family key ('Inter' + 600 opens the 400 Regular).
+          fontFamily: FONT_FAMILY.inter.semibold,
         },
       }),
     [colors, insets],

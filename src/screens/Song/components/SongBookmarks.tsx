@@ -10,6 +10,7 @@ import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
 import {BookmarkSheet} from '../../../components/bookmark/BookmarkSheet';
 import {spacing, radius} from '../../../theme/tokens';
+import {FONT_FAMILY} from '../../../constants/fontFamily';
 import type {Bookmark} from '../../../features/bookmarks';
 
 interface SongBookmarksProps {
@@ -166,6 +167,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   sectionTitle: {
+    // 'Manrope SemiBold' + 700 opens a file that is not shipped; the plain
+    // 'Manrope' family + 700 is what reaches Manrope_bold.ttf.
+    fontFamily: FONT_FAMILY.manrope.bold,
     fontWeight: '700',
   },
   addBtn: {

@@ -16,6 +16,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import {useNavigation} from '@react-navigation/native';
 import {useTheme} from '../../../theme';
 import {spacing, radius} from '../../../theme/tokens';
+import {FONT_FAMILY} from '../../../constants/fontFamily';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
 import {ScanProgressBanner} from '../../../components/feedback/ScanProgressBanner/ScanProgressBanner';
@@ -214,7 +215,8 @@ const swipeStyles = StyleSheet.create({
     borderBottomLeftRadius: 0,
   },
   deleteText: {
-    fontWeight: '600',
+    // 600 lives in the family key ('Inter' + 600 opens the 400 Regular).
+    fontFamily: FONT_FAMILY.inter.semibold,
   },
   card: {
     backgroundColor: 'transparent',
@@ -487,7 +489,7 @@ export const LinkedFoldersScreen: React.FC<Props> = ({route}) => {
           disabled={isScanning}
           accessibilityRole="button">
           <SvgIcon name="folderFill" size={20} color={colors.accent.gold} />
-          <AppText variant="body1" color="accent" style={{fontWeight: '600'}}>
+          <AppText variant="body1" color="accent" style={{fontFamily: FONT_FAMILY.inter.semibold}}>
             Add Folder
           </AppText>
         </TouchableOpacity>

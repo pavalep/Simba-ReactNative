@@ -792,8 +792,8 @@ function sheetContent() {
   y += SHEET.titleLine;
   y += SHEET.titleGap;
   const gridTop = y;
-  const rows = Math.ceil(CATEGORIES.length / TILE.cols);
-  y += rows * TILE_PITCH - TILE.rowGap;
+  const rowCount = Math.ceil(CATEGORIES.length / TILE.cols);
+  y += rowCount * TILE_PITCH - TILE.rowGap;
   y += SHEET.bottomPadding;
   return {gridTop, height: y};
 }
@@ -1023,6 +1023,7 @@ function episodeCard(S, name, ep, y) {
   const x = GUTTER;
   const w = SCREEN_W - GUTTER * 2;
   const infoX = x + EPISODE.pad + 1;
+  /** The title/meta column's width — the app's `episodeInfo` flex width. */
   const infoW = w - EPISODE.pad * 2 - 2 - EPISODE.actionW - EPISODE.gap;
   const out = [];
 
@@ -1040,8 +1041,18 @@ function episodeCard(S, name, ep, y) {
   );
 
   let iy = y + EPISODE.pad + 1;
+  // The title is ONE line with a tail (`DetailItem.tsx:65` `numberOfLines={1}`),
+  // so it is cut to the column's own width. `infoW` IS that width: the card is
+  // `SCREEN_W - 2 * GUTTER` wide, minus the card's own padding and border,
+  // minus the action column (44) and its gap (8) —
+  //   379 - 12 * 2 - 2 - 44 - 8 = 301
+  // which is exactly `episodeInfo`'s flex width in
+  // `src/screens/PodcastDetailScreen/styles/DetailItem.styles.ts:20-22`
+  // (flex 1, marginRight 8) minus the 44 dp action column.
+  // Without the cut the title runs 6-10 dp past the card's inner edge, into
+  // the action column.
   out.push(
-    S.k.text(name + ' title', ep.title, {
+    S.k.text(name + ' title', fit(ep.title, infoW, 'Inter', EPISODE.titleSize), {
       x: infoX,
       y: iy,
       family: 'Inter',

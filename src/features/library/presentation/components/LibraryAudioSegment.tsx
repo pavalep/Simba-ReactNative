@@ -5,6 +5,7 @@ import {EmptyState} from '../../../../components/feedback/EmptyState/EmptyState'
 import {SvgIcon} from '../../../../components/utility/SvgIcon';
 import {WaveformBars} from '../../../../components/feedback/WaveformBars/WaveformBars';
 import {radius, ColorTokens} from '../../../../theme/tokens';
+import {FONT_FAMILY} from '../../../../constants/fontFamily';
 
 import {linkedMediaFolderId} from '../../../../types/media';
 import type {LocalMediaFilter, SortOption} from '../types';
@@ -54,7 +55,8 @@ export const LibraryAudioSegment: React.FC<LibraryAudioSegmentProps> = React.mem
           borderColor: colors.accent.gold,
         },
         nowPlayingLabel: {
-          fontWeight: '600',
+          // 600 lives in the family key — see src/constants/fontFamily.ts
+          fontFamily: FONT_FAMILY.inter.semibold,
         },
         nowPlayingSpacer: {
           flex: 1,

@@ -4,6 +4,7 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import {useTheme} from '../../../theme';
 import {spacing, radius} from '../../../theme/tokens';
+import {FONT_FAMILY} from '../../../constants/fontFamily';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {InternalHeader} from '../../../components/layout/InternalHeader/InternalHeader';
 import type {ChangelogScreenProps} from '../../../navigation/types';
@@ -111,6 +112,9 @@ export const ChangelogScreen: React.FC<Props> = () => {
           marginBottom: spacing.sm,
         },
         versionLabel: {
+          // 'Inter SemiBold' + 700 opens a file that is not shipped; the
+          // plain 'Inter' family + 700 is what reaches Inter_bold.ttf.
+          fontFamily: FONT_FAMILY.inter.bold,
           fontWeight: '700' as const,
         },
         dateLabel: {

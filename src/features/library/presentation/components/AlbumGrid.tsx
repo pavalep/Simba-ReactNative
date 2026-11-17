@@ -5,6 +5,7 @@ import {AppText} from '../../../../components/core/AppText/AppText';
 import {AppCard} from '../../../../components/core/AppCard/AppCard';
 import {SvgIcon} from '../../../../components/utility/SvgIcon';
 import {radius} from '../../../../theme/tokens';
+import {FONT_FAMILY} from '../../../../constants/fontFamily';
 import {useMediaAlbums} from '../../../../state';
 
 interface AlbumGridProps {
@@ -109,7 +110,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
-    fontWeight: '600',
+    // 600 lives in the family key — see src/constants/fontFamily.ts
+    fontFamily: FONT_FAMILY.inter.semibold,
     marginBottom: 1,
   },
   artist: {

@@ -16,6 +16,7 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useBottomChromeBand} from '../../../infrastructure/player/miniPlayerChrome';
 import {useTheme} from '../../../theme';
 import {spacing, radius} from '../../../theme/tokens';
+import {FONT_FAMILY} from '../../../constants/fontFamily';
 import { resolveStreamType, useResumeAwareLaunch } from '../../../infrastructure/player';
 
 import type {MovieDetailScreenProps} from '../types';
@@ -570,7 +571,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
   },
   badgeText: {
-    fontWeight: '600',
+    // 600 lives in the family key ('Inter' + 600 opens the 400 Regular).
+    fontFamily: FONT_FAMILY.inter.semibold,
   },
   // Sections
   section: {
@@ -624,7 +626,8 @@ const styles = StyleSheet.create({
   },
   downloadFormat: {
     marginLeft: spacing.md,
-    fontWeight: '600',
+    // 600 lives in the family key ('Inter' + 600 opens the 400 Regular).
+    fontFamily: FONT_FAMILY.inter.semibold,
     minWidth: 60,
   },
   downloadUrl: {

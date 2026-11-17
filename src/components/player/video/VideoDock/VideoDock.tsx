@@ -67,6 +67,7 @@ import {
   View,
 } from 'react-native';
 import {useTheme} from '../../../../theme';
+import {FONT_FAMILY} from '../../../../constants/fontFamily';
 import {spacing} from '../../../../theme/tokens';
 import {usePresentation, useTransport} from '../../../../infrastructure/player';
 import {useClosePlaybackWithToast} from '../../useClosePlaybackWithToast';
@@ -364,7 +365,8 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 15,
-    fontWeight: '600',
+    // Weight 600 now lives in the family key — Android picks the file from it.
+    fontFamily: FONT_FAMILY.inter.semibold,
   },
   artist: {
     fontSize: 13,

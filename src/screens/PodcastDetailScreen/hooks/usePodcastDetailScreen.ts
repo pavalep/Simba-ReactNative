@@ -25,7 +25,11 @@
 // `infrastructure/api/podcastIndex/pagination.ts`.
 
 import {useCallback} from 'react';
-import {getPodcastById, getEpisodes} from '../../../infrastructure/api/podcastIndex/adapter';
+import {
+  getPodcastById,
+  getEpisodes,
+  PODCAST_INDEX_RETRIES,
+} from '../../../infrastructure/api/podcastIndex/adapter';
 import {
   flattenUniqueById,
   nextPageMax,
@@ -62,6 +66,7 @@ export function usePodcastDetailScreen(
     queryFn: () => getPodcastById(podcastId),
     enabled: podcastId > 0,
     staleTime: 5 * 60_000, // metadata doesn't change often
+    retry: PODCAST_INDEX_RETRIES,
   });
 
   // ── Episodes (paginated; doubling `max` window) ──
@@ -73,6 +78,7 @@ export function usePodcastDetailScreen(
       nextPageMax(lastParam as number, lastPage.length, MAX_RESULTS_PER_QUERY),
     enabled: podcastId > 0,
     staleTime: 60_000,
+    retry: PODCAST_INDEX_RETRIES,
   });
 
   // The pages NEST — `max=20` re-sends the first 10 rows of `max=10` —

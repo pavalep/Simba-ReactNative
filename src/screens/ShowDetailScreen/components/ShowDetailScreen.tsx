@@ -7,6 +7,7 @@ import React, {useCallback, useEffect, useState} from 'react';
 import {Alert, View, ScrollView, TouchableOpacity, StyleSheet, FlatList} from 'react-native';
 import {useTheme} from '../../../theme';
 import {radius, spacing} from '../../../theme/tokens';
+import {FONT_FAMILY} from '../../../constants/fontFamily';
 import type {ShowDetailScreenProps} from '../../../navigation/types';
 import {useShowDetailScreen} from '../hooks/useShowDetailScreen';
 import {SimbaStatusBar} from '../../../components/StatusBar';
@@ -414,7 +415,8 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   episodeTitle: {
-    fontWeight: '600',
+    // 600 lives in the family key ('Inter' + 600 opens the 400 Regular).
+    fontFamily: FONT_FAMILY.inter.semibold,
   },
   episodeRowDisabled: {
     opacity: 0.55,

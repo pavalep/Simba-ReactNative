@@ -16,6 +16,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useTheme} from '../../../theme';
 import {spacing, radius} from '../../../theme/tokens';
+import {FONT_FAMILY} from '../../../constants/fontFamily';
 import {useNavigation} from '@react-navigation/native';
 import {useAnimatedEntrance} from '../../../hooks/useAnimatedEntrance';
 import {AppText} from '../../../components/core/AppText/AppText';
@@ -290,7 +291,8 @@ const styles = StyleSheet.create({
   cardTitle: {
     paddingHorizontal: 10,
     paddingTop: spacing.sm,
-    fontWeight: '600',
+    // 600 lives in the family key ('Inter' + 600 opens the 400 Regular).
+    fontFamily: FONT_FAMILY.inter.semibold,
   },
   cardArtist: {
     paddingHorizontal: 10,

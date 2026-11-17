@@ -16,6 +16,7 @@ import {useApiQuery} from '../../../hooks/useApiQuery';
 import {
   searchInternetArchiveAudio,
   searchInternetArchiveVideos,
+  INTERNET_ARCHIVE_RETRIES,
 } from '../../../infrastructure/api/internetArchive/adapter';
 import {useNetworkStatus} from '../../../hooks/useNetworkStatus';
 import type {
@@ -81,6 +82,7 @@ export function useArchiveScreen({
       searchInternetArchiveAudio(query, {limit: PAGE_SIZE, page}),
     enabled: mediaType === 'audio',
     staleTime: 600_000,
+    retry: INTERNET_ARCHIVE_RETRIES,
   });
 
   const videoQ = useApiQuery<PaginatedResult<InternetArchiveVideoResult>>({
@@ -89,6 +91,7 @@ export function useArchiveScreen({
       searchInternetArchiveVideos(query, {limit: PAGE_SIZE, page}),
     enabled: mediaType === 'video',
     staleTime: 600_000,
+    retry: INTERNET_ARCHIVE_RETRIES,
   });
 
   const active = mediaType === 'audio' ? audioQ : videoQ;

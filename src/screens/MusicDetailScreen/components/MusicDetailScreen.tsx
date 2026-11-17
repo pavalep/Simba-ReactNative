@@ -10,6 +10,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import {MediaImage} from '../../../components/utility/MediaImage';
 import {useTheme} from '../../../theme';
 import {spacing, radius} from '../../../theme/tokens';
+import {FONT_FAMILY} from '../../../constants/fontFamily';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
 import {ActivityOrb} from '../../../components/feedback/ActivityOrb/ActivityOrb';
@@ -162,6 +163,9 @@ export const MusicDetailScreen: React.FC<Props> = ({navigation, route}) => {
         overlayTitle: {
           color: colors.text.bright,
           fontSize: 22,
+          // 'Inter SemiBold' + 700 opens a file that is not shipped; the
+          // plain 'Inter' family + 700 is what reaches Inter_bold.ttf.
+          fontFamily: FONT_FAMILY.inter.bold,
           fontWeight: '700',
         },
         overlayArtist: {
@@ -227,7 +231,8 @@ export const MusicDetailScreen: React.FC<Props> = ({navigation, route}) => {
         shareButtonText: {
           color: colors.accent.gold,
           fontSize: 15,
-          fontWeight: '600',
+          // 600 lives in the family key ('Inter' + 600 opens the 400 Regular).
+          fontFamily: FONT_FAMILY.inter.semibold,
         },
         playlistButton: {
           borderWidth: 1.5,
@@ -242,7 +247,8 @@ export const MusicDetailScreen: React.FC<Props> = ({navigation, route}) => {
         playlistButtonText: {
           color: colors.accent.gold,
           fontSize: 15,
-          fontWeight: '600',
+          // 600 lives in the family key ('Inter' + 600 opens the 400 Regular).
+          fontFamily: FONT_FAMILY.inter.semibold,
         },
         streamSection: {
           paddingHorizontal: spacing.lg,

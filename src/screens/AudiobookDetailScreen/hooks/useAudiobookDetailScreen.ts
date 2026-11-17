@@ -9,7 +9,10 @@
 // V18-migrated (Wave 5), so it stays imported from the legacy file.
 
 import {useApiQuery} from '../../../hooks/useApiQuery';
-import {getAudiobookById} from '../../../infrastructure/api/librivox/adapter';
+import {
+  getAudiobookById,
+  LIBRIVOX_RETRIES,
+} from '../../../infrastructure/api/librivox/adapter';
 import {
   getArchiveTracks,
   archiveIdentifierFromUrl,
@@ -40,6 +43,7 @@ export function useAudiobookDetailScreen(
       return {book: bookData, chapters};
     },
     staleTime: 60 * 60 * 1000,
+    retry: LIBRIVOX_RETRIES,
   });
 
   return {

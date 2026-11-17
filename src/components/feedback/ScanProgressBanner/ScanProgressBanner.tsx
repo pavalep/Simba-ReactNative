@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import {useTheme} from '../../../theme';
 import {radius, spacing} from '../../../theme/tokens';
+import {FONT_FAMILY} from '../../../constants/fontFamily';
 import {AppText} from '../../core/AppText/AppText';
 import {useMediaStore} from '../../../state';
 
@@ -193,7 +194,8 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   label: {
-    fontWeight: '500',
+    // 500 lives in the family key ('Inter' + 500 opens the 400 Regular).
+    fontFamily: FONT_FAMILY.inter.medium,
   },
   dot: {
     width: 8,

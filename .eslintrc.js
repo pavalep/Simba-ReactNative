@@ -47,6 +47,35 @@ module.exports = {
   },
   overrides: [
     {
+      // The Penpot board generators (`designs/`) are NODE scripts that emit
+      // Penpot RPC payloads. Two of the app's rules do not apply to them:
+      //
+      //  • `no-restricted-syntax` (raw colour literals). The generators are
+      //    the other END of the token rule, not a violation of it: they READ
+      //    the app's tokens (`designs/penpot/app-spec.js` evaluates
+      //    `src/theme/tokens.ts` with the TypeScript AST), but a Penpot
+      //    payload has to carry a literal colour string — `effect.add` takes
+      //    `color: 'rgba(0,0,0,0.25)'`, and `color` there is the Penpot RPC
+      //    field name, not an app style prop. This is the same exemption
+      //    `src/theme/**` and `src/constants/**` already have: token
+      //    definitions and colour presets are the legal homes for literals.
+      //  • the node globals. `Buffer` is not defined under the React Native
+      //    config, and three generators legitimately use it.
+      //
+      // The alternative — `ignorePatterns: ['designs/']` — would drop lint
+      // coverage of the board generators entirely, which are exactly the
+      // files the design waves edit. B12-6 was filed as "not a gate
+      // failure"; it IS one (CI runs `eslint . --max-warnings 0`), so the
+      // fix is to make the generators clean, not to hide them.
+      files: ['designs/**/*.js'],
+      env: {
+        node: true,
+      },
+      rules: {
+        'no-restricted-syntax': 'off',
+      },
+    },
+    {
       // 55.7: token definitions + user-facing color presets are the only allowed literal homes
       files: ['src/theme/**/*.ts', 'src/constants/**/*.ts'],
       rules: {

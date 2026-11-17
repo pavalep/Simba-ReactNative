@@ -3,6 +3,7 @@ import {View, TouchableOpacity, StyleSheet} from 'react-native';
 import {useTheme} from '../../theme';
 import {SvgIcon} from '../utility/SvgIcon';
 import {AppText} from '../core/AppText/AppText';
+import {FONT_FAMILY} from '../../constants/fontFamily';
 
 interface Props {
   onPress: () => void;
@@ -65,6 +66,8 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: 10,
     lineHeight: 14,
+    // Bold file is `Inter_bold.ttf` — the plain 'Inter' family needs it.
+    fontFamily: FONT_FAMILY.inter.bold,
     fontWeight: '700',
   },
 });

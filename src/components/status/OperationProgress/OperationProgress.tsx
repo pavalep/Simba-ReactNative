@@ -12,6 +12,7 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../../theme';
 import {radius, spacing} from '../../../theme/tokens';
 import type {ColorTokens} from '../../../theme/tokens';
+import {FONT_FAMILY} from '../../../constants/fontFamily';
 import {AppText} from '../../core/AppText/AppText';
 import {ActivityOrb} from '../../feedback/ActivityOrb/ActivityOrb';
 
@@ -180,7 +181,8 @@ const createStyles = (colors: ColorTokens) => StyleSheet.create({
     flex: 1,
   },
   title: {
-    fontWeight: '500',
+    // Weight 500 now lives in the family key — Android picks the file from it.
+    fontFamily: FONT_FAMILY.inter.medium,
     flex: 1,
   },
   cancelBtn: {

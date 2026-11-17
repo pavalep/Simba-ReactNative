@@ -193,6 +193,40 @@ function assetPath(family, weight, style) {
   return 'fonts/' + family + suffix + '.ttf';
 }
 
+/**
+ * The ACTUAL weight of a shipped TTF, read out of its OS/2 table
+ * (`usWeightClass`, offset 4 of the table).
+ *
+ * This is what makes the second class of finding possible. A file can EXIST
+ * and still be the wrong face: `'Inter'` + `fontWeight: '600'` resolves to
+ * `fonts/Inter.ttf`, which exists — and is the 400 Regular. The weight the
+ * author asked for is silently gone, and the text renders lighter than the
+ * design says. The file's own name table is the only honest source for what
+ * it is; the file NAME is not (the family string and the file's weight are
+ * separate facts).
+ */
+function ttfWeightClass(file) {
+  let buf;
+  try {
+    buf = fs.readFileSync(file);
+  } catch (e) {
+    return null;
+  }
+  if (buf.length < 12) return null;
+  const numTables = buf.readUInt16BE(4);
+  for (let i = 0; i < numTables; i++) {
+    const rec = 12 + i * 16;
+    if (rec + 16 > buf.length) return null;
+    const tag = buf.toString('ascii', rec, rec + 4);
+    if (tag === 'OS/2') {
+      const off = buf.readUInt32BE(rec + 8);
+      if (off + 6 > buf.length) return null;
+      return buf.readUInt16BE(off + 4);
+    }
+  }
+  return null;
+}
+
 // ── 4. walk the source for text usages ────────────────────────────────────
 function walk(dir, out) {
   for (const entry of fs.readdirSync(dir, {withFileTypes: true})) {
@@ -484,17 +518,29 @@ function bodiesOfBranch(branch, lookup) {
  * `variant` prop) is the AppText default.
  */
 function variantInfo(tag) {
-  const lit = /\svariant=\{?['"]([A-Za-z0-9_]+)['"]\}/.exec(tag);
-  if (lit) return {condition: null, names: [lit[1]]};
+  // The CONDITIONAL form first: `variant={isCompact ? 'bodySmall' : 'h3'}`.
+  // A literal must not be read out of it, so it is matched on its own.
   const cond = /\svariant=\{([^}]*)\}/.exec(tag);
-  if (!cond) return {condition: null, names: ['body1']}; // AppText's default
-  const split = splitTernary(cond[1]);
-  if (!split) return {condition: null, names: ['body1']};
-  const names = split.branches.map(b => {
-    const m = /^['"]([A-Za-z0-9_]+)['"]$/.exec(b.trim());
-    return m ? m[1] : 'body1';
-  });
-  return {condition: split.condition, names};
+  if (cond) {
+    const split = splitTernary(cond[1]);
+    if (split) {
+      const names = split.branches.map(b => {
+        const m = /^['"]([A-Za-z0-9_]+)['"]$/.exec(b.trim());
+        return m ? m[1] : 'body1';
+      });
+      return {condition: split.condition, names};
+    }
+    return {condition: null, names: ['body1']};
+  }
+  // The LITERAL form. It comes in two shapes and BOTH must match:
+  //   variant="h3"      — the dominant form: NO braces at all
+  //   variant={'h3'}    — the braced form
+  // The braces are optional in the pattern, not required: requiring a
+  // closing `}` after the quote silently dropped every unbraced literal and
+  // audited 606 of 660 tags as AppText's `body1` default.
+  const lit = /\svariant=(?:\{)?['"]([A-Za-z0-9_]+)['"]/.exec(tag);
+  if (lit) return {condition: null, names: [lit[1]]};
+  return {condition: null, names: ['body1']}; // AppText's default
 }
 
 /**
@@ -549,12 +595,27 @@ function styleInfo(expr, lookup) {
   return {condition: split.condition, branches};
 }
 
-/** RN's flattening: later bodies win, per property. */
+/**
+ * RN's flattening: later bodies win, per property.
+ *
+ * A body is EITHER a source string (a style object literal, or a reference
+ * to one) OR an already-merged `{family, weight, style}` object — the array
+ * path merges its elements before the variant is paired with them, so the
+ * merged object has to survive a second merge. Reading an object as a string
+ * gave "[object Object]", which silently dropped every font property inside
+ * a style array.
+ */
 function mergeBodies(bodies) {
   let family = null;
   let weight = null;
   let style = null;
   for (const body of bodies) {
+    if (body && typeof body === 'object') {
+      if (body.family) family = body.family;
+      if (body.weight) weight = body.weight;
+      if (body.style) style = body.style;
+      continue;
+    }
     const fam = /fontFamily:\s*FONT_FAMILY\.([A-Za-z0-9_.]+)/.exec(body || '');
     if (fam) family = fam[1];
     const wt = /fontWeight:\s*'(\d+)'/.exec(body || '');
@@ -569,9 +630,30 @@ function main() {
   const families = parseFontFamilies();
   const tokens = parseTokens();
   const shipped = new Set(fs.readdirSync(ASSETS));
+  // The ACTUAL weight of every shipped face, read out of its OS/2 table.
+  const weightOf = new Map();
+  for (const f of shipped) {
+    const w = ttfWeightClass(path.join(ASSETS, f));
+    if (w != null) weightOf.set(f, w);
+  }
+
+  /**
+   * The family key that carries a weight, for the hint in the report.
+   *
+   * The app's own typography tokens are the single place that says which key
+   * carries which weight, so the suggestion is read out of them rather than
+   * out of a second table here.
+   */
+  function keyForWeight(family, weight) {
+    for (const t of Object.values(tokens)) {
+      if (t.weight === weight && families[t.familyKey] !== family) {
+        return t.familyKey;
+      }
+    }
+    return null;
+  }
 
   const problems = [];
-  const seen = new Set();
   let usages = 0;
   let unresolved = 0;
 
@@ -583,17 +665,24 @@ function main() {
     const lineOf = idx => text.slice(0, idx).split('\n').length;
 
     // the file's own styles, then the styles modules it imports
-    const local = parseStyleObject(
-      (() => {
-        const createAt = text.indexOf('StyleSheet.create(');
-        if (createAt >= 0) {
-          const brace = text.indexOf('{', createAt);
-          const inner = brace >= 0 ? balancedBlock(text, brace) : null;
-          if (inner) return inner;
+    //
+    // EVERY `StyleSheet.create(` block in the file, not just the first:
+    // a file with a second sheet (a `swipeStyles`, a themed sheet) used to
+    // be invisible to the gate, so a style that carries a lost weight was
+    // never audited.
+    const local = {};
+    {
+      const createRe = /StyleSheet\.create\(/g;
+      let cm;
+      while ((cm = createRe.exec(text)) !== null) {
+        const brace = text.indexOf('{', cm.index + cm[0].length - 1);
+        const inner = brace >= 0 ? balancedBlock(text, brace) : null;
+        if (!inner) continue;
+        for (const [k, v] of Object.entries(parseStyleObject(inner))) {
+          if (!(k in local)) local[k] = v;
         }
-        return '';
-      })()
-    );
+      }
+    }
     const imported = {};
     for (const f of importedStyleFiles(file, text)) {
       for (const [k, v] of Object.entries(parseStyleModule(f))) {
@@ -675,16 +764,43 @@ function main() {
 
         usages++;
         const path_ = assetPath(family, weight, style);
-        const key = family + '|' + weight + '|' + style;
-        if (!shipped.has(path_.split('/').pop())) {
-          const dup = seen.has(key);
-          seen.add(key);
+        const file = path_.split('/').pop();
+        if (!shipped.has(file)) {
+          // EVERY site is reported. The old report deduped by
+          // `family|weight|style` and then DROPPED the duplicates, so only
+          // the first occurrence of each missing font was ever listed and
+          // the other sites were invisible even when the gate did fire.
           problems.push({
             rel,
             line: lineOf(m.index),
             what: `${family} + weight ${weight}${style === 'italic' ? ' italic' : ''} -> ${path_} MISSING`,
-            dup,
           });
+          continue;
+        }
+        // ── the SECOND class: the file exists, but it is the WRONG face ──
+        //
+        // The style set an explicit `fontWeight`, and the file RN opened for
+        // it carries a DIFFERENT weight. `'Inter'` + `'600'` opens
+        // `fonts/Inter.ttf` — which exists, and is the 400 Regular. The
+        // weight the author asked for is silently gone.
+        //
+        // This only applies when the STYLE set the weight. When the weight
+        // comes from the typography token, the token's own (family, weight)
+        // pair IS the contract, and a style that overrides the family is the
+        // author choosing a face on purpose.
+        if (merged.weight) {
+          const actual = weightOf.get(file);
+          if (actual != null && actual !== Number(merged.weight)) {
+            const hint = keyForWeight(family, merged.weight);
+            problems.push({
+              rel,
+              line: lineOf(m.index),
+              what:
+                `${family} + weight ${merged.weight} opens ${file}, whose weight is ${actual}` +
+                ` — the ${merged.weight} is LOST` +
+                (hint ? ` (use FONT_FAMILY.${hint})` : ''),
+            });
+          }
         }
       }
     }
@@ -693,7 +809,6 @@ function main() {
   // report
   const byKey = new Map();
   for (const p of problems) {
-    if (p.dup) continue;
     if (!byKey.has(p.what)) byKey.set(p.what, []);
     byKey.get(p.what).push(p);
   }
@@ -707,9 +822,9 @@ function main() {
   console.log('\nFALLBACKS (these render in the system font):');
   for (const [what, list] of byKey) {
     console.log('\n  ' + what);
-    for (const p of list.slice(0, 8)) console.log('      ' + p.rel + ':' + p.line);
-    if (list.length > 8) console.log('      … and ' + (list.length - 8) + ' more');
+    for (const p of list) console.log('      ' + p.rel + ':' + p.line);
   }
+  console.log('\n  ' + problems.length + ' site(s).');
   process.exitCode = 1;
 }
 

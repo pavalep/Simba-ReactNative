@@ -22,6 +22,7 @@ import {
   searchJamendoTracks,
   getJamendoTracksByGenre,
   getPopularJamendoTracks,
+  JAMENDO_RETRIES,
 } from '../../../infrastructure/api/jamendo/adapter';
 import type {JamendoTrackResult} from '../../../types/api';
 import {useInfiniteApiQuery} from '../../../hooks/useApiQuery';
@@ -135,6 +136,7 @@ export function useMusicScreen(): UseMusicScreenResult {
     getNextPageParam: (lastPage, _pages, lastPageParam) =>
       nextMusicPage(lastPage.length, lastPageParam),
     staleTime: 60_000,
+    retry: JAMENDO_RETRIES,
   });
 
   // Flatten all loaded pages + dedupe by id (Jamendo's offset pagination

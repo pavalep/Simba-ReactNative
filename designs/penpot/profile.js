@@ -1162,7 +1162,7 @@ function creditsBoard(themeName) {
  */
 function statsBoard(themeName) {
   const P = profileKit(themeName);
-  const {k, c} = P;
+  const {k} = P;
   const shapes = [];
   let y = HEADER_H;
 

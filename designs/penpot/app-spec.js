@@ -225,9 +225,9 @@ function variant(name) {
 }
 
 /** Look up a dotted colour path, e.g. 'background.primary'. */
-function color(path) {
-  const value = readPath(colors, path);
-  if (value == null) throw new Error('unknown colour path ' + path);
+function color(dottedPath) {
+  const value = readPath(colors, dottedPath);
+  if (value == null) throw new Error('unknown colour path ' + dottedPath);
   return value;
 }
 

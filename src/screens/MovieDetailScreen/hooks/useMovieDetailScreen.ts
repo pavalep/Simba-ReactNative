@@ -9,7 +9,10 @@
 // of the V18 family).
 
 import {useApiQuery} from '../../../hooks/useApiQuery';
-import {getInternetArchiveVideoDetails} from '../../../infrastructure/api/internetArchive/adapter';
+import {
+  getInternetArchiveVideoDetails,
+  INTERNET_ARCHIVE_RETRIES,
+} from '../../../infrastructure/api/internetArchive/adapter';
 import type {InternetArchiveVideoResult} from '../../../types/api';
 
 export function useMovieDetailScreen(identifier: string) {
@@ -17,6 +20,7 @@ export function useMovieDetailScreen(identifier: string) {
     queryKey: ['internetArchive', 'videoDetails', identifier],
     queryFn: () => getInternetArchiveVideoDetails(identifier),
     enabled: !!identifier,
+    retry: INTERNET_ARCHIVE_RETRIES,
   });
 
   return {

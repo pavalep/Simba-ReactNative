@@ -29,6 +29,7 @@ import {useWeatherStore, useSettingsStore} from '../state';
 import {
   fetchWeatherByCity,
   fetchWeatherByCoords,
+  WEATHER_RETRIES,
   type WeatherSnapshot,
 } from '../infrastructure/api/weather/adapter';
 import {getCurrentCoords, reverseGeocodeCity} from '../services/device/geolocation';
@@ -112,10 +113,13 @@ export function useWeather(): UseWeatherResult {
     queryFn,
     enabled: shouldFetch,
     staleTime: ONE_HOUR_MS,
-    // Don't surface a network blip as a hard error — the cascade
-    // catches its own throws and returns null. The store then
-    // records the soft "no location source" message.
-    retry: false,
+    // The cascade absorbs its own failures — it catches every throw and
+    // returns null — so TanStack never sees a rejection and never has
+    // anything to retry. The policy below is therefore the weather
+    // adapter's DOCUMENTED one, declared here so the hook reads as the
+    // owner of its source's retry behaviour rather than inheriting a
+    // silent global default.
+    retry: WEATHER_RETRIES,
   });
 
   // Single sync point: when the query settles, mirror its result

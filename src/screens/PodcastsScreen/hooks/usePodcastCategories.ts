@@ -18,6 +18,7 @@ import {useMemo} from 'react';
 import {PODCAST_CATEGORIES, type PodcastCategory} from '../../../constants/podcastCategories';
 import {
   getPodcastCategories,
+  PODCAST_INDEX_RETRIES,
   type PodcastCategoryResult,
 } from '../../../infrastructure/api/podcastIndex/adapter';
 import {useApiQuery} from '../../../hooks/useApiQuery';
@@ -40,6 +41,7 @@ export function usePodcastCategories(): PodcastCategoriesState {
     queryKey: ['podcastIndex', 'categories'],
     queryFn: () => getPodcastCategories(),
     staleTime: 5 * 60_000, // categories don't change often
+    retry: PODCAST_INDEX_RETRIES,
   });
 
   const merged = useMemo<PodcastCategory[]>(() => {

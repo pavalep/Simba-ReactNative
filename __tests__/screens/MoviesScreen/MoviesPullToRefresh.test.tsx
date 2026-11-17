@@ -194,19 +194,18 @@ describe('the Movies hook — the refresh spinner belongs to the gesture', () =>
   });
 
   it('clears the spinner even when the refetch fails', async () => {
-    // The first load answers. The REFETCH fails — and its failure is
-    // held open, so the spinner is observed ON before it is cleared.
-    let rejectRefetch: (reason: Error) => void;
+    // The first load answers. The REFETCH fails — and so does EVERY
+    // retry after it: the Movies query declares the Internet Archive
+    // adapter's own retry policy (`retry: INTERNET_ARCHIVE_RETRIES`),
+    // which is what the APP does through its QueryProvider default, so
+    // TanStack asks the source again after each failure. A mock that
+    // only failed the first attempt would leave the later attempts
+    // hanging on a stub that resolves nothing, and the refetch would
+    // never settle — the spinner would never clear, and the claim this
+    // test makes would go untested.
     mockSearch
       .mockResolvedValueOnce(makePage(PAGE_SIZE, PAGE_SIZE))
-      .mockImplementationOnce(
-        () =>
-          new Promise<PaginatedResult<InternetArchiveVideoResult>>(
-            (_resolve, reject) => {
-              rejectRefetch = reject;
-            },
-          ),
-      );
+      .mockRejectedValue(new Error('the source is down'));
 
     await renderWithProviders(Harness, {routeName: 'MoviesScreen'});
     await waitFor(() => expect(stateOf('isLoading')).toBe('false'));
@@ -215,10 +214,10 @@ describe('the Movies hook — the refresh spinner belongs to the gesture', () =>
     await waitFor(() => expect(stateOf('refreshing')).toBe('true'));
 
     // The gesture's `finally` clears the spinner, so a failed refresh
-    // cannot leave a spinner running forever.
-    await act(async () => {
-      rejectRefetch(new Error('the source is down'));
+    // cannot leave a spinner running forever. The window covers the
+    // retry backoff (1 s + 2 s) that the adapter's policy buys.
+    await waitFor(() => expect(stateOf('refreshing')).toBe('false'), {
+      timeout: 10000,
     });
-    await waitFor(() => expect(stateOf('refreshing')).toBe('false'));
   });
 });

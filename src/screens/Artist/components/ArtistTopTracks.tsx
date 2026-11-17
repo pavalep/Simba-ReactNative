@@ -7,6 +7,7 @@ import React, {useState, useCallback} from 'react';
 import {View, TouchableOpacity, StyleSheet, FlatList} from 'react-native';
 import {useTheme} from '../../../theme';
 import {radius, spacing} from '../../../theme/tokens';
+import {FONT_FAMILY} from '../../../constants/fontFamily';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
 import AudioWaveform from '../../../components/player/AudioWaveform/AudioWaveform';
@@ -217,7 +218,8 @@ const styles = StyleSheet.create({
   },
   numText: {
     fontSize: 13,
-    fontWeight: '500',
+    // 500 lives in the family key — see src/constants/fontFamily.ts
+    fontFamily: FONT_FAMILY.inter.medium,
   },
   trackInfo: {
     flex: 1,
@@ -225,7 +227,8 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   trackTitle: {
-    fontWeight: '500',
+    // 500 lives in the family key — see src/constants/fontFamily.ts
+    fontFamily: FONT_FAMILY.inter.medium,
   },
   duration: {
     minWidth: 40,

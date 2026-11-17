@@ -55,6 +55,7 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../../theme';
 import {radius, spacing} from '../../../theme/tokens';
 import {AppText} from '../../core/AppText/AppText';
+import {FONT_FAMILY} from '../../../constants/fontFamily';
 
 export interface BottomSheetProps<T = unknown> {
   /** Whether the sheet is visible. */
@@ -325,7 +326,8 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    // Weight 600 now lives in the family key — Android picks the file from it.
+    fontFamily: FONT_FAMILY.inter.semibold,
   },
   headerCustom: {
     flex: 1,

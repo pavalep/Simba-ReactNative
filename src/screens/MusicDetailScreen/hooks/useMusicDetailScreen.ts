@@ -5,8 +5,8 @@
 // on `source` and returns the union type `TrackResult`.
 
 import {useApiQuery} from '../../../hooks/useApiQuery';
-import {getJamendoTrackById} from '../../../infrastructure/api/jamendo/adapter';
-import {getAudiusTrackById} from '../../../infrastructure/api/audius/adapter';
+import {getJamendoTrackById, JAMENDO_RETRIES} from '../../../infrastructure/api/jamendo/adapter';
+import {getAudiusTrackById, AUDIUS_RETRIES} from '../../../infrastructure/api/audius/adapter';
 import type {JamendoTrackResult, AudiusTrackResult} from '../../../types/api';
 
 type TrackResult = JamendoTrackResult | AudiusTrackResult | null;
@@ -25,6 +25,7 @@ export function useMusicDetailScreen(
       }
       return (await getAudiusTrackById(trackId)) ?? null;
     },
+    retry: source === 'audius' ? AUDIUS_RETRIES : JAMENDO_RETRIES,
   });
 
   return {

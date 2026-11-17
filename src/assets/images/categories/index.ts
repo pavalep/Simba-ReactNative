@@ -44,18 +44,13 @@ export const CATEGORY_COVERS = {
     // instead (see `constants/podcastCategories.ts`).
   },
   // ── Music ──
+  // Only the "all" plate is live — the Home rail's one music card uses
+  // it (`Home/components/BrowseAllShelf.tsx`). The ten per-genre music
+  // plates were reachable only from `constants/musicCategories.ts`,
+  // whose `image` field nothing read, so they were dead weight in the
+  // bundle (595,495 bytes) and are gone.
   music: {
     all:         require('./music/all.png'),
-    rock:        require('./music/rock.png'),
-    pop:         require('./music/pop.png'),
-    electronic:  require('./music/electronic.png'),
-    jazz:        require('./music/jazz.png'),
-    classical:   require('./music/classical.png'),
-    hiphop:      require('./music/hiphop.png'),
-    ambient:     require('./music/ambient.png'),
-    folk:        require('./music/folk.png'),
-    blues:       require('./music/blues.png'),
-    reggae:      require('./music/reggae.png'),
   },
   // ── Live TV ──
   liveTv: {

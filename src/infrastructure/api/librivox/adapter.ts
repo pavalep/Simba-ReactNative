@@ -21,7 +21,7 @@
  * the proof-of-pattern references for the W6 P21c shape; this
  * file follows the same pattern.
  */
-import {apiFetch} from '../apiClient';
+import {apiFetch, ApiError} from '../apiClient';
 import {API_CONFIG} from '../../../constants/api';
 import {AdapterParseError} from '../adapterErrors';
 import type {AudiobookResult, ApiSearchOptions} from '../../../types/api';
@@ -143,23 +143,84 @@ export function audiobookResultsFromResponseRaw(
   return books.map((b, i) => parseRawAudiobook(b, `books[${i}]`));
 }
 
+// ─── The LibriVox feed's own contract ───────────────────────────────────
+//
+// Measured against the live API (2026-11-17), not read from a doc:
+//
+//  • The search fields are PREFIX matches, not free text. `?q=alice` is
+//    IGNORED by the API — it answers 200 with the first books in the
+//    catalogue, which is exactly what the app used to send, so the
+//    Audiobooks search never searched. `?title=alice` is an EXACT match
+//    and answers 404; `?title=^alice` is the prefix match and answers with
+//    the Alice books. The `^` operator is LibriVox's own.
+//  • `?subject=` is ignored the same way `?q=` is.
+//  • `?page=3` is ignored — the feed pages with `?offset=`, and the offset
+//    counts ITEMS, not pages. `?offset=3&limit=3` returns books 4..6.
+//  • A 404 means "no books match", not "the server is broken".
+//  • `?genre=` is 5xx-prone for some genres (`genre=^mystery` answers 500)
+//    even with the prefix operator, which is why the genre path keeps a
+//    full-text fallback.
+
+/** LibriVox's prefix-match operator. */
+const PREFIX = '^';
+
+/** The offset a page starts at — LibriVox pages by ITEM count. */
+function offsetForPage(page: number | undefined, limit: number): number {
+  const p = typeof page === 'number' && page > 0 ? page : 1;
+  return (p - 1) * limit;
+}
+
+/** A 404 from LibriVox is "no books match", not a failure. */
+function isNoMatches(e: unknown): boolean {
+  return e instanceof ApiError && e.status === 404;
+}
+
+/**
+ * One LibriVox query, with the 404 → empty-list rule applied.
+ *
+ * Every search in this file goes through here so the 404 rule has ONE
+ * home. A 404 is the feed's way of saying "nothing matched"; treating it
+ * as an error would turn every empty search into a failure state.
+ */
+async function librivoxSearch(
+  params: Record<string, string | number | undefined>,
+  signal?: AbortSignal,
+): Promise<AudiobookResult[]> {
+  try {
+    const raw = await apiFetch<LibriVoxResponseRaw>({
+      config: API_CONFIG.librivox,
+      path: '',
+      params: {format: 'json', ...params},
+      signal,
+    });
+    return audiobookResultsFromResponseRaw(raw);
+  } catch (e) {
+    if (isNoMatches(e)) return [];
+    throw e;
+  }
+}
+
 export async function searchAudiobooks(
   query: string,
   options?: ApiSearchOptions,
   signal?: AbortSignal,
 ): Promise<AudiobookResult[]> {
-  const raw = await apiFetch<LibriVoxResponseRaw>({
-    config: API_CONFIG.librivox,
-    path: '',
-    params: {
-      q: query,
-      format: 'json',
-      limit: options?.limit ?? 20,
-      page: options?.page ?? 1,
-    },
+  const term = query.trim();
+  if (!term) return [];
+  const limit = options?.limit ?? 20;
+  const offset = offsetForPage(options?.page, limit);
+
+  // The field says "Search titles or authors…" and LibriVox cannot OR
+  // across two fields in one request (it answers 500), so the title search
+  // runs first and the author search only runs when the title search found
+  // nothing. The author search therefore only costs a request when the
+  // title search missed.
+  const byTitle = await librivoxSearch(
+    {title: PREFIX + term, limit, offset},
     signal,
-  });
-  return audiobookResultsFromResponseRaw(raw);
+  );
+  if (byTitle.length > 0) return byTitle;
+  return librivoxSearch({author: PREFIX + term, limit, offset}, signal);
 }
 
 export async function getAudiobookById(
@@ -185,18 +246,13 @@ export async function searchByAuthor(
   options?: ApiSearchOptions,
   signal?: AbortSignal,
 ): Promise<AudiobookResult[]> {
-  const raw = await apiFetch<LibriVoxResponseRaw>({
-    config: API_CONFIG.librivox,
-    path: '',
-    params: {
-      author: authorName,
-      format: 'json',
-      limit: options?.limit ?? 20,
-      page: options?.page ?? 1,
-    },
+  const name = authorName.trim();
+  if (!name) return [];
+  const limit = options?.limit ?? 20;
+  return librivoxSearch(
+    {author: PREFIX + name, limit, offset: offsetForPage(options?.page, limit)},
     signal,
-  });
-  return audiobookResultsFromResponseRaw(raw);
+  );
 }
 
 /**
@@ -217,24 +273,15 @@ export async function searchByGenre(
   options?: ApiSearchOptions,
   signal?: AbortSignal,
 ): Promise<AudiobookResult[]> {
+  const tag = genre.trim().toLowerCase();
+  if (!tag) return [];
+  const limit = options?.limit ?? 20;
   try {
-    const raw = await apiFetch<LibriVoxResponseRaw>({
-      config: API_CONFIG.librivox,
-      path: '',
-      params: {
-        genre: genre.toLowerCase().trim(),
-        format: 'json',
-        limit: options?.limit ?? 20,
-        page: options?.page ?? 1,
-      },
+    const books = await librivoxSearch(
+      {genre: PREFIX + tag, limit, offset: offsetForPage(options?.page, limit)},
       signal,
-    });
-    const books = normalizeBooks(
-      raw === null || raw === undefined ? undefined : (raw as LibriVoxResponseRaw).books,
     );
-    if (books.length > 0) {
-      return books.map((b, i) => parseRawAudiobook(b, `books[${i}]`));
-    }
+    if (books.length > 0) return books;
   } catch (e) {
     // Transport-level failures → fall through to full-text.
     // Wire-shape failures propagate.
@@ -247,17 +294,11 @@ export async function getRecentAudiobooks(
   options?: ApiSearchOptions,
   signal?: AbortSignal,
 ): Promise<AudiobookResult[]> {
-  const raw = await apiFetch<LibriVoxResponseRaw>({
-    config: API_CONFIG.librivox,
-    path: '',
-    params: {
-      format: 'json',
-      limit: options?.limit ?? 30,
-      page: options?.page ?? 1,
-    },
+  const limit = options?.limit ?? 30;
+  return librivoxSearch(
+    {limit, offset: offsetForPage(options?.page, limit)},
     signal,
-  });
-  return audiobookResultsFromResponseRaw(raw);
+  );
 }
 
 // V21 W6 P21 (T21.04): documented retries for TanStack Query.

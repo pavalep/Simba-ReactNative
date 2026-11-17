@@ -44,6 +44,7 @@ import {SvgIcon} from '../../utility/SvgIcon';
 import {useAccessibility} from '../../../hooks/useAccessibility';
 import {useAuthStore} from '../../../state';
 import {BRAND} from '../../../constants/brand';
+import {FONT_FAMILY} from '../../../constants/fontFamily';
 import type {RootStackParamList} from '../../../navigation/types';
 
 interface HomeHeaderProps {
@@ -273,6 +274,8 @@ const styles = StyleSheet.create({
   },
   profileInitial: {
     fontSize: 16,
+    // Bold file is `Inter_bold.ttf` — the plain 'Inter' family needs it.
+    fontFamily: FONT_FAMILY.inter.bold,
     fontWeight: '700',
   },
 });

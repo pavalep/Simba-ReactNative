@@ -3,6 +3,7 @@ import {Modal, StyleSheet, TouchableOpacity, View} from 'react-native';
 import {useTheme} from '../../../theme';
 import {radius, spacing} from '../../../theme/tokens';
 import {AppText} from '../../core/AppText/AppText';
+import {FONT_FAMILY} from '../../../constants/fontFamily';
 import {AppTextInput} from '../../core/AppTextInput/AppTextInput';
 
 export interface PlaylistManageModalProps {
@@ -57,7 +58,7 @@ export const PlaylistManageModal: React.FC<PlaylistManageModalProps> = ({
               <AppText variant="body2" color="secondary">Cancel</AppText>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.primaryButton, {backgroundColor: isRename ? colors.accent.gold : colors.semantic.error}]} onPress={submit}>
-              <AppText variant="body2" style={{color: colors.text.inverse, fontWeight: '600'}}>
+              <AppText variant="body2" style={{color: colors.text.inverse, fontFamily: FONT_FAMILY.inter.semibold}}>
                 {isRename ? 'Save' : 'Delete'}
               </AppText>
             </TouchableOpacity>

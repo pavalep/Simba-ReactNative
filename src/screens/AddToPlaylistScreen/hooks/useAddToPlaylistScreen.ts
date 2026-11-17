@@ -51,10 +51,14 @@
 import {useCallback, useMemo, useState} from 'react';
 
 import {useApiQuery} from '../../../hooks/useApiQuery';
-import {getPopularJamendoTracks} from '../../../infrastructure/api/jamendo/adapter';
+import {
+  getPopularJamendoTracks,
+  JAMENDO_RETRIES,
+} from '../../../infrastructure/api/jamendo/adapter';
 import {
   resolveInternetArchiveVideoDetails,
   searchInternetArchiveVideos,
+  INTERNET_ARCHIVE_RETRIES,
 } from '../../../infrastructure/api/internetArchive/adapter';
 import {MOVIE_CATEGORIES, withJunkFilter} from '../../../constants/movieCategories';
 import {useDownloadsStore} from '../../../state';
@@ -246,6 +250,7 @@ export function useAddToPlaylistScreen(
       }),
     enabled: section === 'movies',
     staleTime: 300000,
+    retry: INTERNET_ARCHIVE_RETRIES,
   });
 
   const musicQuery = useApiQuery<JamendoTrackResult[]>({
@@ -253,6 +258,7 @@ export function useAddToPlaylistScreen(
     queryFn: () => getPopularJamendoTracks(SECTION_LIMIT, 1),
     enabled: section === 'music',
     staleTime: 300000,
+    retry: JAMENDO_RETRIES,
   });
 
   const downloads = useDownloadsStore(state => state.records);

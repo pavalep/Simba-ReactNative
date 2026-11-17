@@ -31,7 +31,10 @@ import {useCallback, useMemo} from 'react';
 import {useInfiniteApiQuery} from '../../../hooks/useApiQuery';
 import {usePullToRefresh} from '../../_shared/pullToRefresh';
 import {MOVIE_CATEGORIES, withJunkFilter} from '../../../constants/movieCategories';
-import {searchInternetArchiveVideos} from '../../../infrastructure/api/internetArchive/adapter';
+import {
+  searchInternetArchiveVideos,
+  INTERNET_ARCHIVE_RETRIES,
+} from '../../../infrastructure/api/internetArchive/adapter';
 import type {
   InternetArchiveVideoResult,
   PaginatedResult,
@@ -204,6 +207,7 @@ export function useMoviesScreen({
       return (lastPageParam as number) + 1;
     },
     staleTime: 60_000,
+    retry: INTERNET_ARCHIVE_RETRIES,
   });
 
   const pages = q.data?.pages ?? [];

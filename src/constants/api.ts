@@ -43,11 +43,6 @@ export const API_CONFIG = {
     baseUrl: 'https://iptv-org.github.io/iptv',
     timeoutMs: 30_000,
   },
-  jamendo: {
-    baseUrl: 'https://api.jamendo.com/v3.0',
-    clientId: ENV.JAMENDO_CLIENT_ID,
-    clientSecret: ENV.JAMENDO_CLIENT_SECRET,
-  },
   internetArchive: {
     baseUrl: 'https://archive.org',
     // advancedsearch is genuinely slow on a cold CDN node (>10s before

@@ -1,5 +1,6 @@
 import {StyleSheet} from 'react-native';
 import {radius, spacing} from '../../../theme/tokens';
+import {FONT_FAMILY} from '../../../constants/fontFamily';
 
 export const styles = StyleSheet.create({
   root: {flex: 1},
@@ -32,7 +33,10 @@ export const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   info: {flex: 1, gap: 2},
-  name: {fontWeight: '600'},
+  name: {
+    // 600 lives in the family key ('Inter' + 600 opens the 400 Regular).
+    fontFamily: FONT_FAMILY.inter.semibold,
+  },
   footer: {
     alignItems: 'center',
     justifyContent: 'center',

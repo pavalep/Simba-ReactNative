@@ -8,6 +8,7 @@ import {View, TouchableOpacity, StyleSheet, Dimensions, Animated} from 'react-na
 import LinearGradient from 'react-native-linear-gradient';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../../theme';
+import {FONT_FAMILY} from '../../../constants/fontFamily';
 import {AppText} from '../../../components/core/AppText/AppText';
 
 const {width: SCREEN_WIDTH} = Dimensions.get('window');
@@ -190,7 +191,8 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   artistName: {
-    fontWeight: '600',
+    // 600 lives in the family key — see src/constants/fontFamily.ts
+    fontFamily: FONT_FAMILY.inter.semibold,
     textDecorationLine: 'underline',
   },
 });

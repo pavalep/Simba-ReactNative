@@ -34,6 +34,7 @@ import {useApiQuery} from '../../../hooks/useApiQuery';
 import {usePullToRefresh} from '../../_shared/pullToRefresh';
 import {
   getIPTVCatalogue,
+  IPTV_RETRIES,
   type IPTVCatalogue,
 } from '../../../infrastructure/api/iptv/adapter';
 import {filterIPTVChannels} from '../../../infrastructure/api/iptv/catalogue';
@@ -116,6 +117,7 @@ export function useLiveTVBrowser(initialCategory?: string) {
     queryFn: ({signal}) => getIPTVCatalogue(signal),
     staleTime: CATALOGUE_STALE_MS,
     gcTime: CATALOGUE_GC_MS,
+    retry: IPTV_RETRIES,
   });
 
   /**

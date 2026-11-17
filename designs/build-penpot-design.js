@@ -198,15 +198,15 @@ function layoutOf(screen) {
   const find = (prefix) => all.find((n) => n.name.startsWith(prefix));
 
   const root = all.find((n) => n.kind === 'frame' && !n.parent);
-  const content = N['Content'];
+  const content = N.Content;
   const logoArea = N['Logo area'];
   const stack = N['Logo stack'];
   const orb = find('Orb (gold glow)');
   const block = N['Logo block'];
-  const brand = N['Brand'];
-  const lion = N['Lion'];
-  const wordmark = N['Wordmark'];
-  const tagline = N['Tagline'];
+  const brand = N.Brand;
+  const lion = N.Lion;
+  const wordmark = N.Wordmark;
+  const tagline = N.Tagline;
   const bottom = N['Bottom section'];
   const btnWrap = N['Button wrap'];
   const btn = N['Sign in with Google'];

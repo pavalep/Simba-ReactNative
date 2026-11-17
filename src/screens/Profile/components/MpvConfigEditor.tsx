@@ -327,7 +327,8 @@ export const MpvConfigEditor: React.FC<MpvConfigEditorProps> = ({
         },
         saveBtnText: {
           color: colors.text.inverse,
-          fontWeight: '600',
+          // 600 lives in the family key ('Inter' + 600 opens the 400 Regular).
+          fontFamily: FONT_FAMILY.inter.semibold,
         },
       }),
     [colors],
@@ -449,7 +450,7 @@ export const MpvConfigEditor: React.FC<MpvConfigEditorProps> = ({
             {/* Add new option button */}
             {editingIndex === null && (
               <TouchableOpacity style={styles.addBtn} onPress={handleAdd}>
-                <AppText variant="body2" color="accent" style={{fontWeight: '600'}}>
+                <AppText variant="body2" color="accent" style={{fontFamily: FONT_FAMILY.inter.semibold}}>
                   + Add Option
                 </AppText>
               </TouchableOpacity>
@@ -498,7 +499,7 @@ export const MpvConfigEditor: React.FC<MpvConfigEditorProps> = ({
                   <TouchableOpacity
                     style={styles.editSaveBtn}
                     onPress={handleSaveEdit}>
-                    <AppText variant="body2" style={{color: colors.text.inverse, fontWeight: '600'}}>
+                    <AppText variant="body2" style={{color: colors.text.inverse, fontFamily: FONT_FAMILY.inter.semibold}}>
                       Save
                     </AppText>
                   </TouchableOpacity>

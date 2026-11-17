@@ -133,6 +133,7 @@ function glyphOf(buf, cmap, code) {
     let lo = 0;
     let hi = nGroups - 1;
     while (lo <= hi) {
+      /* eslint-disable-next-line no-bitwise -- the TrueType cmap lookup is a binary search over the group's mid point; the shift IS the algorithm. */
       const mid = (lo + hi) >> 1;
       const g = off + 16 + mid * 12;
       const start = buf.readUInt32BE(g);
@@ -157,9 +158,13 @@ function glyphOf(buf, cmap, code) {
     if (code < start) return 0;
     const idDelta = buf.readInt16BE(deltaBase + i * 2);
     const idRangeOffset = buf.readUInt16BE(rangeBase + i * 2);
-    if (idRangeOffset === 0) return (code + idDelta) & 0xffff;
+    if (idRangeOffset === 0) {
+      /* eslint-disable-next-line no-bitwise -- the glyph id is a 16-bit value; the mask is the format-4 spec's own arithmetic. */
+      return (code + idDelta) & 0xffff;
+    }
     const glyphAddr = rangeBase + i * 2 + idRangeOffset + (code - start) * 2;
     const glyph = buf.readUInt16BE(glyphAddr);
+    /* eslint-disable-next-line no-bitwise -- the glyph id is a 16-bit value; the mask is the format-4 spec's own arithmetic. */
     return glyph === 0 ? 0 : (glyph + idDelta) & 0xffff;
   }
   return 0;

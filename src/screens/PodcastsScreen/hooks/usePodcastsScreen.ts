@@ -41,6 +41,7 @@ import {useCallback, useState} from 'react';
 import {
   searchPodcasts,
   getTrendingPodcasts,
+  PODCAST_INDEX_RETRIES,
 } from '../../../infrastructure/api/podcastIndex/adapter';
 import {
   flattenUniqueById,
@@ -121,6 +122,7 @@ export function usePodcastsScreen(
     getNextPageParam: (lastPage, _pages, lastParam) =>
       nextPageMax(lastParam as number, lastPage.length, MAX_RESULTS_PER_QUERY),
     staleTime: 60_000,
+    retry: PODCAST_INDEX_RETRIES,
   });
 
   // The pages NEST: `max=50` re-sends the first 25 rows of `max=25`.

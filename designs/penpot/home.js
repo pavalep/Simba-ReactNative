@@ -55,7 +55,7 @@
 
 'use strict';
 
-const {kit, SCREEN_W, SCREEN_H, INSETS_TOP, spacing} = require('./kit');
+const {kit, SCREEN_W, SCREEN_H, spacing} = require('./kit');
 
 /**
  * The Explore Contents card: 140 wide, 8 apart, 12 from the edge.

@@ -13,7 +13,10 @@
 
 import {useMemo} from 'react';
 import {useApiQuery} from '../../../../hooks/useApiQuery';
-import {getReleaseGroupDetail} from '../../../../infrastructure/api/musicbrainz/adapter';
+import {
+  getReleaseGroupDetail,
+  MUSICBRAINZ_RETRIES,
+} from '../../../../infrastructure/api/musicbrainz/adapter';
 import type {MusicBrainzReleaseGroupDetail} from '../../../../types/api';
 import {useMediaStore} from '../../../../state';
 
@@ -58,6 +61,7 @@ export function useAlbumEnrichment(
         : Promise.resolve(null),
     enabled: !!releaseGroupId,
     staleTime: 60 * 60 * 1000, // 1 hour
+    retry: MUSICBRAINZ_RETRIES,
   });
 
   const matchedCount = useMemo(() => {

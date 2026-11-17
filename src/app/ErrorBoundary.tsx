@@ -6,6 +6,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import {AppText} from '../components/core/AppText/AppText';
+import {FONT_FAMILY} from '../constants/fontFamily';
 import {logger} from '../lib/logger';
 
 // ─── Types ────────────────────────────────────────────────
@@ -211,7 +212,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   retryText: {
-    fontWeight: '600',
+    // Weight 600 now lives in the family key — Android picks the file from it.
+    fontFamily: FONT_FAMILY.inter.semibold,
   },
   goBackButton: {
     paddingHorizontal: 32,

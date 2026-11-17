@@ -17,6 +17,7 @@ import {AppText} from '../../../../components/core/AppText/AppText';
 import {ScanProgressBanner} from '../../../../components/feedback/ScanProgressBanner/ScanProgressBanner';
 import {SvgIcon} from '../../../../components/utility/SvgIcon';
 import {spacing, radius} from '../../../../theme/tokens';
+import {FONT_FAMILY} from '../../../../constants/fontFamily';
 import {LibraryScreenProps} from '../../../../navigation/types';
 import {LibraryFoldersSegment} from './LibraryFoldersSegment';
 import {LibraryAudioSegment} from './LibraryAudioSegment';
@@ -146,7 +147,7 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
           borderBottomColor: 'transparent',
         },
         segmentActive: {borderBottomColor: colors.accent.gold},
-        segmentLabel: {fontWeight: '500', fontSize: 13},
+        segmentLabel: {fontFamily: FONT_FAMILY.inter.medium, fontSize: 13},
         segmentIcon: {width: 14, height: 14, marginRight: 8},
         segmentInner: {flexDirection: 'row', alignItems: 'center'},
         segmentRail: {flexDirection: 'row', paddingHorizontal: 20},
@@ -168,7 +169,7 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
           backgroundColor: colors.background.elevated,
           gap: 6,
         },
-        sortBtnLabel: {fontWeight: '500'},
+        sortBtnLabel: {fontFamily: FONT_FAMILY.inter.medium},
         filterRow: {flex: 1, flexDirection: 'row', gap: spacing.xs},
         filterChip: {
           paddingVertical: 6,
@@ -181,7 +182,7 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
           backgroundColor: colors.accent.goldDim,
           borderColor: colors.accent.gold,
         },
-        filterChipLabel: {fontWeight: '500'},
+        filterChipLabel: {fontFamily: FONT_FAMILY.inter.medium},
         filterRail: {flexDirection: 'row', gap: spacing.xs},
         sortPickerScrim: {flex: 1, justifyContent: 'flex-end'},
         sortPickerPanel: {
@@ -404,7 +405,7 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
             const isActive = playlistFilterType === item.key;
             return (
               <TouchableOpacity style={[styles.playlistFilterChip, isActive && styles.playlistFilterChipActive]} onPress={() => setPlaylistFilterType(item.key)} activeOpacity={0.7}>
-                <AppText variant="caption" color={isActive ? 'accent' : 'secondary'} style={{fontWeight: '600'}}>{item.label}</AppText>
+                <AppText variant="caption" color={isActive ? 'accent' : 'secondary'} style={{fontFamily: FONT_FAMILY.inter.semibold}}>{item.label}</AppText>
               </TouchableOpacity>
             );
           }}

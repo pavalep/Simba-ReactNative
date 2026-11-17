@@ -23,6 +23,7 @@ import {
   searchShows,
   getSchedule,
   getPopularShows,
+  TVMAZE_RETRIES,
   type TVMazeScheduleItem,
 } from '../../../infrastructure/api/tvmaze/adapter';
 import {useNetworkStatus} from '../../../hooks/useNetworkStatus';
@@ -89,6 +90,7 @@ export function useShowsScreen(
       return Array.from(unique.values());
     },
     staleTime: 1_800_000, // 30 min
+    retry: TVMAZE_RETRIES,
   });
 
   // The active stream — search or browse, dispatched by the
@@ -98,6 +100,7 @@ export function useShowsScreen(
     queryFn: () => searchShows(searchTerm),
     enabled: isSearchActive,
     staleTime: SEARCH_CACHE_TTL,
+    retry: TVMAZE_RETRIES,
   });
 
   const browseQ = useInfiniteApiQuery<TVMazeShow[]>({
@@ -112,6 +115,7 @@ export function useShowsScreen(
     },
     enabled: !isSearchActive,
     staleTime: 3_600_000,
+    retry: TVMAZE_RETRIES,
   });
 
   const active = isSearchActive ? searchQ : browseQ;

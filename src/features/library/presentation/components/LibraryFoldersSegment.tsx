@@ -4,6 +4,7 @@ import {AppText} from '../../../../components/core/AppText/AppText';
 import {EmptyState} from '../../../../components/feedback/EmptyState/EmptyState';
 import {SvgIcon} from '../../../../components/utility/SvgIcon';
 import {radius, ColorTokens} from '../../../../theme/tokens';
+import {FONT_FAMILY} from '../../../../constants/fontFamily';
 
 import textContent from '../related/textContent';
 import {useMediaStore} from '../../../../state';
@@ -78,7 +79,8 @@ export const LibraryFoldersSegment: React.FC<LibraryFoldersSegmentProps> = React
           flex: 1,
         },
         folderName: {
-          fontWeight: '600',
+          // 600 lives in the family key — see src/constants/fontFamily.ts
+          fontFamily: FONT_FAMILY.inter.semibold,
         },
         folderPath: {
           fontSize: 11,
@@ -206,7 +208,7 @@ export const LibraryFoldersSegment: React.FC<LibraryFoldersSegmentProps> = React
                     <AppText
                       variant="caption"
                       color={type === 'video' ? 'accent' : 'accent'}
-                      style={{fontSize: 10, fontWeight: '600'}}>
+                      style={{fontSize: 10, fontFamily: FONT_FAMILY.inter.semibold}}>
                       {type === 'video' ? 'VIDEO' : 'AUDIO'}
                     </AppText>
                   </View>

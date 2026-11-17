@@ -75,7 +75,11 @@ describe('podcastIndexAdapter', () => {
       title: 'Test Pod',
       author: 'Author',
       description: 'd',
-      image: 'http://x/i',
+      // The artwork URL is upgraded to https at the adapter boundary: a
+      // release build sets `usesCleartextTraffic=false`, so an http:// image
+      // is blocked by the platform and the row shows its placeholder for
+      // good. The feed's URL is NOT an image and stays as it came.
+      image: 'https://x/i',
       feedUrl: 'http://x/feed',
       episodeCount: 5,
       categories: {'1': 'Tech'},
@@ -123,7 +127,8 @@ describe('podcastIndexAdapter', () => {
       description: 'd',
       datePublished: 1234,
       duration: 600,
-      image: 'http://x/i',
+      // Same rule as the feed artwork: the image is upgraded to https.
+      image: 'https://x/i',
       feedUrl: 'http://x/feed',
       enclosureUrl: 'http://x/audio.mp3',
       enclosureType: 'audio/mpeg',

@@ -23,7 +23,10 @@
 
 import {useCallback, useMemo, useState} from 'react';
 import {useApiQuery} from '../../../hooks/useApiQuery';
-import {getJamendoTracksByGenre} from '../../../infrastructure/api/jamendo/adapter';
+import {
+  getJamendoTracksByGenre,
+  JAMENDO_RETRIES,
+} from '../../../infrastructure/api/jamendo/adapter';
 import {useMediaStore, type ScannedTrack} from '../../../state';
 import {useNetworkStatus} from '../../../hooks/useNetworkStatus';
 import type {JamendoTrackResult} from '../../../types/api';
@@ -67,6 +70,7 @@ export function useGenreScreen(
     queryKey: ['jamendo', 'byGenre', initialGenre, STREAMING_LIMIT],
     queryFn: () => getJamendoTracksByGenre(initialGenre, {limit: STREAMING_LIMIT}),
     staleTime: 60_000,
+    retry: JAMENDO_RETRIES,
   });
 
   const retryStreaming = useCallback(() => {

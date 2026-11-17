@@ -16,12 +16,22 @@
 import {useEffect, useMemo, useState} from 'react';
 import type {QueryFunctionContext} from '@tanstack/react-query';
 import {useApiQueries} from '../../../hooks/useApiQuery';
-import {searchAudiobooks} from '../../../infrastructure/api/librivox/adapter';
-import {getIPTVCatalogue, type IPTVCatalogue} from '../../../infrastructure/api/iptv/adapter';
+import {searchAudiobooks, LIBRIVOX_RETRIES} from '../../../infrastructure/api/librivox/adapter';
+import {
+  getIPTVCatalogue,
+  IPTV_RETRIES,
+  type IPTVCatalogue,
+} from '../../../infrastructure/api/iptv/adapter';
 import {filterIPTVChannels} from '../../../infrastructure/api/iptv/catalogue';
-import {searchJamendoTracks} from '../../../infrastructure/api/jamendo/adapter';
-import {searchInternetArchiveAudio} from '../../../infrastructure/api/internetArchive/adapter';
-import {searchAudiusTracks} from '../../../infrastructure/api/audius/adapter';
+import {
+  searchJamendoTracks,
+  JAMENDO_RETRIES,
+} from '../../../infrastructure/api/jamendo/adapter';
+import {
+  searchInternetArchiveAudio,
+  INTERNET_ARCHIVE_RETRIES,
+} from '../../../infrastructure/api/internetArchive/adapter';
+import {searchAudiusTracks, AUDIUS_RETRIES} from '../../../infrastructure/api/audius/adapter';
 import {getPopularJamendoTracks} from '../../../infrastructure/api/jamendo/adapter';
 import {scopeShowsTV, type SearchScope} from '../utils/searchFilters';
 import type {
@@ -113,6 +123,7 @@ export function useAggregatedSearch(
         queryFn: () => searchAudiobooks(debouncedQuery, {limit: 6}),
         enabled,
         staleTime: 60_000,
+        retry: LIBRIVOX_RETRIES,
       },
       {
         queryKey: ['iptv', 'catalogue'] as const,
@@ -151,12 +162,14 @@ export function useAggregatedSearch(
         enabled: enabled && scopeShowsTV(scope),
         staleTime: IPTV_CATALOGUE_STALE_MS,
         gcTime: IPTV_CATALOGUE_GC_MS,
+        retry: IPTV_RETRIES,
       },
       {
         queryKey: ['jamendo', 'search', debouncedQuery, 6] as const,
         queryFn: () => searchJamendoTracks(debouncedQuery, {limit: 6}),
         enabled,
         staleTime: 60_000,
+        retry: JAMENDO_RETRIES,
       },
       {
         queryKey: ['internetArchive', 'search', debouncedQuery, 6] as const,
@@ -164,12 +177,14 @@ export function useAggregatedSearch(
           searchInternetArchiveAudio(debouncedQuery, {limit: 6}).then(r => r.items),
         enabled,
         staleTime: 60_000,
+        retry: INTERNET_ARCHIVE_RETRIES,
       },
       {
         queryKey: ['audius', 'search', debouncedQuery, 6] as const,
         queryFn: () => searchAudiusTracks(debouncedQuery, {limit: 6}),
         enabled,
         staleTime: 60_000,
+        retry: AUDIUS_RETRIES,
       },
     ],
     combine: ([

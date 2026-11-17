@@ -27,6 +27,7 @@ import {
   getGenres,
   getCountries,
   getLanguages,
+  RADIO_BROWSER_RETRIES,
   type RadioFilterSet,
 } from '../../../infrastructure/api/radioBrowser/adapter';
 import {useApiQuery, useInfiniteApiQuery} from '../../../hooks/useApiQuery';
@@ -141,16 +142,19 @@ export function useRadioBrowser(initialTag?: string): UseRadioBrowserReturn {
     queryKey: ['radioBrowser', 'tags', 'genres', TAGS_LIMIT],
     queryFn: () => getGenres(TAGS_LIMIT),
     staleTime: 5 * 60_000,
+    retry: RADIO_BROWSER_RETRIES,
   });
   const countriesQ = useApiQuery<RadioBrowseTag[]>({
     queryKey: ['radioBrowser', 'tags', 'countries', TAGS_LIMIT],
     queryFn: () => getCountries(TAGS_LIMIT),
     staleTime: 5 * 60_000,
+    retry: RADIO_BROWSER_RETRIES,
   });
   const languagesQ = useApiQuery<RadioBrowseTag[]>({
     queryKey: ['radioBrowser', 'tags', 'languages', TAGS_LIMIT],
     queryFn: () => getLanguages(TAGS_LIMIT),
     staleTime: 5 * 60_000,
+    retry: RADIO_BROWSER_RETRIES,
   });
 
   // ── The big one: server-paginated stations per
@@ -188,6 +192,7 @@ export function useRadioBrowser(initialTag?: string): UseRadioBrowserReturn {
       return (lastPageParam as number) + 1;
     },
     staleTime: 60_000,
+    retry: RADIO_BROWSER_RETRIES,
   });
 
   // ── Filter actions ──

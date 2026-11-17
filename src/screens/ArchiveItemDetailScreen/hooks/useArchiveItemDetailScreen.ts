@@ -11,6 +11,7 @@ import {useApiQuery} from '../../../hooks/useApiQuery';
 import {
   getInternetArchiveItemDetails,
   getArchiveTracks,
+  INTERNET_ARCHIVE_RETRIES,
 } from '../../../infrastructure/api/internetArchive/adapter';
 import type {
   InternetArchiveItemResult,
@@ -32,12 +33,14 @@ export function useArchiveItemDetailScreen(
     queryKey: ['internetArchive', 'item', identifier],
     queryFn: () => getInternetArchiveItemDetails(identifier),
     enabled: !!identifier,
+    retry: INTERNET_ARCHIVE_RETRIES,
   });
 
   const tracksQ = useApiQuery<ArchiveTrack[]>({
     queryKey: ['internetArchive', 'tracks', identifier],
     queryFn: () => getArchiveTracks(identifier),
     enabled: !!identifier,
+    retry: INTERNET_ARCHIVE_RETRIES,
   });
 
   return {

@@ -775,15 +775,19 @@ function searchKit(themeName) {
           ? {after: {name: previousLabel, edge: 'right', pad: SHEET.chipPadX * 2 + SHEET.chipBorder * 2 + SHEET.chipGap}}
           : SHEET.padX + SHEET.chipPadX + SHEET.chipBorder;
         out.push(
-          k.text(labelName, row_.label, {
-            x: textX,
-            y: y + (SHEET.chipH - SHEET.chipLabelLine) / 2,
-            family: row_.selected ? 'Inter SemiBold' : 'Inter Medium',
-            weight: row_.selected ? 600 : 500,
-            size: SHEET.chipLabelSize,
-            lineHeight: SHEET.chipLabelLine,
-            fill: row_.selected ? c.background.primary : c.text.primary,
-          }),
+          // The pill — behind the label.
+          //
+          // The plan's order IS the painting order (build-penpot-app.js:
+          // "the plan's order IS the painting order"), and the pill's fill
+          // is OPAQUE (accent.gold when selected, background.primary
+          // otherwise). Pushing the label first therefore painted the pill
+          // OVER its own label and the chip read as a blank gold lozenge.
+          // The Movies board already paints the pill first
+          // (designs/penpot/movies.js:823-851) — this is that treatment.
+          //
+          // The `after` references resolve regardless of the order: the
+          // builder lays every shape out before it paints any of them
+          // (build-penpot-app.js:1413-1422).
           k.rect(name + ' chip ' + row_.key + ' pill', {
             x: {after: {name: labelName, pad: -SHEET.chipPadX - SHEET.chipBorder}},
             y,
@@ -800,6 +804,16 @@ function searchKit(themeName) {
             fill: row_.selected ? c.accent.gold : c.background.primary,
             stroke: row_.selected ? undefined : c.border.subtle,
             strokeWidth: row_.selected ? undefined : 1.5,
+          }),
+          // The label — on top of the pill.
+          k.text(labelName, row_.label, {
+            x: textX,
+            y: y + (SHEET.chipH - SHEET.chipLabelLine) / 2,
+            family: row_.selected ? 'Inter SemiBold' : 'Inter Medium',
+            weight: row_.selected ? 600 : 500,
+            size: SHEET.chipLabelSize,
+            lineHeight: SHEET.chipLabelLine,
+            fill: row_.selected ? c.background.primary : c.text.primary,
           }),
         );
         previousLabel = labelName;
@@ -914,7 +928,7 @@ function searchEmptyBoard(themeName) {
  * and lets the sheet cover the rest of it.
  */
 function resultsContent(S, o) {
-  const {k, P} = S;
+  const {k} = S;
   const shapes = [];
   const chromeOut = chrome(S, {value: o.query, placeholder: FIELD_PLACEHOLDER, focused: true, clear: true});
   shapes.push(...chromeOut.shapes);

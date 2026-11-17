@@ -1,6 +1,7 @@
 import React from 'react';
 import {View, TouchableOpacity, StyleSheet} from 'react-native';
 import {AppText} from '../../core/AppText/AppText';
+import {FONT_FAMILY} from '../../../constants/fontFamily';
 import {radius} from '../../../theme/tokens';
 import {useTheme} from '../../../theme';
 
@@ -178,6 +179,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   btnLabel: {
-    fontWeight: '600',
+    // Weight 600 now lives in the family key — Android picks the file from it.
+    fontFamily: FONT_FAMILY.inter.semibold,
   },
 });

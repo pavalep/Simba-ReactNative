@@ -14,6 +14,7 @@ import {useBottomChromeInset} from '../../../infrastructure/player/miniPlayerChr
 import LinearGradient from 'react-native-linear-gradient';
 import {useTheme} from '../../../theme';
 import {spacing, radius} from '../../../theme/tokens';
+import {FONT_FAMILY} from '../../../constants/fontFamily';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
 import {BackButton} from '../../../components/utility/BackButton/BackButton';
@@ -375,7 +376,10 @@ const styles = StyleSheet.create({
     minWidth: 44,
     alignItems: 'center',
   },
-  chipLabel: {fontWeight: '600'},
+  chipLabel: {
+    // 600 lives in the family key ('Inter' + 600 opens the 400 Regular).
+    fontFamily: FONT_FAMILY.inter.semibold,
+  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -393,7 +397,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   rowBody: {flex: 1, gap: 1},
-  rowTitle: {fontWeight: '600'},
+  rowTitle: {
+    // 600 lives in the family key ('Inter' + 600 opens the 400 Regular).
+    fontFamily: FONT_FAMILY.inter.semibold,
+  },
   rowActions: {flexDirection: 'row', gap: spacing.xs},
   actionBtn: {
     width: 34,

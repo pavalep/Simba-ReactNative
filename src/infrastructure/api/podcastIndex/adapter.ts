@@ -292,6 +292,25 @@ function unwrapSingle<T>(envelope: RawEnvelope<T> | undefined): T | undefined {
   return (envelope?.feed ?? undefined) as T | undefined;
 }
 
+/**
+ * The artwork URL, with the scheme forced to https.
+ *
+ * Podcast Index hands back whatever scheme the publisher used, and some
+ * feeds are still `http://`. The app never rewrote it, which worked in a
+ * DEBUG build (RN's Gradle plugin resolves
+ * `android:usesCleartextTraffic` to `true` for debug) and silently fails in
+ * a RELEASE build, where the platform blocks cleartext and the row shows
+ * the placeholder tile for good.
+ *
+ * The upgrade happens HERE, at the one boundary where the app produces the
+ * URL, so no consumer has to know about it. When the host serves https it
+ * now works in release too; when it does not, the image fails exactly as it
+ * already does — the placeholder — so this is never worse than before.
+ */
+function secureArtworkUrl(url: string): string {
+  return url.startsWith('http://') ? 'https://' + url.slice(7) : url;
+}
+
 export function podcastResultFromRaw(
   raw: RawFeed | undefined,
 ): PodcastResult | null {
@@ -301,7 +320,7 @@ export function podcastResultFromRaw(
     title: raw.title,
     author: raw.author,
     description: raw.description,
-    image: raw.image,
+    image: secureArtworkUrl(raw.image),
     feedUrl: raw.url,
     // V23 W24 D-040c: RawFeed.episodeCount is now optional (API
     // often omits it on summary endpoints). padResult() cast keeps
@@ -329,7 +348,7 @@ export function podcastEpisodeResultFromRaw(
     description: raw.description,
     datePublished: raw.datePublished,
     duration: raw.duration,
-    image: raw.image,
+    image: secureArtworkUrl(raw.image),
     feedUrl: raw.feedUrl,
     enclosureUrl: raw.enclosureUrl,
     enclosureType: raw.enclosureType,

@@ -17,6 +17,7 @@ import {BackButton} from '../../../../components/utility/BackButton/BackButton';
 import {SimbaStatusBar} from '../../../../components/StatusBar';
 import {MediaImage} from '../../../../components/utility/MediaImage';
 import {radius, spacing} from '../../../../theme/tokens';
+import {FONT_FAMILY} from '../../../../constants/fontFamily';
 import {useCachedArt} from '../../../../hooks/useCachedArt';
 import {useMoreFromArtist} from '../../../../hooks/useMoreFromArtist';
 import {StreamingRow} from '../../../../components/media/StreamingRow/StreamingRow';
@@ -404,7 +405,7 @@ export const AlbumDetailScreen: React.FC<Props> = ({navigation, route}) => {
             <SvgIcon name="play" size={18} color={colors.background.primary} />
             <AppText
               variant="body2"
-              style={{color: colors.background.primary, fontWeight: '600'}}>
+              style={{color: colors.background.primary, fontFamily: FONT_FAMILY.inter.semibold}}>
               Play All
             </AppText>
           </TouchableOpacity>

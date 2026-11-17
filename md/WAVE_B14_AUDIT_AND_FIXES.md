@@ -238,11 +238,221 @@ ALL GATES DONE
 
 | phase | content | state |
 |---|---|---|
-| 1 | the font gate, B13.5, B13.7, B13.11, B13.1-4, the Live TV share link, the list inset | **done** |
-| 2 | the cheap VALID code fixes: B12-6 (CI red), B12-14, B13-14, B13-15, B13-16 + B12-11, B13-17, B13-19, A-01/A-02/A-03 | pending |
-| 3 | the fontWeight sweep — **corrected scope** — and the board pass that follows | pending |
-| 4 | B13-9 + B13-10 — `MusicDetailScreen` as a real detail screen, + a new board | pending |
-| 5 | B13-3 / B13-4 / B13-13 — Radio + Live TV onto the shared shell, + the board redraw | pending |
-| 6 | B13-12 — Audiobooks / Archive / Shows onto the shared shell (A-01 … A-31) | pending |
-| 7 | the design items — B13-6, B13-1-2, B12-3/4, B12-7/8/9, B-11-4/7 | pending |
-| 8 | the E and F audit slices (B-11-*, R3–R6, CF-*, CO-*, the iOS URL scheme) | pending |
+| 1 | the font gate, B13.5, B13.7, B13.11, B13.1-4, the Live TV share link, the list inset | **done** (30bb2f7) |
+| 2 | the cheap VALID code fixes: B12-6 (CI red), B12-14, B13-14, B13-17, A-01/A-02/A-03, CF-08, plus the extras | **done** |
+| 3 | the fontWeight sweep — **corrected scope** — and the board pass that follows | **done** (the sweep; the board pass is §8) |
+| 4 | B13-15 (the rename), B13-16 + B12-11 (the route params), CF-21, A-2, R3a/R3c/R3d, the footer's error | pending |
+| 5 | B13-9 + B13-10 — `MusicDetailScreen` as a real detail screen, + a new board | pending |
+| 6 | B13-3 / B13-4 / B13-13 — Radio + Live TV onto the shared shell, + the board redraw | pending |
+| 7 | B13-12 — Audiobooks / Archive / Shows onto the shared shell (A-01 … A-31) | pending |
+| 8 | the design items — B13-6, B13-1-2, B12-3/4, B12-7/8/9, B-11-4/7, B-11-2's board rebuild | pending |
+
+---
+
+## 6. Audits E and F
+
+### 6.1 B-11-2 … B-11-7, R3, R4, R5, R6 (audit E)
+
+| id | verdict | evidence | action |
+|---|---|---|---|
+| **B-11-2** | **VALID** (generator defect) | `designs/penpot/search.js:777-804` pushed the label BEFORE the pill; the plan's order IS the painting order (`build-penpot-app.js:1429-1432`) and the pill's fill is opaque — so the pill painted over its own label. The Movies board already paints the pill first (`movies.js:823-851`). | **Fixed** — the Search board now paints the pill first. The board itself is re-drawn in §8. |
+| **B-11-3** | **INVALID** | The arithmetic says the two centres coincide: the list reserves `B + 56 + 12`; the footer's −68 puts the 56 dp wrap's bottom at `B`; the 18 dp caption is centred in it, so its line-box centre is at `B + 28` — and the FAB disc's centre is at `B + 28` too. The wave's "11 dp" was measured from **ink bands** (32 px ≈ a 13 dp cap-to-descender band, not the 18 dp line box) and mixes a spinner arc with text. | Closed — no change. A device re-measure of the **line boxes** would settle it. |
+| **B-11-4** | **NOT-A-CODE-FIX** (design wave) | The band is `STATUS_INSET = 24`; `kit.js:62`'s `INSETS_TOP = 32` is still 8 dp over the device's 24. **The carried counts are stale:** the plan holds **82 boards**, of which **20 carry the 24 dp band** and **62 do not** — not "the other 67". | Carried forward — one decision for every board + a re-draw. |
+| **B-11-5** | **NOT-A-CODE-FIX** (device proof) | The state exists (`BrowseListFooter.tsx:113-121`); `PodcastsContent.tsx:151-152` binds it. Nothing to fix in code. | Carried forward — a device proof. |
+| **B-11-6** | **NOT-A-CODE-FIX** (device proof) + a copy nit | The sentence *"Showing {shown} of {total} movies — the archive stops paging here"* (`MoviesScreen/related/textContent.json:5`) is computed when `numFound > items.length`, which the **short-page** stop also produces (`useMoviesScreen.ts:196-197`) — and there the archive did *not* stop paging, so the sentence can be false. | Carried forward — the label needs to be derived from which stop rule fired. |
+| **B-11-7** | **NOT-A-CODE-FIX** (Penpot pass) | The 4 Movies boards; the numeric read-back already passed. | Carried forward — a 100 %-zoom pass. |
+| **R3a** | **VALID** | `BookmarksScreen.tsx:84` makes the count label the ONLY clear-all entry point (`useBookmarksScreen.ts:92-94`). `CONTENT_OWNERSHIP.md:330` asks for a separate named "Clear all bookmarks" control. | Phase 4. |
+| **R3b** | **VALID** | `DownloadsScreen.tsx:84` — the row is a `View`, not pressable, so a finished file cannot be opened; and on a `done` record the action shows a **download glyph** labelled "Resume download" that calls `resumeDownload` → `downloadService.ts:484-496`, which **restarts** the download. | Phase 4 — a row-grammar change, not a one-liner. |
+| **R3c** | **VALID** | The Library's `playlists` content mode still exists (`features/library/presentation/types/index.ts:2`, `localFilesConfig.ts:43-49`, `useLibraryScreen.ts:92,148-151`, `LibraryScreenContent.tsx:469,514-527,428-432`) although AllPlaylists owns that list and the same kind chips. | Phase 4 — the dropdown's "Playlists" entry must navigate to AllPlaylists in the same change. |
+| **R3d** | **VALID** | `HistoryScreen.tsx:336-343` — a `RefreshControl` whose handler is `setRefreshing(true); requestAnimationFrame(() => setRefreshing(false))` over a local store that re-reads nothing. | Phase 4 — delete the control, the state and the handler. |
+| **R4** | **VALID** (the Profile half is done) | `StatsScreen.tsx:37,78-111` reads the **persisted** 10-entry recent-history store for days/streak, and the **transient** `sessionStore` for playCounts/mediaLibrary. `sessionStore.ts:67` creates the store with no `persist` and its only writer is `features/recentHistory/index.ts:24` — so after a cold start the page says "Plays 0" next to a real day streak. | Carried forward — it needs a persisted, timestamped roll-up, not a screen change. |
+| **R5** | **VALID** (a specific list, not a sweep) | The 68 named dead exports in `md/PROFILE_RC1_REFACTOR.md:280-291`, the 8 store keys and their setters, the Help FAQ answers, and 6 of 8 Bookmarks strings — all still present. | Phase 4 — deletion needs a jest run per removal (the rule is zero inbound refs across `src/` AND `__tests__/`). |
+| **R6** | **VALID** | `@typescript-eslint/no-unused-vars` is off in two places (`.eslintrc.js:67` for tests, `:118` for the legacy surface) and the deferral comment says the V20 sweep never happened. Read-only run: **89 violations in 59 files**. | Carried forward — turning the rule on is 89 errors in 59 files. |
+
+Audit E also found, outside the list: **Movies and Music give the shared footer the LIST's error, not the load-more's** (`MoviesContent.tsx:314`, `MusicContent.tsx:152` pass the whole query's error, while the Podcasts fix at `PodcastsContent.tsx:150` passes `pageError`) — so a first-page failure shows two error messages and the footer names a load-more that never started. The Movies `windowEnd` sentence can be false (the A-06 note above), and `sessionStore.ts:50-53`'s `incrementPlayCount` is dead.
+
+### 6.2 CF-01, CF-03/04, CF-08, CF-12, CF-21, CO-05…CO-08, the iOS URL scheme (audit F)
+
+| id | verdict | evidence | action |
+|---|---|---|---|
+| **CF-01** | **STALE** (fixed in `0507926`) | The Android chain is complete end-to-end: the manifest filter (`AndroidManifest.xml:105-110`) → `MainActivity : ReactActivity` → `linking.ts:58` → `AppContent.tsx:113-136`. | Closed — the residual is a device re-proof. |
+| **CF-03** | **VALID** | `HomeHeader.tsx:274-277` sets `fontWeight: '700'` on `variant="h3"`, whose family is `Inter SemiBold` → RN resolves `fonts/Inter SemiBold_bold.ttf` → **not shipped** → the system font. | **Fixed** in the sweep. |
+| **CF-04** | **STALE** (fixed in `5d274e0`) | `InternalHeader.tsx:127-135` has no `fontWeight`; the file's only three hits are comments. | Closed. |
+| **CF-08** | **VALID** | `cacheService.ts:28`'s `getCacheSize` and its private `dirSize` have **no consumer** in `src/` or `__tests__`. `formatBytes` IS used. | **Fixed** — both deleted. |
+| **CF-12** | **INVALID** | The value is mpv's own `slang` format; every reader splits it correctly, the Settings row renders **names**, and `und` already maps to "Default (auto)". | Closed. Changing the *default* is a product decision. |
+| **CF-21** | **VALID** | `Avatar.tsx:107-109` draws `<SvgIcon name="music"/>` for the no-initials case, so every signed-out user sees a media glyph as their account avatar. | Phase 4 — reuse the HomeHeader **monogram** treatment; a new person glyph would be an asset + board wave. |
+| **CO-05** | **INVALID** (the chain is intact) | Profile → About → Privacy/Terms → `RootNavigator` → the real policy screens. There is **no first-run consent prompt anywhere** — nothing to accept, so the only gap is reachability. | Closed — a device proof. |
+| **CO-06** | **NOT-A-CODE-FIX** | "a judgement call, not a measurement". The Profile now has **21** `SettingsRow`s across 8 sections. | Carried forward — a device look + a design call. |
+| **CO-07** | **NOT-A-CODE-FIX** (placement) | The policy lives on the page it affects, deliberately (`CONTENT_OWNERSHIP.md:335,377`), and the chips are real and persisted. | Carried forward — but it exposed a real defect, below. |
+| **CO-08** | **STALE** (fixed in `0507926`) | `useDownloadsSync.ts:50-54,70-91` — one `ensureLoaded().then(hydrate).catch()`, one `subscribe`, a `release()`. | Closed. |
+| **the iOS URL scheme** | **VALID** | `ios/CinePlayer/Info.plist` has **no** `CFBundleURLTypes`, and `AppDelegate.swift` has no `application(_:open:options:)` — so registering the scheme alone would make iOS open the app and **drop the link**. The wave doc also points at the wrong path (`ios/SimbaPlayer/`; the target was renamed to `CinePlayer`). | Carried forward — it must be plist + AppDelegate + the module name (`AppDelegate.swift:27` starts RN with `"CinePlayer"` while the JS registers `"SimbaPlayer"`), then one macOS build. It cannot be compiled on this host. |
+
+Audit F also found, outside the list: **7 live font fallbacks** on Android (the gate's blind spot hid all of them), **the download auto-delete policy has two owners** — the store's default is `0` ("Off") but the service's own default is `5`, and the store's value only reaches the service when the **Downloads page is mounted**, so on a fresh install the app silently keeps 5 completed downloads while the chip says "Off"; and the service's **age** half (30 days) is always enforced with no UI at all. Plus: `MediaImage` never resets its three-state machine when `source` changes; five orphan SVG assets; `linking.ts:74`'s mis-indented `Stats: 'stats',`.
+
+---
+
+## 7. Phases 2 and 3 — the fixes
+
+### 7.1 B12-6 — CI's JS gate was RED on this branch
+
+`eslint .` exits **1** with 4 errors + 15 warnings, and `.github/workflows/ci.yml:64` runs
+`npm run lint -- --max-warnings 0`. The wave doc filed this as "not a gate failure" because
+its own ad-hoc gate only linted TS/TSX.
+
+The fix is to make the generators clean, not to hide them — `ignorePatterns: ['designs/']`
+would drop lint coverage of exactly the files the design waves edit. A scoped override for
+`designs/**/*.js` turns off `no-restricted-syntax` (a Penpot payload's `color:` field is
+Penpot's RPC field name, and the generators are the other END of the token rule — they
+*read* `src/theme/tokens.ts`) and sets `env: {node: true}` (`Buffer` is not defined under
+the RN config, and three generators use it).
+
+The 15 warnings were fixed at the source: two shadowed names renamed, five unused bindings
+removed, and the three bitwise operations in the TrueType cmap parser kept with an explicit
+`eslint-disable-next-line no-bitwise` (they ARE the algorithm).
+
+**One ESLint detail worth recording:** the description syntax (`-- why`) is only honoured in
+a **block** comment. In a `//` line comment the directive does not apply, and
+`eslint-comments/no-unused-disable` then removes it as "unused" — which is exactly what
+happened on the first attempt. The probe that settled it is recorded in the commit.
+
+### 7.2 B12-14 — the release build blocked the podcast artwork
+
+The app never rewrote the scheme. **3 of 100** trending feeds carry `http://` artwork.
+Cleartext is `android:usesCleartextTraffic="${usesCleartextTraffic}"`, resolved by RN's
+Gradle plugin to **debug `true`, release `false"`** — so in a release build those covers are
+blocked by the platform and the row shows the placeholder tile for good.
+
+`podcastResultFromRaw` and `podcastEpisodeResultFromRaw` now upgrade the scheme at the one
+boundary where the app produces the URL. When the host serves https it works in release
+too; when it does not, the image fails exactly as it already does — the placeholder — so it
+is never worse.
+
+### 7.3 B13-14 — the ten retry constants that all lied
+
+Ten constants, each with the comment *"hook layer honors this constant"*. **Not one was
+imported by any hook.** The retry that actually happened was the app-wide TanStack default
+`DEFAULT_RETRY = 2` — a different mechanism that merely shares the number.
+
+**36 queries across 23 hook files** now declare their source's policy explicitly.
+`QueryProvider.tsx`'s `DEFAULT_RETRY = 2` stays as the fallback for queries with no
+explicit policy (the LRC query).
+
+Every constant is 2 and the app-wide default was also 2, so **this is a zero-behaviour-change
+refactor**: it moves the policy from an accidental global default to an explicit per-source
+declaration. The one exception is `useWeather.ts`, whose `retry: false` was replaced by
+`retry: WEATHER_RETRIES` — the cascade catches its own throws and returns `null`, so the
+queryFn effectively never throws and TanStack never retries either way.
+
+### 7.4 A-01 / A-02 / A-03 — the LibriVox contract
+
+Measured against the live API on 2026-11-17, not read from a doc:
+
+| the app sent | the API did |
+|---|---|
+| `?q=alice` | **IGNORED** — 200 with the first books in the catalogue. The Audiobooks search never searched. |
+| `?title=alice` | 404 — an exact match, and no book is titled exactly "alice". |
+| `?title=^alice` | **the Alice books** — `^` is LibriVox's prefix operator. |
+| `?subject=alice` | IGNORED, like `q`. |
+| `?page=3` | IGNORED — the feed pages with `?offset=`, which counts ITEMS. |
+| `?offset=3&limit=3` | books 4..6 ✓ |
+| `?genre=fiction` | 500 — and `?genre=^mystery` 500s too, which is why the genre path keeps a fallback. |
+
+So: the searches are now **prefix** matches (`title=^…`, `author=^…`, `genre=^…`), the
+paging is `offset = (page − 1) × limit`, and **a 404 is "no books match", not a failure** —
+one `librivoxSearch` helper owns that rule, because treating a 404 as an error would turn
+every empty search into a failure state.
+
+The free-text search does the title search first and the **author** search only when the
+title search found nothing, because the field says *"Search titles or authors…"* and
+LibriVox cannot OR across two fields in one request (it answers 500). The author search
+therefore only costs a request when the title search missed.
+
+Five new tests pin the contract: the title prefix and the absence of `q`, the author
+fallback, `offset` instead of `page`, the 404 → empty rule, and that a 500 is still a
+failure.
+
+### 7.5 B13-17 — the dead code
+
+Deleted, after verifying each has no consumer:
+
+* `API_CONFIG.jamendo` — zero references (the Jamendo adapter has its own config).
+* `musicCategories.ts`'s `icon` / `genre` / `image` — only `id` and `name` are read (the
+  browse sheet's rows and the active chip's lookup).
+* **the ten per-genre music cover plates** — 595,495 bytes of dead bundle weight. The Home
+  rail's one music card uses `CATEGORY_COVERS.music.all`; the other ten were reachable only
+  from the field nothing read.
+* **six dead re-exports in EACH of the three screen type barrels** (`MusicScreen/types`,
+  `MoviesScreen/types`, `PodcastsScreen/types`) — their real consumers import the types from
+  `_shared/` directly. (The carried list named only the Music one; the same six were dead in
+  the other two.)
+
+`CF-08`'s `getCacheSize` + `dirSize` went the same way.
+
+### 7.6 The fontWeight sweep — the CORRECTED scope
+
+The carried rule was *"never a `fontWeight` prop"*. That is **not** the app's rule, and
+following it would have broken the bold faces: `theme/tokens.ts:416-433` pairs family +
+weight on every variant, and `'Inter'` + `'700'` is exactly what selects
+`fonts/Inter_bold.ttf`. What actually breaks is:
+
+1. a **sub-700 weight on a plain family** (`'Inter'` + 600 → `fonts/Inter.ttf` = the 400
+   Regular), and
+2. a **700 on a baked-weight family** (`'Inter SemiBold'` + 700 →
+   `fonts/Inter SemiBold_bold.ttf`, which does not ship → the system font).
+
+**55 sites across 30 files**, all fixed: the weight moved into the family key
+(`FONT_FAMILY.inter.semibold` / `.medium` / `.bold`), exactly as `src/constants/fontFamily.ts`
+and the typography tokens already document.
+
+### 7.7 The font gate — it was STILL blind after the rewrite
+
+This is the most important correction of the wave. The Phase 1 rewrite closed the
+style-array, conditional-style and imported-style blind spots, but three holes remained,
+and the gate was reporting **0 findings while 224 of 660 tags (34%) were audited with a
+different font than the one rendered**:
+
+1. **The literal-variant regex was broken.** `/\svariant=\{?['"]([A-Za-z0-9_]+)['"]\}/`
+   requires a closing `}` after the quote, so the dominant unbraced form `variant="h3"`
+   never matched — **606 of 660 tags were audited as AppText's `body1` default**.
+2. **The array path threw the fonts away.** `arrayCandidates()` returns merged **objects**,
+   and `main()` merged them again as strings — which stringified to `"[object Object]"`, so
+   every `fontFamily`/`fontWeight` inside a style array was discarded. **32 of 66
+   array-style tags carried a font prop that was dropped**, including the very case the
+   rewrite's own doc comment claimed to handle.
+3. **The report dropped the duplicates.** It deduped by `family|weight|style` and then
+   **skipped** the duplicates, so only the first occurrence of each missing font was ever
+   listed.
+
+Plus a fourth, found later in the wave: **only the FIRST `StyleSheet.create(` per file was
+parsed**, so a second sheet (a `swipeStyles`, a themed sheet) was invisible — it hid one
+more lost weight.
+
+All four are fixed. The gate now also reads each shipped TTF's **OS/2 `usWeightClass`**,
+so it can tell "the file exists" from "the file is the RIGHT face" — which is the only way
+to catch class 1 above (a `?q=`-style silent wrong-weight). The corrected gate found the
+**7 real fallbacks** the blind gate reported none of, and then the 55-site sweep.
+
+The gate's two finding classes are now:
+
+```
+FALLBACKS (these render in the system font):
+  Inter SemiBold + weight 700 -> fonts/Inter SemiBold_bold.ttf MISSING
+      src\screens\Genre\components\GenreScreen.tsx:150
+  Inter + weight 600 opens Inter.ttf, whose weight is 400 — the 600 is LOST
+      src\app\ErrorBoundary.tsx:104
+```
+
+### 7.8 The two tests my own changes broke
+
+* `__tests__/paginatedAdapters.test.ts` asserted the artwork URL came out as `http://x/i`.
+  It is `https://x/i` now — the input stays `http://` so the test still proves the upgrade.
+* `__tests__/screens/MoviesScreen/MoviesPullToRefresh.test.tsx` — "clears the spinner even
+  when the refetch fails". The harness's QueryClient sets `retry: false`, so the old mock
+  only had to fail the FIRST attempt; with the explicit `retry: 2` the later attempts fell
+  through to a stub that resolves nothing and **the refetch never settled** — the spinner
+  stayed on for 30 s. The mock now fails every attempt, which is what "the source is down"
+  means, and the wait covers the retry backoff.
+
+**That second one is a property of the harness, not of the app**: the app's QueryProvider
+already retried twice, so the production behaviour is unchanged.
+

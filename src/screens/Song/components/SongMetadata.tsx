@@ -8,6 +8,7 @@ import {View, TouchableOpacity, StyleSheet, FlatList} from 'react-native';
 import {useTheme} from '../../../theme';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {spacing, radius} from '../../../theme/tokens';
+import {FONT_FAMILY} from '../../../constants/fontFamily';
 
 interface MetadataRow {
   label: string;
@@ -104,6 +105,9 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     marginBottom: spacing.sm,
+    // 'Manrope SemiBold' + 700 opens a file that is not shipped; the plain
+    // 'Manrope' family + 700 is what reaches Manrope_bold.ttf.
+    fontFamily: FONT_FAMILY.manrope.bold,
     fontWeight: '700',
   },
   card: {
@@ -122,7 +126,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   value: {
-    fontWeight: '500',
+    // 500 lives in the family key ('Inter' + 500 opens the 400 Regular).
+    fontFamily: FONT_FAMILY.inter.medium,
     textAlign: 'right',
   },
   pathCard: {
@@ -135,7 +140,8 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   pathValue: {
-    fontWeight: '500',
+    // 500 lives in the family key ('Inter' + 500 opens the 400 Regular).
+    fontFamily: FONT_FAMILY.inter.medium,
   },
   copyHint: {
     marginTop: 4,

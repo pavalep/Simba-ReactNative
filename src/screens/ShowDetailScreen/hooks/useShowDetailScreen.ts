@@ -9,7 +9,11 @@
 
 import {useMemo} from 'react';
 import {useApiQuery} from '../../../hooks/useApiQuery';
-import {getShowById, getEpisodeList} from '../../../infrastructure/api/tvmaze/adapter';
+import {
+  getShowById,
+  getEpisodeList,
+  TVMAZE_RETRIES,
+} from '../../../infrastructure/api/tvmaze/adapter';
 import {
   fileNameMatchesShow,
   fileNameMatchesEpisode,
@@ -36,6 +40,7 @@ export function useShowDetailScreen(showId: number) {
         ([show, episodes]) => ({show, episodes}),
       ),
     staleTime: 60 * 60 * 1000,
+    retry: TVMAZE_RETRIES,
   });
 
   const show = data?.show ?? null;

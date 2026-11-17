@@ -11,7 +11,10 @@
 
 import {useMemo} from 'react';
 import {useApiQuery} from './useApiQuery';
-import {searchJamendoTracks} from '../infrastructure/api/jamendo/adapter';
+import {
+  searchJamendoTracks,
+  JAMENDO_RETRIES,
+} from '../infrastructure/api/jamendo/adapter';
 import type {JamendoTrackResult} from '../types/api';
 
 export function useMoreFromArtist(
@@ -32,6 +35,7 @@ export function useMoreFromArtist(
     queryFn: () => searchJamendoTracks(artistName, {limit}),
     enabled,
     staleTime: 60_000,
+    retry: JAMENDO_RETRIES,
   });
 
   const tracks = useMemo(() => {

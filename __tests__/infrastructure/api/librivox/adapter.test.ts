@@ -30,8 +30,22 @@ import {AdapterParseError} from '../../../../src/infrastructure/api/adapterError
 
 jest.mock('../../../../src/infrastructure/api/apiClient', () => ({
   apiFetch: jest.fn(),
+  // The adapter tells "no books match" (a 404) from a failure by reading
+  // the HTTP status off the error. The mock has to carry `ApiError` too, or
+  // the `instanceof` check in the adapter throws a TypeError instead of
+  // answering the question it was asked.
+  ApiError: class MockApiError extends Error {
+    status: number;
+    kind: string;
+    constructor(message: string, status: number, kind: string = 'http') {
+      super(message);
+      this.name = 'ApiError';
+      this.status = status;
+      this.kind = kind;
+    }
+  },
 }));
-const {apiFetch} = require('../../../../src/infrastructure/api/apiClient');
+const {apiFetch, ApiError} = require('../../../../src/infrastructure/api/apiClient');
 const mockedApiFetch = apiFetch as jest.MockedFunction<typeof apiFetch>;
 
 beforeEach(() => {
@@ -180,8 +194,16 @@ describe('librivox adapter — V21 W6 P21c', () => {
     mockedApiFetch.mockResolvedValueOnce({books: [validBook(1)]});
     const result = await searchByGenre('fiction');
     expect(result).toHaveLength(1);
-    // The fallback call used `q=...` instead of `genre=...`.
-    expect(mockedApiFetch.mock.calls[1][0].params).toHaveProperty('q', 'fiction');
+    // The genre call uses LibriVox's prefix operator, and the fallback
+    // call is the title search — NOT `q`, which the API ignores.
+    expect(mockedApiFetch.mock.calls[0][0].params).toHaveProperty(
+      'genre',
+      '^fiction',
+    );
+    expect(mockedApiFetch.mock.calls[1][0].params).toHaveProperty(
+      'title',
+      '^fiction',
+    );
   });
 
   it('searchByGenre propagates AdapterParseError from the genre call', async () => {
@@ -196,5 +218,62 @@ describe('librivox adapter — V21 W6 P21c', () => {
     await expect(searchByGenre('fiction')).rejects.toBeInstanceOf(
       AdapterParseError,
     );
+  });
+});
+
+// ─── The feed's own contract (measured against the live API) ────────────
+//
+// `?q=` is IGNORED by LibriVox — it answers 200 with the first books in
+// the catalogue, so the app used to "search" by showing the same shelf for
+// every term. The search fields are PREFIX matches (`?title=^alice`), and
+// the feed pages with `?offset=`, not `?page=`.
+
+describe('librivox adapter — the feed contract', () => {
+  it('searchAudiobooks asks for a TITLE prefix match, never `q`', async () => {
+    mockedApiFetch.mockResolvedValueOnce({books: [validBook(1)]});
+    await searchAudiobooks('alice');
+    const params = mockedApiFetch.mock.calls[0][0].params as Record<
+      string,
+      string | number | undefined
+    >;
+    expect(params).toHaveProperty('title', '^alice');
+    expect(params).not.toHaveProperty('q');
+  });
+
+  it('searchAudiobooks falls back to the AUTHOR search when no title matches', async () => {
+    mockedApiFetch.mockResolvedValueOnce({books: []});
+    mockedApiFetch.mockResolvedValueOnce({books: [validBook(2)]});
+    const result = await searchAudiobooks('twain');
+    expect(result).toHaveLength(1);
+    expect(mockedApiFetch).toHaveBeenCalledTimes(2);
+    expect(mockedApiFetch.mock.calls[1][0].params).toHaveProperty(
+      'author',
+      '^twain',
+    );
+  });
+
+  it('pages with `offset`, not `page` — LibriVox counts ITEMS', async () => {
+    mockedApiFetch.mockResolvedValueOnce({books: [validBook(1)]});
+    await searchAudiobooks('alice', {limit: 20, page: 3});
+    const params = mockedApiFetch.mock.calls[0][0].params as Record<
+      string,
+      string | number | undefined
+    >;
+    expect(params).toHaveProperty('offset', 40);
+    expect(params).not.toHaveProperty('page');
+  });
+
+  it('a 404 means "no books match", not a failure', async () => {
+    mockedApiFetch.mockRejectedValueOnce(
+      new ApiError('Request failed with status code 404', 404),
+    );
+    expect(await searchAudiobooks('nothingmatchesthis')).toEqual([]);
+  });
+
+  it('a 500 is still a failure — it is not swallowed as "no results"', async () => {
+    mockedApiFetch.mockRejectedValueOnce(
+      new ApiError('Request failed with status code 500', 500, 'server'),
+    );
+    await expect(searchAudiobooks('alice')).rejects.toBeTruthy();
   });
 });

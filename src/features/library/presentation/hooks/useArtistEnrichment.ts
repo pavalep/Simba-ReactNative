@@ -13,6 +13,7 @@ import {useApiQuery} from '../../../../hooks/useApiQuery';
 import {
   searchArtists,
   getArtistDiscography,
+  MUSICBRAINZ_RETRIES,
 } from '../../../../infrastructure/api/musicbrainz/adapter';
 import type {
   MusicBrainzArtist,
@@ -50,6 +51,7 @@ export function useArtistEnrichment(artistName: string): ArtistEnrichment {
     },
     enabled: artistName.trim().length > 0,
     staleTime: 60 * 60 * 1000,
+    retry: MUSICBRAINZ_RETRIES,
   });
 
   return {

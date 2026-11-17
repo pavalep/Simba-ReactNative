@@ -7,28 +7,6 @@ import {logger} from '../lib/logger';
  * platform cache directory (thumbnails, temp extraction, mpv scratch).
  */
 
-async function dirSize(path: string): Promise<number> {
-  try {
-    const items = await RNFS.readDir(path);
-    let total = 0;
-    for (const item of items) {
-      if (item.isDirectory()) {
-        total += await dirSize(item.path);
-      } else {
-        total += item.size;
-      }
-    }
-    return total;
-  } catch {
-    return 0;
-  }
-}
-
-/** Total cache size in bytes. */
-export async function getCacheSize(): Promise<number> {
-  return dirSize(RNFS.CachesDirectoryPath);
-}
-
 /** Human-readable size label, e.g. "1.2 MB". */
 export function formatBytes(bytes: number): string {
   if (bytes <= 0) return '0 B';

@@ -16,6 +16,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useTheme} from '../../../theme';
 import {spacing, radius} from '../../../theme/tokens';
+import {FONT_FAMILY} from '../../../constants/fontFamily';
 import {useAnimatedEntrance} from '../../../hooks/useAnimatedEntrance';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {AppButton} from '../../../components/core/AppButton/AppButton';
@@ -284,7 +285,8 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
   },
   filterChipLabel: {
-    fontWeight: '600',
+    // 600 lives in the family key ('Inter' + 600 opens the 400 Regular).
+    fontFamily: FONT_FAMILY.inter.semibold,
   },
   content: {
     flex: 1,

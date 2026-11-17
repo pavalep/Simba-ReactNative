@@ -31,6 +31,7 @@ import {
   parseM3u,
 } from '../../../utils/m3uParser';
 import {spacing} from '../../../theme/tokens';
+import {FONT_FAMILY} from '../../../constants/fontFamily';
 import {isVideoFile} from '../../../utils/timeAgo';
 import {getFileName} from '../../../services/fileService';
 import {shareContent} from '../../../services/shareService';
@@ -656,7 +657,8 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
         offlineBadgeText: {
           color: colors.semantic.warning,
           fontSize: 10,
-          fontWeight: '600',
+          // 600 lives in the family key ('Inter' + 600 opens the 400 Regular).
+          fontFamily: FONT_FAMILY.inter.semibold,
         },
         itemInfo: {
           flex: 1,
