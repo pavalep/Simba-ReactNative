@@ -1,2 +1,2 @@
-export {LiveTVScreenNew} from './components/LiveTVContent';
+export {LiveTVScreen} from './components/LiveTVContent';
 export {LiveTVFavoritesScreen} from './components/LiveTVFavoritesScreen';

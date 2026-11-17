@@ -2,7 +2,6 @@ import React, {useState} from 'react';
 import {View} from 'react-native';
 import {useTheme} from '../../../theme';
 import {AppText} from '../AppText/AppText';
-import {SvgIcon} from '../../utility/SvgIcon/SvgIcon';
 import {MediaImage} from '../../utility/MediaImage/MediaImage';
 import {FONT_FAMILY} from '../../../constants/fontFamily';
 
@@ -83,7 +82,15 @@ export const Avatar: React.FC<AvatarProps> = ({
     );
   }
 
-  // Fallback: initials or icon
+  // The monogram — the initials of the name, or the app's own signed-out
+  // default.
+  //
+  // There is NO person glyph in the app's icon set, and the music note that
+  // used to stand here was a MEDIA glyph on an ACCOUNT avatar: every
+  // signed-out user saw a music note as their profile picture. The Home
+  // header already draws the signed-out avatar as a letter
+  // (`HomeHeader.tsx:195-199`: the first letter of the name, or 'A'), so
+  // that is the letter used here — one treatment for one state.
   return (
     <View
       style={{
@@ -92,21 +99,17 @@ export const Avatar: React.FC<AvatarProps> = ({
         justifyContent: 'center',
         backgroundColor: colors.border.subtle,
       }}>
-      {initials ? (
-        <AppText
-          style={{
-            // The weight lives in the FAMILY key, never in a
-            // `fontWeight` prop — see `src/constants/fontFamily.ts`.
-            fontFamily: FONT_FAMILY.inter.semibold,
-            fontSize,
-            lineHeight: Math.round(fontSize * 1.2),
-            color: colors.text.secondary,
-          }}>
-          {initials}
-        </AppText>
-      ) : (
-        <SvgIcon name="music" size={size * 0.5} color={colors.text.tertiary} />
-      )}
+      <AppText
+        style={{
+          // The weight lives in the FAMILY key, never in a
+          // `fontWeight` prop — see `src/constants/fontFamily.ts`.
+          fontFamily: FONT_FAMILY.inter.semibold,
+          fontSize,
+          lineHeight: Math.round(fontSize * 1.2),
+          color: colors.text.secondary,
+        }}>
+        {initials || 'A'}
+      </AppText>
     </View>
   );
 };

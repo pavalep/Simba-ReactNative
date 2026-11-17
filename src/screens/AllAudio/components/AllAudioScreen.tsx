@@ -26,6 +26,7 @@ import {SearchBar} from '../../../components/core/SearchBar/SearchBar';
 import {EmptyState} from '../../../components/feedback/EmptyState/EmptyState';
 import {SimbaStatusBar} from '../../../components/StatusBar';
 import {useAllAudioScreen} from '../hooks/useAllAudioScreen';
+import type {AllAudioScreenProps} from '../types';
 
 const {width: SCREEN_WIDTH} = Dimensions.get('window');
 const COLUMN_COUNT = 2;
@@ -39,9 +40,13 @@ function formatDuration(sec: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-export const AllAudioScreen: React.FC = () => {
+export const AllAudioScreen: React.FC<AllAudioScreenProps> = ({route}) => {
   const {colors} = useTheme();
   const navigation = useNavigation();
+  // The route's params — `sort` and `filter` — are what the Artist
+  // screen and the Library send. They were declared and sent and
+  // ignored; the screen keeps them now (see `useAllAudioScreen`).
+  const {sort, filter} = route.params ?? {};
   const {
     audioTracks,
     searchQuery,
@@ -54,7 +59,7 @@ export const AllAudioScreen: React.FC = () => {
     handlePlayTrack,
     refreshing,
     handleRefresh,
-  } = useAllAudioScreen();
+  } = useAllAudioScreen(sort, filter);
 
   const {styles: animStyles} = useAnimatedEntrance(
     Math.min(filteredTracks.length, 12),

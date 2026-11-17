@@ -58,7 +58,12 @@ export type RootStackParamList = {
     genre: string;
     initialTab?: 'local' | 'streaming';
   };
-  AllVideosScreen: {filter?: string; sort?: string} | undefined;
+  // The videos list takes NO params. It used to declare
+  // `{filter?: string; sort?: string}`: nothing navigated to it with
+  // either one and nothing read either one, so the declaration was a
+  // promise the screen did not keep. The AUDIO list's twin kept its
+  // params — and now honours them, because two callers send them.
+  AllVideosScreen: undefined;
   AllAudioScreen: {filter?: string; sort?: string} | undefined;
   AllPlaylistsScreen: undefined;
   MoviesScreen: {categoryId?: string} | undefined;
@@ -111,10 +116,17 @@ export type RootStackParamList = {
   MusicDetail: {trackId: string; source?: 'jamendo' | 'audius'};
   MovieDetail: {identifier: string; title?: string};
   // ── P36: live radio + TV browse (wired RadioBrowser + IPTV-org) ──
+  //
+  // The Radio screen is TAB-LESS: it replaced the old TabView screen
+  // ("FAB-only, tab-less replacement for the legacy TabView-based
+  // screen" — `src/screens/RadioScreen/components/RadioContent.tsx`).
+  // The route used to declare an `initialTab` of five values, the
+  // linking config parsed one, and NOBODY read it: a deep link asking
+  // for a tab landed on the browse screen and said nothing about why.
+  // The promise is gone with the tab it referred to.
   RadioScreen:
     | {
-        initialTab?: 'top' | 'genres' | 'countries' | 'languages' | 'favorites';
-        /** P53: when set, the Genres tab is preselected with this tag. */
+        /** P53: the genre chip the screen starts on. */
         initialTag?: string;
       }
     | undefined;
@@ -124,10 +136,14 @@ export type RootStackParamList = {
   // ── v10.1 Wave 8: Favorites page reached via the Live TV header heart ──
   LiveTVFavoritesScreen: undefined;
   // ── P37: audiobooks (LibriVox) + Internet Archive ──
+  //
+  // The Audiobooks screen is a single stream with a genre chip row —
+  // the old three-tab layout (search / genres / recent) was dropped in
+  // V18.11.3 (`src/screens/AudiobooksScreen/related/scopeConfig.ts`).
+  // Its `initialTab` was the same dead promise the Radio screen's was.
   AudiobooksScreen:
     | {
-        initialTab?: 'search' | 'genres' | 'recent';
-        /** P53: when set, the Genres tab is preselected with this genre. */
+        /** P53: the genre chip the screen starts on. */
         initialGenre?: string;
       }
     | undefined;

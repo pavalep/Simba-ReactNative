@@ -8,6 +8,7 @@ import {useToast} from '../../../components/feedback/Toast';
 import {resolveInternetArchiveVideoDetails} from '../../../infrastructure/api/internetArchive/adapter';
 import {useBottomChromeInset} from '../../../infrastructure/player/miniPlayerChrome';
 import {useListEnd} from '../../_shared/useListEnd';
+import {IA_MAX_RETRIEVABLE} from '../hooks/useMoviesScreen';
 import {MOVIE_CATEGORIES} from '../../../constants/movieCategories';
 import {useTheme} from '../../../theme';
 import {spacing} from '../../../theme/tokens';
@@ -65,7 +66,7 @@ export const MoviesContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => {
     setSearchTerm(ctx.query);
   }, [ctx.query, setSearchTerm]);
 
-  const {items, numFound, hasLoaded, isLoading, isLoadingMore, error, hasMore} = data;
+  const {items, numFound, hasLoaded, isLoading, isLoadingMore, error, pageError, hasMore} = data;
   // The list ends when the source has nothing more to give. The
   // footer's own copy distinguishes "that is everything" from "the
   // archive refuses to page further".
@@ -76,9 +77,16 @@ export const MoviesContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => {
   // That is the footer's own ENDING — and it is a LABEL on the shared
   // footer, not a second footer. Without it the list would claim "You're
   // all caught up." while the archive still had rows it would not serve.
+  //
+  // The label may ONLY say "the archive stops paging here" when the
+  // archive's paging cap is what ended the list. A SHORT PAGE ends the
+  // list too (the source simply ran out of rows) and it leaves
+  // `numFound > items.length` as well — but there the archive did not
+  // stop paging, so the sentence would be false. That ending gets the
+  // footer's own "You're all caught up." instead.
   const windowEndLabel = useMemo(
     () =>
-      numFound > items.length
+      items.length >= IA_MAX_RETRIEVABLE && numFound > items.length
         ? text.footer.windowEnd
             .replace('{shown}', items.length.toLocaleString())
             .replace('{total}', numFound.toLocaleString())
@@ -312,7 +320,11 @@ export const MoviesContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => {
           <BrowseFooter
             isLoadingMore={isLoadingMore}
             hasLoaded={hasLoaded}
-            error={error}
+            // The LOAD-MORE error, not the list's error: a first-load
+            // failure is the error card's business, and the footer saying
+            // it too announced the same failure twice — and wrongly
+            // ("Couldn't load MORE" for a load-more that never started).
+            error={pageError}
             reachedEnd={reachedEnd}
             shown={items.length}
             onLoadMore={loadMore}

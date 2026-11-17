@@ -6,7 +6,7 @@
 // V18.11.6+post-audit: removed the dead `radio` useApiQuery. The
 // "Radio" tab was dropped from the screen in V18.11.4, but the
 // hook was still fetching radio stations for data the user never
-// saw. Radio browsing now lives entirely in RadioScreenNew; this
+// saw. Radio browsing now lives entirely in RadioScreen; this
 // hook only knows about local + streaming.
 //
 // UX decisions (documented in V18_LEGACY_TABVIEW_CLEANUP.md):
@@ -15,7 +15,7 @@
 //     deduped by track id). It was a unique feature but added
 //     significant complexity for a single FAB; deferred to a
 //     future "Moods" entry-point.
-//   - "Radio" duplicated the RadioScreenNew experience. The
+//   - "Radio" duplicated the RadioScreen experience. The
 //     user can navigate there from the Library/Home tabs.
 //
 // The "source" field in the genre screen output is now

@@ -77,11 +77,24 @@ export const BookmarksScreen: React.FC = () => {
       {clearDialog}
 
       {/* ── Header (canonical InternalHeader — chevron + title + right action) ── */}
+      {/* The count is INFORMATION, so it is the header's plain subtitle —
+          never a control. It used to be the right action, and that
+          action's press was `handleClearAll`: a user who tapped "12
+          saved" because it looked like information was offered a wipe of
+          every bookmark they had (`md/CONTENT_OWNERSHIP.md` §6.3.1).
+          The destructive control is now a NAMED one: a "Clear All"
+          button that says what it does, in the error colour. */}
       <InternalHeader
         title="Bookmarks"
+        subtitle={allBookmarks.length > 0 ? `${bookmarkCount} saved` : undefined}
         rightAction={
           allBookmarks.length > 0
-            ? {label: `${bookmarkCount} saved`, onPress: handleClearAll}
+            ? {
+                label: 'Clear All',
+                tone: 'destructive',
+                accessibilityLabel: 'Clear all bookmarks',
+                onPress: handleClearAll,
+              }
             : undefined
         }
       />

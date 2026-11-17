@@ -17,6 +17,16 @@ interface InternalHeaderProps {
      * has no name, and a screen-reader user hears "button" for it.
      */
     accessibilityLabel?: string;
+    /**
+     * `destructive` paints the label in the error colour.
+     *
+     * A control that wipes the page's content must not wear the same
+     * gold as a neutral action — the count that used to sit on the
+     * Bookmarks header was a wipe-everything button wearing a count's
+     * clothes (`md/CONTENT_OWNERSHIP.md` §6.3.1), and the fix is a
+     * NAMED control, visibly distinct from the page's accent.
+     */
+    tone?: 'accent' | 'destructive';
     onPress: () => void;
   };
 }
@@ -27,6 +37,12 @@ export const InternalHeader: React.FC<InternalHeaderProps> = ({
   rightAction,
 }) => {
   const {colors} = useTheme();
+
+  // A LABEL action is wider than the icon slot, so the button grows to
+  // fit it and the title's reserved gutter grows with it. The gutter is
+  // symmetric on purpose: the title stays centred in the FULL header
+  // width, whatever the right action's width is.
+  const hasLabelAction = Boolean(rightAction?.label);
 
   return (
     <View
@@ -41,18 +57,25 @@ export const InternalHeader: React.FC<InternalHeaderProps> = ({
       <BackButton />
 
       {/* Right action slot — matches the BackButton width so the row stays
-          balanced when both are present. */}
+          balanced when both are present. A LABEL action is wider than the
+          icon, so it grows to fit its own text. */}
       {rightAction ? (
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={rightAction.onPress}
           accessibilityRole="button"
-          accessibilityLabel={rightAction.accessibilityLabel}
-          style={[styles.rightButton, {backgroundColor: colors.background.elevated}]}>
+          accessibilityLabel={rightAction.accessibilityLabel ?? rightAction.label}
+          style={[
+            styles.rightButton,
+            hasLabelAction ? styles.rightButtonLabel : null,
+            {backgroundColor: colors.background.elevated},
+          ]}>
           {rightAction.icon ? (
             <SvgIcon name={rightAction.icon} size={18} color={colors.text.secondary} />
           ) : rightAction.label ? (
-            <AppText variant="body2" color="accent">
+            <AppText
+              variant="body2"
+              color={rightAction.tone === 'destructive' ? 'error' : 'accent'}>
               {rightAction.label}
             </AppText>
           ) : null}
@@ -82,7 +105,12 @@ export const InternalHeader: React.FC<InternalHeaderProps> = ({
           a `fontWeight: '700'` on top of it would ask React Native for
           `Manrope SemiBold_bold.ttf`, which does not ship — the silent
           fallback CF-03 was about. */}
-      <View style={styles.titleOverlay} pointerEvents="none">
+      <View
+        style={[
+          styles.titleOverlay,
+          hasLabelAction ? styles.titleOverlayLabel : null,
+        ]}
+        pointerEvents="none">
         <AppText
           variant="displaySans"
           color="primary"
@@ -124,6 +152,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 96, // leave room for back + right action buttons
   },
+  titleOverlayLabel: {
+    // A LABEL right action is wider than the 36 px icon slot, so the
+    // gutter grows — symmetrically, so the title stays centred in the
+    // FULL header width.
+    paddingHorizontal: 132,
+  },
   title: {
     // Manrope SemiBold 22 px — the token supplies the family AND the
     // weight (600). This style supplies the size, the tracking and the
@@ -145,5 +179,13 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  rightButtonLabel: {
+    // A LABEL action sizes to its own text instead of the 36 px icon
+    // square. The fixed width is dropped — `minWidth` keeps the slot at
+    // least as wide as the BackButton, so the row stays balanced.
+    width: 'auto',
+    minWidth: 36,
+    paddingHorizontal: spacing.md,
   },
 });

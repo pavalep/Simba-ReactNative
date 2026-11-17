@@ -71,15 +71,41 @@ interface DownloadRowProps {
   colors: ReturnType<typeof useTheme>['colors'];
   onPauseResume: (uri: string, status: string) => void;
   onRetry: (uri: string) => void;
+  onPlay: (record: DownloadRecord) => void;
   onDelete: (uri: string) => void;
 }
 
 const DownloadRow: React.FC<DownloadRowProps> = React.memo(
-  ({record, colors, onPauseResume, onRetry, onDelete}) => {
+  ({record, colors, onPauseResume, onRetry, onPlay, onDelete}) => {
     const active = record.status === 'downloading';
     const paused = record.status === 'paused';
     const failed = record.status === 'error';
+    const done = record.status === 'done';
     const progress = progressOf(record);
+
+    const body = (
+      <>
+        <AppText variant="body2" color="primary" numberOfLines={1} style={styles.rowTitle}>
+          {record.title}
+        </AppText>
+        <AppText variant="caption" color="secondary" numberOfLines={1}>
+          {statusLabel(record)}
+        </AppText>
+        {(active || paused) && (
+          <View style={[styles.progressTrack, {backgroundColor: colors.border.subtle}]}>
+            <View
+              style={[
+                styles.progressFill,
+                {
+                  backgroundColor: failed ? colors.semantic.error : colors.accent.gold,
+                  transform: [{scaleX: progress}],
+                },
+              ]}
+            />
+          </View>
+        )}
+      </>
+    );
 
     return (
       <View style={[styles.row, {backgroundColor: colors.background.elevated}]}>
@@ -91,41 +117,44 @@ const DownloadRow: React.FC<DownloadRowProps> = React.memo(
           />
         </View>
 
-        <View style={styles.rowBody}>
-          <AppText variant="body2" color="primary" numberOfLines={1} style={styles.rowTitle}>
-            {record.title}
-          </AppText>
-          <AppText variant="caption" color="secondary" numberOfLines={1}>
-            {statusLabel(record)}
-          </AppText>
-          {(active || paused) && (
-            <View style={[styles.progressTrack, {backgroundColor: colors.border.subtle}]}>
-              <View
-                style={[
-                  styles.progressFill,
-                  {
-                    backgroundColor: failed ? colors.semantic.error : colors.accent.gold,
-                    transform: [{scaleX: progress}],
-                  },
-                ]}
-              />
-            </View>
-          )}
-        </View>
+        {/* Only a FINISHED download is playable — a half-downloaded file
+            cannot be opened — so only that row's body is pressable. Every
+            other state keeps a plain `View`, which neither looks nor
+            behaves like a control. */}
+        {done ? (
+          <TouchableOpacity
+            style={styles.rowBody}
+            onPress={() => onPlay(record)}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={`Play ${record.title}`}>
+            {body}
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.rowBody}>{body}</View>
+        )}
 
         <View style={styles.rowActions}>
           <TouchableOpacity
             style={[styles.actionBtn, {borderColor: colors.border.subtle}]}
-            onPress={() =>
-              failed ? onRetry(record.uri) : onPauseResume(record.uri, record.status)
-            }
+            onPress={() => {
+              if (done) onPlay(record);
+              else if (failed) onRetry(record.uri);
+              else onPauseResume(record.uri, record.status);
+            }}
             activeOpacity={0.7}
             accessibilityRole="button"
             accessibilityLabel={
-              failed ? 'Retry download' : active ? 'Pause download' : 'Resume download'
+              done
+                ? 'Play download'
+                : failed
+                  ? 'Retry download'
+                  : active
+                    ? 'Pause download'
+                    : 'Resume download'
             }>
             <SvgIcon
-              name={failed || !active ? 'download' : 'pause'}
+              name={done ? 'play' : failed ? 'replay' : active ? 'pause' : 'download'}
               size={16}
               color={colors.accent.gold}
             />
@@ -170,10 +199,11 @@ export const DownloadsScreen: React.FC<DownloadsScreenProps> = () => {
         colors={colors}
         onPauseResume={h.handlePauseResume}
         onRetry={h.handleRetry}
+        onPlay={h.handlePlay}
         onDelete={h.setConfirmUri}
       />
     ),
-    [colors, h.handlePauseResume, h.handleRetry, h.setConfirmUri],
+    [colors, h.handlePauseResume, h.handleRetry, h.handlePlay, h.setConfirmUri],
   );
 
   return (
@@ -256,8 +286,18 @@ export const DownloadsScreen: React.FC<DownloadsScreenProps> = () => {
                   <AppText variant="body2" color="primary">
                     Auto-delete
                   </AppText>
+                  {/* The policy has TWO halves and the screen states both.
+                      The age half (30 days) was always enforced by the
+                      service with nothing on screen saying so — the page
+                      said "keep the last N" and a finished download was
+                      deleted at 30 days whatever N was. */}
                   <AppText variant="caption" color="secondary">
-                    Keep the last N completed downloads
+                    Finished downloads are deleted 30 days after they finish.
+                  </AppText>
+                  <AppText variant="caption" color="secondary">
+                    {h.autoDeleteDownloads > 0
+                      ? `The last ${h.autoDeleteDownloads} are kept until then.`
+                      : 'Every one is kept until then.'}
                   </AppText>
                 </View>
                 <View style={styles.chipRow}>

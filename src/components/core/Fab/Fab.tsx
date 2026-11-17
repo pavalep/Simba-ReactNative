@@ -8,7 +8,7 @@
  *   • `screens/Home/components/HomeFab.tsx` — a gold "play" disc;
  *   • `screens/{Movies,Music,Podcasts}Screen/components/BrowseFab.tsx` —
  *     three byte-identical copies of a gold "filter" disc;
- *   • `screens/{Radio,LiveTV}ScreenNew/browse/Fab.tsx` — two more
+ *   • `screens/{Radio,LiveTV}Screen/browse/Fab.tsx` — two more
  *     byte-identical copies of the same disc;
  *   • and the Library's, drawn inline in the screen's stylesheet.
  *

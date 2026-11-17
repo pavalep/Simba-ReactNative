@@ -127,7 +127,7 @@ const ActiveFilterChips: React.FC<{
 
 // ─── Screen ───────────────────────────────────────────────────────────
 
-export const RadioScreenNew: React.FC<Props> = ({navigation, route}) => {
+export const RadioScreen: React.FC<Props> = ({navigation, route}) => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
   // The app's ONE bottom-chrome rule: the safe area, or the mini-player
@@ -290,10 +290,10 @@ export const RadioScreenNew: React.FC<Props> = ({navigation, route}) => {
         case 'share':
           // ONE share target for the whole feature, and the params the
           // linking config actually parses: `SongScreen` parses
-          // `fileUri` and `title` (`navigation/linking.ts:130-138`).
+          // `fileUri` and `title` (`navigation/linking.ts`).
           // The old code sent `fileTitle` — not a declared param — and
           // the favourites screen sent `route: 'RadioScreen'`, whose
-          // linking config parses only `initialTab`, so the station was
+          // linking config carried only `initialTab`, so the station was
           // lost entirely.
           shareContent({
             route: 'SongScreen',

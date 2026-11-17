@@ -20,6 +20,22 @@ import type {RootStackParamList} from './types';
  *   simbaplayer://playlist/<id>
  *   simbaplayer://library/artist/<name>
  *   simbaplayer://settings/equalizer
+ *
+ * ── The two shapes a param can take ────────────────────────────────
+ *
+ * A path param (`simbaplayer://podcast/42`) and a query param
+ * (`simbaplayer://podcast?podcastId=42`) are BOTH delivered to the
+ * screen: React Navigation puts every query param on the route it
+ * resolved (`@react-navigation/core`'s `getStateFromPath.tsx` —
+ * `parseQueryParams()` collects the whole query string and merges it
+ * into the focused route's params).
+ *
+ * The difference is the `parse` map. It is what DECODES a value: a
+ * query param that is not in the map arrives exactly as it was typed,
+ * so `?genre=Rock%20Roll` would reach the screen as the literal string
+ * "Rock%20Roll". Every param a screen READS is therefore listed in its
+ * route's `parse` map here, with `decodeURIComponent` (or a stricter
+ * parser, where the screen only honours some values).
  */
 
 /**
@@ -156,7 +172,18 @@ export const linking: LinkingOptions<RootStackParamList> = {
         },
       },
       AllVideosScreen: 'videos',
-      AllAudioScreen: 'audio',
+      AllAudioScreen: {
+        path: 'audio',
+        // The All Audio list's two params — the artist filter and the
+        // opening sort. Both are sent by the app itself (the Artist
+        // screen's "view all tracks" and the Library's "View All
+        // Artists"), and both are read by the screen now. The deep link
+        // can carry them too: `simbaplayer://audio?filter=Kavinsky`.
+        parse: {
+          filter: decodeURIComponent,
+          sort: decodeURIComponent,
+        },
+      },
       AllPlaylistsScreen: 'playlists',
       Search: 'search',
       NowPlaying: {
@@ -166,8 +193,22 @@ export const linking: LinkingOptions<RootStackParamList> = {
           fileTitle: decodeURIComponent,
         },
       },
-      MoviesScreen: 'movies',
-      MusicScreen: 'music',
+      MoviesScreen: {
+        path: 'movies',
+        // The Movies browse screen seeds its filter from `categoryId`
+        // (`src/hooks/useSectionOptions.ts` — the shared seed hook reads
+        // the route params). The param is a QUERY param, because the
+        // path is the bare word "movies" — and without this entry it
+        // would arrive undecoded.
+        parse: {categoryId: decodeURIComponent},
+      },
+      MusicScreen: {
+        path: 'music',
+        // The Music browse screen seeds its genre filter from `genre`
+        // (the same shared seed hook). `simbaplayer://music?genre=rock`
+        // opens the browse screen with that genre selected.
+        parse: {genre: decodeURIComponent},
+      },
       PodcastsScreen: 'podcasts',
       MusicDetail: {
         path: 'music/:trackId/:source?',
@@ -180,6 +221,9 @@ export const linking: LinkingOptions<RootStackParamList> = {
         path: 'movie/:identifier',
         parse: {
           identifier: decodeURIComponent,
+          // The optional title, so a shared link shows the right name
+          // before the details load.
+          title: decodeURIComponent,
         },
       },
       PodcastDetail: {
@@ -188,22 +232,44 @@ export const linking: LinkingOptions<RootStackParamList> = {
           podcastId: Number,
         },
       },
-      RadioScreen: {
-        path: 'radio/:initialTab?',
-        parse: {initialTab: decodeURIComponent},
-      },
+      // ── Radio ────────────────────────────────────────────────────────
+      // The FAVOURITES path is declared BEFORE the browse screen's own
+      // path on purpose. React Navigation matches the FIRST config whose
+      // regex fits (`@react-navigation/core`'s `getStateFromPath.tsx`
+      // — the loop over the configs returns on the first match), so a
+      // static path declared after a parametric one is SWALLOWED by it:
+      // `simbaplayer://radio/favorites` used to resolve to the browse
+      // screen with `initialTab='favorites'`, and the favourites page
+      // was unreachable by deep link.
       RadioFavoritesScreen: 'radio/favorites',
+      RadioScreen: {
+        // The Radio screen is TAB-LESS (it replaced the old TabView
+        // screen), so it has no `initialTab` to honour — the old
+        // `radio/:initialTab?` segment was a promise the screen could
+        // not keep, and it was the segment that swallowed
+        // `radio/favorites`. The one param the screen DOES read is the
+        // genre chip it starts on (`useRadioBrowser(initialTag)`), and
+        // it arrives as a query param.
+        path: 'radio',
+        parse: {initialTag: decodeURIComponent},
+      },
+      // ── Live TV ──────────────────────────────────────────────────────
+      // Same rule as Radio: the static favourites path first.
+      LiveTVFavoritesScreen: 'tv/favorites',
       LiveTVScreen: {
         path: 'tv/:categoryId?',
         parse: {categoryId: decodeURIComponent},
       },
-      LiveTVFavoritesScreen: 'tv/favorites',
       AudiobooksScreen: {
-        path: 'audiobooks/:initialTab?',
-        parse: {
-          initialTab: decodeURIComponent,
-          genre: decodeURIComponent,
-        },
+        // The Audiobooks screen is a single stream with a genre chip
+        // row — the old three-tab layout (search / genres / recent) was
+        // dropped in V18.11.3, so there is no `initialTab` to honour.
+        // The genre chip it starts on is `initialGenre`, and that is
+        // the name the screen reads (`AudiobooksContent.tsx`); the old
+        // parse key was `genre`, which the screen never looked at, so
+        // the genre could not arrive.
+        path: 'audiobooks',
+        parse: {initialGenre: decodeURIComponent},
       },
       AudiobookDetail: {
         path: 'audiobook/:bookId',
@@ -211,7 +277,11 @@ export const linking: LinkingOptions<RootStackParamList> = {
       },
       ArchiveScreen: {
         path: 'archive/:initialTab?',
-        parse: {initialTab: decodeURIComponent},
+        parse: {
+          initialTab: decodeURIComponent,
+          // The optional search term the screen starts with.
+          query: decodeURIComponent,
+        },
       },
       ArchiveItemDetail: {
         path: 'archive-item/:identifier',
@@ -220,7 +290,11 @@ export const linking: LinkingOptions<RootStackParamList> = {
       // ── P38: TV shows (TVMaze) ──
       ShowsScreen: {
         path: 'shows/:initialTab?',
-        parse: {initialTab: decodeURIComponent},
+        parse: {
+          initialTab: decodeURIComponent,
+          // The Browse tab's genre chip — the screen reads `initialGenre`.
+          initialGenre: decodeURIComponent,
+        },
       },
       ShowDetail: {
         path: 'show/:showId',

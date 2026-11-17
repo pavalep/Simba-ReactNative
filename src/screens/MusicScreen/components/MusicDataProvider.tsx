@@ -11,16 +11,8 @@
 // useInfiniteApiQuery re-points the queryKey.
 
 import React, {useCallback, useMemo, type ReactNode} from 'react';
-import {usePlay} from '../../../infrastructure/player';
 import {useMusicScreen} from '../hooks/useMusicScreen';
-import {useToast} from '../../../components/feedback/Toast';
-import {
-  isBlockedError,
-  isExpiredError,
-  isLaunchError,
-  isNetworkError,
-  isUnsupportedError,
-} from '../../../infrastructure/player';
+import {navigate} from '../../../navigation/navigationHelper';
 import type {JamendoTrackResult} from '../../../types/api';
 
 interface MusicDataContextValue {
@@ -36,6 +28,8 @@ interface MusicDataContextValue {
   isLoadingMore: boolean;
   hasNextPage: boolean;
   error: string | null;
+  /** The failed NEXT PAGE's error — the footer's copy, not the list's. */
+  pageError: string | null;
   fetchNextPage: () => void;
   refetch: () => void;
   /**
@@ -68,64 +62,26 @@ export const MusicDataProvider: React.FC<{
 }> = ({children}) => {
   // Single hook instance for the whole screen.
   const music = useMusicScreen();
-  const play = usePlay();
-  const toast = useToast();
 
-  const handleTrackPress = useCallback(
-    async (item: JamendoTrackResult) => {
-      // V21 typed facade — awaited + Result pattern-match so the
-      // 4 failure variants (network / unsupported / expired /
-      // blocked) surface as toasts instead of being swallowed.
-      // Pre-V21: direct useResumeAwareLaunch().openPlayer() call
-      // returned a Promise<boolean>; rejection became unhandled
-      // promise rejection, `false` was discarded silently.
-      const result = await play({
-        uri: item.audioUrl,
-        title: item.name,
-        mediaType: 'music',
-      });
-      if (result.ok) return;
-      if (isNetworkError(result.error)) {
-        toast.show(
-          'No connection. The track will open when you are online.',
-          'warning',
-          {duration: 6000},
-        );
-      } else if (isUnsupportedError(result.error)) {
-        toast.show(
-          'This audio format is not supported by the player.',
-          'error',
-          {duration: 6000},
-        );
-      } else if (isExpiredError(result.error)) {
-        toast.show('Sign in expired. Please sign in again.', 'warning', {
-          duration: 6000,
-        });
-      } else if (isBlockedError(result.error)) {
-        toast.show(
-          'This content is not available in your region.',
-          'error',
-          {duration: 6000},
-        );
-      } else if (isLaunchError(result.error)) {
-        // B-009: player activity refused to launch. Surface the
-        // typed bridge rejection code so users can report it.
-        const detail = result.error.code ? ` [${result.error.code}]` : '';
-        toast.show(
-          `Player couldn’t start${detail ? ` — ${detail}` : ''}. ${result.error.message}`,
-          'error',
-          {duration: 8000},
-        );
-      } else {
-        toast.show(
-          'Could not open the player. Please try again.',
-          'error',
-          {duration: 6000},
-        );
-      }
-    },
-    [play, toast],
-  );
+  /**
+   * A row tap opens the TRACK'S OWN PAGE.
+   *
+   * The row used to BE the play action: one tap played the track from
+   * the list, and the row's comment said so. The track's own page is
+   * now a real screen (B13-9) — the cover, the meta, the description
+   * and the play button — so the row opens it and the play action
+   * lives there. That is the grammar every other detail screen in the
+   * app uses: the Movie detail and the Podcast detail are both opened
+   * from a list and both carry their own play action.
+   *
+   * The source is named, not implied: the deep link
+   * `simbaplayer://music/<trackId>` carries no source, and the screen
+   * defaults it — but a row in THIS screen is always a Jamendo track,
+   * so the row says so.
+   */
+  const handleTrackPress = useCallback((item: JamendoTrackResult) => {
+    navigate('MusicDetail', {trackId: String(item.id), source: 'jamendo'});
+  }, []);
 
   const value = useMemo<MusicDataContextValue>(
     () => ({
@@ -138,6 +94,7 @@ export const MusicDataProvider: React.FC<{
       isLoadingMore: music.isLoadingMore,
       hasNextPage: music.hasNextPage,
       error: music.error,
+      pageError: music.pageError,
       fetchNextPage: music.fetchNextPage,
       refetch: music.refetch,
       refreshing: music.refreshing,
@@ -154,6 +111,7 @@ export const MusicDataProvider: React.FC<{
       music.isLoadingMore,
       music.hasNextPage,
       music.error,
+      music.pageError,
       music.fetchNextPage,
       music.refetch,
       music.refreshing,

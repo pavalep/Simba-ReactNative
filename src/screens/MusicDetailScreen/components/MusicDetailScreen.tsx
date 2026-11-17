@@ -1,20 +1,50 @@
-import React, {useMemo, useCallback, useState} from 'react';
-import {
-  View,
-  ScrollView,
-  FlatList,
-  TouchableOpacity,
-  StyleSheet,
-} from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
+// ══════════════════════════════════════════════════════════════════
+// Music Detail — the TRACK'S OWN PAGE
+// ══════════════════════════════════════════════════════════════════
+//
+// The Music row used to BE the play action: one tap played the track
+// from the list. The track's own page is now a real page (B13-9), so
+// the row OPENS it and the play action lives here — the same grammar
+// the Movie detail and the Podcast detail use.
+//
+// THE GRAMMAR IT FOLLOWS
+// ----------------------
+// The Movie detail's: an `InternalHeader` with the item's title and a
+// share action, the artwork hero, a row of gold-dim badges, the
+// action buttons, and a section below. The Podcast detail's: ONE
+// scrollable, with the states inside it.
+//
+// WHAT THE OLD SCREEN GOT WRONG (B13-10 — six defects, all real)
+// --------------------------------------------------------------
+//   M-07  four bare `fontWeight` props — the weight now lives in the
+//         family key, like every other style in the app.
+//   M-09  hand-rolled loading and error states — they are the shared
+//         `Placeholder` now, like every other screen.
+//   M-11  the title was drawn THREE times: the header, the cover's
+//         scrim and the info block. It is drawn TWICE now, exactly
+//         like the Movie detail (the header and the hero).
+//   M-12  a `FlatList` inside a `ScrollView` — the page is ONE list
+//         now, with the hero as its header and the states as its
+//         empty component.
+//   M-13  the launch was the pre-V21 `openPlayer`, not awaited — the
+//         typed `usePlay()` facade is, so a refused launch says why.
+//   M-28  `source` sat in the play handler's deps without being read.
+//
+// The share action is the header's (the Movie detail's treatment); the
+// old screen had it as a third button in the actions block, which made
+// three buttons for two actions.
+
+import React, {useCallback, useMemo, useState} from 'react';
+import {FlatList, StyleSheet, TouchableOpacity, View} from 'react-native';
 import {MediaImage} from '../../../components/utility/MediaImage';
 import {useTheme} from '../../../theme';
 import {spacing, radius} from '../../../theme/tokens';
-import {FONT_FAMILY} from '../../../constants/fontFamily';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
-import {ActivityOrb} from '../../../components/feedback/ActivityOrb/ActivityOrb';
 import {InternalHeader} from '../../../components/layout/InternalHeader/InternalHeader';
+import {ScreenContainer} from '../../../components/layout/ScreenContainer/ScreenContainer';
+import {Placeholder} from '../../../components/feedback/Placeholder';
+import {useToast} from '../../../components/feedback/Toast';
 import {SimbaStatusBar} from '../../../components/StatusBar';
 import type {MusicDetailScreenProps} from '../../../navigation/types';
 import {useMusicDetailScreen} from '../hooks/useMusicDetailScreen';
@@ -23,73 +53,26 @@ import {StreamingRow} from '../../../components/media/StreamingRow/StreamingRow'
 import type {JamendoTrackResult, AudiusTrackResult} from '../../../types/api';
 import {shareContent} from '../../../services/shareService';
 import {PlaylistSheet} from '../../../components/sheets/PlaylistSheet/PlaylistSheet';
-import { resolveStreamType, useResumeAwareLaunch } from '../../../infrastructure/player';
+import {
+  isBlockedError,
+  isExpiredError,
+  isLaunchError,
+  isNetworkError,
+  isUnsupportedError,
+  usePlay,
+} from '../../../infrastructure/player';
+import {formatDuration} from '../../../utils/timeAgo';
 
 type Props = MusicDetailScreenProps;
 
-function fmtDur(s: number): string {
-  if (!s || s <= 0) return '0:00';
-  const m = Math.floor(s / 60);
-  const sec = Math.floor(s % 60);
-  return `${m}:${sec.toString().padStart(2, '0')}`;
-}
-
-export const MusicDetailScreen: React.FC<Props> = ({navigation, route}) => {
+export const MusicDetailScreen: React.FC<Props> = ({route}) => {
   const {trackId, source = 'jamendo'} = route.params;
   const {track, isLoading, error} = useMusicDetailScreen(trackId, source);
   const {colors} = useTheme();
-  const {openPlayer} = useResumeAwareLaunch();
+  const play = usePlay();
+  const toast = useToast();
   // P34.1: add-to-playlist sheet for streaming tracks
   const [sheetVisible, setSheetVisible] = useState(false);
-
-  const handlePlay = useCallback(() => {
-    if (!track) return;
-    const fileUri =
-      'audioUrl' in track ? track.audioUrl : track.streamUrl;
-    const fileTitle = 'name' in track ? track.name : track.title;
-    const artwork =
-      'imageUrl' in track
-        ? (track as JamendoTrackResult).imageUrl
-        : (track as AudiusTrackResult).artworkUrl;
-    openPlayer({
-      uri: fileUri,
-      title: fileTitle,
-      type: resolveStreamType('music'),
-      // The artwork this screen ALREADY computed — it reached the More
-      // sheet's `currentItem` and the header, and the launch was the one
-      // place it did not. Without it the session carried no artwork, the
-      // checkpoint wrote the history entry with `thumbnailPath: ''`, and
-      // the search tile for that track had nothing to draw (B-026).
-      ...(artwork ? {thumbnailPath: artwork} : {}),
-    });
-  }, [track, openPlayer, source]);
-
-  // P39.5: streaming rows play directly
-  const handleMorePlay = useCallback(
-    (t: JamendoTrackResult) => {
-      openPlayer({
-        uri: t.audioUrl,
-        title: t.name,
-        type: resolveStreamType('music'),
-        // Same reason as `handlePlay`: the row's own cover art.
-        ...(t.imageUrl ? {thumbnailPath: t.imageUrl} : {}),
-      });
-    },
-    [openPlayer],
-  );
-
-  const handleShare = useCallback(() => {
-    if (!track) return;
-    const shareTitle = 'name' in track ? track.name : track.title;
-    const artist = track.artistName ?? '';
-    // 52.3/56.2: real share sheet with deep link + https fallback
-    shareContent({
-      route: 'MusicDetail',
-      params: {trackId, source},
-      title: shareTitle,
-      subtitle: artist || undefined,
-    });
-  }, [track, trackId, source]);
 
   const imageUrl = track
     ? 'imageUrl' in track
@@ -122,86 +105,162 @@ export const MusicDetailScreen: React.FC<Props> = ({navigation, route}) => {
       ? (track as AudiusTrackResult).description
       : undefined;
 
+  // The app's ONE duration format (`utils/timeAgo.ts`) — the screen
+  // used to own a second formatter that disagreed with it on the empty
+  // case ("0:00" against the shared ""). A duration of zero means
+  // "unknown", so the badge is not drawn at all rather than drawn
+  // empty: the Movie detail's rule.
+  const durationLabel = duration > 0 ? formatDuration(duration) : undefined;
+
+  /**
+   * Play the track.
+   *
+   * The typed facade (V21), awaited, so a refused launch says WHY
+   * instead of disappearing. The old screen called the pre-V21
+   * `openPlayer` without awaiting it: the rejection became an
+   * unhandled promise rejection and the `false` reply was discarded
+   * (M-13).
+   */
+  const handlePlay = useCallback(async () => {
+    if (!track) return;
+    const fileUri = 'audioUrl' in track ? track.audioUrl : track.streamUrl;
+    const fileTitle = 'name' in track ? track.name : track.title;
+    const result = await play({
+      uri: fileUri,
+      title: fileTitle,
+      mediaType: 'music',
+      // The artwork this screen ALREADY computed — it reached the More
+      // sheet's `currentItem` and the header, and the launch was the one
+      // place it did not. Without it the session carried no artwork, the
+      // checkpoint wrote the history entry with `thumbnailPath: ''`, and
+      // the search tile for that track had nothing to draw (B-026).
+      ...(imageUrl ? {thumbnailPath: imageUrl} : {}),
+    });
+    if (result.ok) return;
+    if (isNetworkError(result.error)) {
+      toast.show(
+        'No connection. The track will open when you are online.',
+        'warning',
+        {duration: 6000},
+      );
+    } else if (isUnsupportedError(result.error)) {
+      toast.show(
+        'This audio format is not supported by the player.',
+        'error',
+        {duration: 6000},
+      );
+    } else if (isExpiredError(result.error)) {
+      toast.show('Sign in expired. Please sign in again.', 'warning', {
+        duration: 6000,
+      });
+    } else if (isBlockedError(result.error)) {
+      toast.show(
+        'This content is not available in your region.',
+        'error',
+        {duration: 6000},
+      );
+    } else if (isLaunchError(result.error)) {
+      const detail = result.error.code ? ` [${result.error.code}]` : '';
+      toast.show(
+        `Player couldn’t start${detail ? ` — ${detail}` : ''}. ${result.error.message}`,
+        'error',
+        {duration: 8000},
+      );
+    } else {
+      toast.show(
+        'Could not open the player. Please try again.',
+        'error',
+        {duration: 6000},
+      );
+    }
+  }, [track, play, toast, imageUrl]);
+
+  // P39.5: streaming rows play directly
+  const handleMorePlay = useCallback(
+    async (t: JamendoTrackResult) => {
+      const result = await play({
+        uri: t.audioUrl,
+        title: t.name,
+        mediaType: 'music',
+        // Same reason as `handlePlay`: the row's own cover art.
+        ...(t.imageUrl ? {thumbnailPath: t.imageUrl} : {}),
+      });
+      if (result.ok) return;
+      toast.show('Could not open the player. Please try again.', 'error', {
+        duration: 6000,
+      });
+    },
+    [play, toast],
+  );
+
+  const handleShare = useCallback(() => {
+    if (!track) return;
+    const shareTitle = 'name' in track ? track.name : track.title;
+    const artist = track.artistName ?? '';
+    // 52.3/56.2: real share sheet with deep link + https fallback
+    shareContent({
+      route: 'MusicDetail',
+      params: {trackId, source},
+      title: shareTitle,
+      subtitle: artist || undefined,
+    });
+  }, [track, trackId, source]);
+
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        root: {
+        list: {
           flex: 1,
-          backgroundColor: colors.background.primary,
         },
-        scrollContent: {
+        listContent: {
           paddingBottom: spacing.xxxl,
         },
-        coverContainer: {
-          width: '100%',
-          aspectRatio: 1,
-          maxHeight: 300,
+        // ── The artwork ─────────────────────────────────────────────
+        coverWrap: {
           alignSelf: 'center',
-          backgroundColor: colors.background.elevated,
+          width: '100%',
+          maxWidth: 300,
+          aspectRatio: 1,
+          marginTop: spacing.lg,
+          marginBottom: spacing.lg,
+          borderRadius: radius.lg,
           overflow: 'hidden',
+          backgroundColor: colors.background.elevated,
         },
-        coverImage: {
+        cover: {
           width: '100%',
           height: '100%',
         },
-        placeholderCover: {
+        coverPlaceholder: {
           width: '100%',
           height: '100%',
           alignItems: 'center',
           justifyContent: 'center',
           backgroundColor: colors.background.elevated,
         },
-        gradientOverlay: {
-          position: 'absolute',
-          left: 0,
-          right: 0,
-          bottom: 0,
+        // ── The title and the artist ───────────────────────────────
+        titleBlock: {
           paddingHorizontal: spacing.lg,
-          paddingTop: spacing.xxxl,
-          paddingBottom: spacing.lg,
+          gap: spacing.xs,
         },
-        overlayTitle: {
-          color: colors.text.bright,
-          fontSize: 22,
-          // 'Inter SemiBold' + 700 opens a file that is not shipped; the
-          // plain 'Inter' family + 700 is what reaches Inter_bold.ttf.
-          fontFamily: FONT_FAMILY.inter.bold,
-          fontWeight: '700',
-        },
-        overlayArtist: {
-          color: colors.text.onMediaMuted,
-          fontSize: 15,
-          marginTop: spacing.xs,
-        },
-        infoSection: {
-          paddingHorizontal: spacing.lg,
-          paddingTop: spacing.xl,
-        },
-        infoTitle: {
-          marginBottom: spacing.xs,
-        },
-        infoArtist: {
-          marginBottom: spacing.sm,
-        },
-        infoMeta: {
+        // ── The badges ─────────────────────────────────────────────
+        metaRow: {
           flexDirection: 'row',
           flexWrap: 'wrap',
           gap: spacing.sm,
-          marginBottom: spacing.md,
+          paddingHorizontal: spacing.lg,
+          marginTop: spacing.md,
         },
-        metaChip: {
-          backgroundColor: colors.background.elevated,
+        badge: {
+          backgroundColor: colors.accent.goldDim,
           paddingHorizontal: spacing.md,
           paddingVertical: spacing.xs,
           borderRadius: radius.pill,
         },
-        descriptionText: {
-          marginTop: spacing.sm,
-          lineHeight: 22,
-        },
-        actionsSection: {
+        // ── The actions ────────────────────────────────────────────
+        actions: {
           paddingHorizontal: spacing.lg,
-          paddingTop: spacing.xxl,
+          marginTop: spacing.xl,
           gap: spacing.md,
         },
         playButton: {
@@ -213,12 +272,7 @@ export const MusicDetailScreen: React.FC<Props> = ({navigation, route}) => {
           flexDirection: 'row',
           gap: spacing.sm,
         },
-        playButtonText: {
-          color: colors.text.inverse,
-          fontSize: 17,
-          fontWeight: '700',
-        },
-        shareButton: {
+        outlineButton: {
           borderWidth: 1.5,
           borderColor: colors.accent.gold,
           paddingVertical: spacing.md,
@@ -228,233 +282,184 @@ export const MusicDetailScreen: React.FC<Props> = ({navigation, route}) => {
           flexDirection: 'row',
           gap: spacing.sm,
         },
-        shareButtonText: {
-          color: colors.accent.gold,
-          fontSize: 15,
-          // 600 lives in the family key ('Inter' + 600 opens the 400 Regular).
-          fontFamily: FONT_FAMILY.inter.semibold,
-        },
-        playlistButton: {
-          borderWidth: 1.5,
-          borderColor: colors.accent.gold,
-          paddingVertical: spacing.md,
-          borderRadius: radius.md,
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexDirection: 'row',
-          gap: spacing.sm,
-        },
-        playlistButtonText: {
-          color: colors.accent.gold,
-          fontSize: 15,
-          // 600 lives in the family key ('Inter' + 600 opens the 400 Regular).
-          fontFamily: FONT_FAMILY.inter.semibold,
-        },
-        streamSection: {
+        // ── The description ────────────────────────────────────────
+        description: {
           paddingHorizontal: spacing.lg,
-          paddingTop: spacing.xxl,
+          marginTop: spacing.lg,
+          lineHeight: 22,
         },
-        streamTitle: {
+        // ── The section below ──────────────────────────────────────
+        sectionTitle: {
+          paddingHorizontal: spacing.lg,
+          marginTop: spacing.xxl,
           marginBottom: spacing.sm,
-        },
-        loadingContainer: {
-          flex: 1,
-          alignItems: 'center',
-          justifyContent: 'center',
-        },
-        errorContainer: {
-          flex: 1,
-          alignItems: 'center',
-          justifyContent: 'center',
-          paddingHorizontal: spacing.xxl,
-          gap: spacing.md,
-        },
-        errorText: {
-          textAlign: 'center',
         },
       }),
     [colors],
   );
 
-  if (isLoading) {
-    return (
-      <View style={styles.root}>
-        <SimbaStatusBar variant="home" />
-        <InternalHeader title="Track Details" />
-        <View style={styles.loadingContainer}>
-          <ActivityOrb size={56} />
-        </View>
+  // ── The hero — the list's header ────────────────────────────────────
+  const hero = track ? (
+    <>
+      {/* ── The artwork ── */}
+      <View style={styles.coverWrap}>
+        {imageUrl ? (
+          <MediaImage
+            source={imageUrl}
+            style={styles.cover}
+            resizeMode="cover"
+          />
+        ) : (
+          <View style={styles.coverPlaceholder}>
+            <SvgIcon name="music" size={80} color={colors.accent.gold} />
+          </View>
+        )}
       </View>
-    );
-  }
 
-  if (error || !track) {
-    return (
-      <View style={styles.root}>
-        <SimbaStatusBar variant="home" />
-        <InternalHeader title="Track Details" />
-        <View style={styles.errorContainer}>
-          <SvgIcon name="alertCircle" size={48} color={colors.semantic.error} />
-          <AppText variant="body1" color="error" style={styles.errorText}>
-            {error ?? 'Track not found'}
-          </AppText>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <AppText variant="body1" color="accent">
-              Go Back
-            </AppText>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  }
-
-  return (
-    <View style={styles.root}>
-      <SimbaStatusBar variant="home" />
-      <InternalHeader title={title} />
-
-      <ScrollView
-        style={styles.root}
-        contentContainerStyle={styles.scrollContent}
-        bounces={false}>
-        {/* ── Cover Art ── */}
-        <View style={styles.coverContainer}>
-          {imageUrl ? (
-            <MediaImage
-              source={imageUrl}
-              style={styles.coverImage}
-              resizeMode="cover"
-            />
-          ) : (
-            <View style={styles.placeholderCover}>
-              <SvgIcon
-                name="music"
-                size={80}
-                color={colors.accent.gold}
-              />
-            </View>
-          )}
-          <LinearGradient
-            colors={['transparent', colors.background.scrimMid]}
-            locations={[0.3, 1]}
-            style={styles.gradientOverlay}
-            pointerEvents="none">
-            <AppText
-              variant="h3"
-              style={styles.overlayTitle}
-              numberOfLines={2}>
-              {title}
-            </AppText>
-            <AppText style={styles.overlayArtist} numberOfLines={1}>
-              {artistName}
-            </AppText>
-          </LinearGradient>
-        </View>
-
-        {/* ── Info Section ── */}
-        <View style={styles.infoSection}>
-          <AppText variant="displaySerif" color="primary" style={styles.infoTitle}>
-            {title}
-          </AppText>
-          <AppText variant="body1" color="secondary" style={styles.infoArtist}>
+      {/* ── The title and the artist ── */}
+      <View style={styles.titleBlock}>
+        <AppText
+          variant="displaySerif"
+          color="primary"
+          numberOfLines={2}>
+          {title}
+        </AppText>
+        {artistName ? (
+          <AppText variant="body2" color="secondary" numberOfLines={1}>
             {artistName}
           </AppText>
+        ) : null}
+      </View>
 
-          <View style={styles.infoMeta}>
-            <View style={styles.metaChip}>
-              <AppText variant="caption" color="secondary">
-                {fmtDur(duration)}
-              </AppText>
-            </View>
-            {genreName ? (
-              <View style={styles.metaChip}>
-                <AppText variant="caption" color="secondary">
-                  {genreName}
-                </AppText>
-              </View>
-            ) : null}
-            {albumName ? (
-              <View style={styles.metaChip}>
-                <AppText variant="caption" color="secondary">
-                  {albumName}
-                </AppText>
-              </View>
-            ) : null}
-          </View>
-
-          {description ? (
-            <AppText
-              variant="body2"
-              color="tertiary"
-              style={styles.descriptionText}
-              numberOfLines={4}>
-              {description}
+      {/* ── The badges ── */}
+      <View style={styles.metaRow}>
+        {durationLabel ? (
+          <View style={styles.badge}>
+            <AppText variant="caption" color="accent">
+              {durationLabel}
             </AppText>
-          ) : null}
-        </View>
-
-        {/* ── Action Buttons ── */}
-        <View style={styles.actionsSection}>
-          <TouchableOpacity
-            style={styles.playButton}
-            activeOpacity={0.8}
-            onPress={handlePlay}
-            accessibilityLabel="Play track"
-            accessibilityRole="button">
-            <SvgIcon
-              name="play"
-              size={22}
-              color={colors.text.inverse}
-            />
-            <AppText style={styles.playButtonText}>Play</AppText>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.shareButton}
-            activeOpacity={0.8}
-            onPress={handleShare}
-            accessibilityLabel="Share track"
-            accessibilityRole="button">
-            <AppText style={styles.shareButtonText}>Share</AppText>
-          </TouchableOpacity>
-
-          {/* P34.1: add streaming track to a playlist */}
-          <TouchableOpacity
-            style={styles.playlistButton}
-            activeOpacity={0.8}
-            onPress={() => setSheetVisible(true)}
-            accessibilityLabel="Add track to playlist"
-            accessibilityRole="button">
-            <SvgIcon name="listMusic" size={20} color={colors.accent.gold} />
-            <AppText style={styles.playlistButtonText}>Add to Playlist</AppText>
-          </TouchableOpacity>
-        </View>
-
-        {/* P39.5: more from this artist (streaming) */}
-        {more.tracks.length > 0 ? (
-          <View style={styles.streamSection}>
-            <AppText
-              variant="h2"
-              color="primary"
-              style={styles.streamTitle}>
-              More From {artistName}
-            </AppText>
-            <FlatList
-              data={more.tracks}
-              keyExtractor={item => String(item.id)}
-              renderItem={({item}) => (
-                <StreamingRow
-                  track={item}
-                  onPlay={handleMorePlay}
-                  showDownload
-                />
-              )}
-              scrollEnabled={false}
-              initialNumToRender={more.tracks.length}
-            />
           </View>
         ) : null}
-      </ScrollView>
+        {genreName ? (
+          <View style={styles.badge}>
+            <AppText variant="caption" color="accent">
+              {genreName}
+            </AppText>
+          </View>
+        ) : null}
+        {albumName ? (
+          <View style={styles.badge}>
+            <AppText variant="caption" color="accent">
+              {albumName}
+            </AppText>
+          </View>
+        ) : null}
+      </View>
+
+      {/* ── The actions ── */}
+      <View style={styles.actions}>
+        <TouchableOpacity
+          style={styles.playButton}
+          activeOpacity={0.8}
+          onPress={handlePlay}
+          accessibilityLabel="Play track"
+          accessibilityRole="button">
+          <SvgIcon name="play" size={22} color={colors.text.inverse} />
+          <AppText variant="button" color="inverse">
+            Play
+          </AppText>
+        </TouchableOpacity>
+
+        {/* P34.1: add streaming track to a playlist */}
+        <TouchableOpacity
+          style={styles.outlineButton}
+          activeOpacity={0.8}
+          onPress={() => setSheetVisible(true)}
+          accessibilityLabel="Add track to playlist"
+          accessibilityRole="button">
+          <SvgIcon name="listMusic" size={20} color={colors.accent.gold} />
+          <AppText variant="button" color="accent">
+            Add to Playlist
+          </AppText>
+        </TouchableOpacity>
+      </View>
+
+      {/* ── The description ── */}
+      {description ? (
+        <AppText
+          variant="body2"
+          color="tertiary"
+          style={styles.description}
+          numberOfLines={6}>
+          {description}
+        </AppText>
+      ) : null}
+
+      {/* ── The section below ── */}
+      {more.tracks.length > 0 ? (
+        <AppText variant="displaySans" color="primary" style={styles.sectionTitle}>
+          More From {artistName}
+        </AppText>
+      ) : null}
+    </>
+  ) : null;
+
+  return (
+    <ScreenContainer
+      header={
+        <InternalHeader
+          title={title || 'Track'}
+          rightAction={
+            track
+              ? {
+                  icon: 'share',
+                  accessibilityLabel: 'Share track',
+                  onPress: handleShare,
+                }
+              : undefined
+          }
+        />
+      }>
+      <SimbaStatusBar variant="home" />
+
+      {/* ── The page is ONE list ─────────────────────────────────────
+          The hero is its header, the "more from this artist" tracks
+          are its rows, and the loading / error / empty states are its
+          empty component. There is no `ScrollView` above it: the old
+          screen had a `FlatList` inside a `ScrollView`, which is the
+          nesting React Native warns about (M-12). */}
+      <FlatList
+        style={styles.list}
+        data={more.tracks}
+        keyExtractor={item => String(item.id)}
+        renderItem={({item}) => (
+          <StreamingRow track={item} onPlay={handleMorePlay} showDownload />
+        )}
+        ListHeaderComponent={hero}
+        ListEmptyComponent={
+          // The states ride INSIDE the list, so there is no layout
+          // flicker when the track resolves (the Podcast detail's
+          // pattern). With the track loaded and no other tracks, there
+          // is nothing to say — an empty list is not an error.
+          track ? null : isLoading ? (
+            <Placeholder
+              variant="loading"
+              anchor="center"
+              title="Loading track…"
+            />
+          ) : (
+            <Placeholder
+              variant="empty"
+              anchor="center"
+              icon="alertCircle"
+              iconColor={colors.semantic.error}
+              title={error ?? 'Track not found'}
+            />
+          )
+        }
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+      />
 
       <PlaylistSheet
         visible={sheetVisible}
@@ -476,6 +481,6 @@ export const MusicDetailScreen: React.FC<Props> = ({navigation, route}) => {
           mediaType: 'audio',
         }}
       />
-    </View>
+    </ScreenContainer>
   );
 };

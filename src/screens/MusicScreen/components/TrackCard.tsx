@@ -1,7 +1,13 @@
 // ─── Music — TrackCard ───────────────────────────────────────────────
 // Horizontal row card: 52px thumb + title/artist/album + duration.
-// The row IS the play action — the whole card is one TouchableOpacity —
-// so there is no second play button inside it.
+// The row OPENS THE TRACK'S OWN PAGE — the whole card is one
+// TouchableOpacity — so there is no play button inside it.
+//
+// The row used to BE the play action (one tap played the track from
+// the list). The track's own page is a real screen now (B13-9), and
+// the play action lives there: the page carries the cover, the meta
+// and the play button, which is the grammar the Movie detail and the
+// Podcast detail use.
 //
 // The artwork follows the house artwork contract: the thumb shows the
 // surface's OWN tile (a goldDim plate with the music glyph on it) until

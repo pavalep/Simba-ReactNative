@@ -456,3 +456,244 @@ FALLBACKS (these render in the system font):
 **That second one is a property of the harness, not of the app**: the app's QueryProvider
 already retried twice, so the production behaviour is unchanged.
 
+---
+
+## 8. Phase 4 — the code fixes (the screens, the policy, the deep links)
+
+Phase 4 is the batch of carried items that turned out to be **code**, not design: the
+rename, the three content-ownership defects, the footer's error, the artwork's state
+machine, the download policy's second owner, and the route params.
+
+### 8.1 B13-15 — the `ScreenNew` folders are gone
+
+`src/screens/RadioScreenNew/` and `src/screens/LiveTVScreenNew/` are now
+`src/screens/RadioScreen/` and `src/screens/LiveTVScreen/` — **18 files**, 10 import/name
+sites, and the **one runtime path** an import grep cannot find
+(`__tests__/app/ZustandSelectorStability.test.ts:312` builds the path with
+`path.join('screens', 'RadioScreen', 'hooks', 'useRadioBrowser.ts')`).
+
+The route names, the deep-link paths and the Penpot registry are untouched: the rename is a
+folder name, not a route name.
+
+Two things the rename did **not** cover, and must not be claimed as covered:
+
+* `.verification/index.android.bundle` and `.verification/index.android.final.bundle` are
+  tracked, pre-built JS bundles and still contain the old names. They are build artefacts,
+  not source; regenerating them is a bundling step, not a rename.
+* `md/`, `graphify-out/` and `scripts/` still mention the old names in prose.
+
+### 8.2 R3d — History's pull-to-refresh did nothing
+
+`HistoryScreen.tsx` carried a `RefreshControl` whose handler was
+`setRefreshing(true); requestAnimationFrame(() => setRefreshing(false))` over a local store
+that re-reads nothing — the same reasoning that already removed Home's pull-to-refresh. The
+control, the state and the handler are gone.
+
+### 8.3 R3a — the count that was a delete button
+
+`BookmarksScreen.tsx` rendered the bookmark count as the header's **right action**, and that
+action's press was `handleClearAll` → a confirm dialog → `clearAllBookmarks()`. A user who
+tapped "12 saved" because it looked like information was offered a wipe of every bookmark
+they had. **A count must not be a destructive control** (`md/CONTENT_OWNERSHIP.md` §6.3.1).
+
+The count is now the header's **plain subtitle**, and the destructive control is a **named**
+one — a "Clear All" button in the error colour, with the accessible name "Clear all
+bookmarks".
+
+That needed one change in the shared header: `InternalHeader`'s `rightAction.label` branch
+existed but **the slot was a fixed 36 dp circle**, so a label was always drawn spilling out
+of a circle meant for an icon (the Folder Browser's "Select" / "Cancel" had the same
+problem). The slot now sizes to its own label — a pill — and the title's reserved gutter
+grows with it, symmetrically, so the title stays centred in the full header width. The
+icon case is unchanged.
+
+### 8.4 R3b — a finished download could not be opened, and its action re-downloaded it
+
+Two defects in one row (`md/CONTENT_OWNERSHIP.md` §6.3.2):
+
+* the row body was a plain `View`, so a completed download could not be played from the
+  list; and
+* on a `done` row the first action button drew a **download** glyph labelled "Resume
+  download" and called `resumeDownload` — which **restarts the transfer**, re-downloading a
+  file that is already on disk.
+
+Now: the row body is pressable **only** when the record is `done`, and it plays the **local**
+file (`record.localPath`, never the remote `record.uri`) through the app's own launch seam
+(`useResumeAwareLaunch().openPlayer` + `resolveStreamType`) — the same path the Library's
+row uses. The first action on a finished row is a **play** action. `handlePauseResume` now
+pauses a running transfer and resumes a paused one, and **nothing else**, so a `done` record
+cannot reach `resumeDownload` by a second route.
+
+If the file is gone from the device, the row says so ("This file is no longer on the
+device.") and deletes nothing — the manifest is the app's record of what it owns, and the
+row's own delete action is how a stale row goes away.
+
+**12 new tests** (2 suites) pin the row grammar and the launch.
+
+### 8.5 R3c — the Library's "Playlists" content mode
+
+The Library rendered the playlist list, the same kind chips **and** a second "+" create
+affordance — while All Playlists owns all three. The mode is gone; the Library's title
+dropdown keeps two entries and **"Playlists" navigates to All Playlists**.
+
+The dropdown's sheet header changed from "Select View" to **"Go to"**, because one of the
+two entries now leaves the page — the old words would have been a lie.
+
+With the mode gone, `LibraryPlaylistsSegment` (the component), its test and the long-press
+test that covered its pin gesture went with it: they tested a screen the app no longer has.
+
+### 8.6 The footer said "Couldn't load MORE" for a load-more that never started
+
+Movies and Music passed the **whole query's** error to the shared footer, while Podcasts
+passed the **page** error. So a first-page failure showed the error card **and** the footer's
+retry pill — the same failure twice, and the pill named a load-more that never started.
+
+Both screens now carry a `pageError` — the error of the failed NEXT page
+(`q.isFetchNextPageError`) — and the footer gets that one. One failure, one message.
+
+**The Movies `windowEnd` sentence could be false.** "Showing {shown} of {total} movies — the
+archive stops paging here" was computed from `numFound > items.length`, which a **short
+page** also produces — and there the archive did not stop paging, the source simply ran out
+of rows. The sentence is now derived from **which stop rule fired**: only the archive's own
+10,000-row paging cap (`IA_MAX_RETRIEVABLE`, now exported by the hook that owns the rule)
+may claim that the archive stopped.
+
+### 8.7 `MediaImage` never reset when the artwork changed
+
+The component owns a three-state machine (pending / loaded / failed) and the state belonged
+to **one** artwork — but nothing keyed it on the `source`, so a row whose artwork URL
+changed rendered the new image over **nothing**. The machine now restarts when the source
+changes, using React's own "adjust the state when a prop changes" pattern (the reset
+happens during the render, so the new artwork never paints once with the old state).
+
+The comparison is on the source **key** (the URI), not the `source` object: a caller that
+builds `{uri}` inline gets a new object every render, and comparing objects would reset the
+state on every render.
+
+### 8.8 A-2 — the download policy had two owners
+
+`downloadService` owned the policy (it persists it and applies it) and its default was
+**5**. The settings store owned a second copy (`autoDeleteDownloads`, default **0**), and
+that copy only reached the service **when the Downloads page was mounted**. So on a fresh
+install the app silently kept the last 5 finished downloads while the chip said "Off" — and
+the chip said "Off" until the user happened to open the page.
+
+The service is now the **one** owner: its default is **0** (the value the app shows), the
+screen reads the value from the service once the manifest has loaded, and the chip's press
+writes straight to the service. The settings store's field, setter and persisted key are
+gone (the key is dropped in the store's `merge`, exactly as the retired `hasLaunched` key
+is).
+
+The policy's **age** half — 30 days, always enforced — had no UI at all. The page now says
+both halves out loud.
+
+### 8.9 B13-16 / B12-11 — the route params
+
+The carried claim was *"five route params are declared but no linking path can carry them"*.
+**That claim is wrong**, and the correction matters: React Navigation puts **every** query
+param on the route it resolved (`@react-navigation/core`'s `getStateFromPath.tsx` —
+`parseQueryParams()` collects the whole query string and merges it into the focused route's
+params). `simbaplayer://movies?categoryId=5` reaches MoviesScreen today.
+
+What was actually wrong was four other things, all now fixed:
+
+1. **The favourites deep links were broken.** React Navigation matches the **first** config
+   whose regex fits (the loop over the configs returns on the first match), and
+   `radio/:initialTab?` and `tv/:categoryId?` were declared **before** `radio/favorites` and
+   `tv/favorites` — so both favourites pages were swallowed by the browse screen's
+   parametric path. The static paths are now declared first.
+2. **`RadioScreen.initialTab` was dead.** The Radio screen replaced the old TabView screen
+   and is **tab-less**; the route declared five tab values, the config parsed one, and
+   nobody read it. The path is now the bare `radio`, and the param the screen **does** read
+   (`initialTag`, the genre chip it starts on) is a decoded query param.
+3. **`AudiobooksScreen.initialTab` was dead** for the same reason (the three-tab layout was
+   dropped in V18.11.3), and the config parsed `genre` while the screen read `initialGenre`
+   — so the genre could never arrive. The parse key is now the name the screen reads.
+4. **Six params a screen reads were never decoded**: Music's `genre`, Movies' `categoryId`,
+   Shows' `initialGenre`, Archive's `query`, Movie Detail's `title` and All Audio's
+   `filter`/`sort`. A query param that is not in the route's `parse` map arrives exactly as
+   it was typed — `?genre=Rock%20Roll` reached the screen as the literal string
+   "Rock%20Roll".
+
+`shareService.ts`'s route → path table is kept in step (`RadioScreen` → `radio`).
+
+**Seven new tests** in `__tests__/navigation/navigationGraph.test.ts` resolve the real paths
+against the real parser: the two favourites links, the browse screens, the decoded query
+params, and the absence of the dead tab promises in the nav types.
+
+### 8.10 CF-21 — the Avatar's fallback
+
+The no-initials branch drew a music glyph; the Home header's signed-out treatment draws a
+**monogram**. The branch now renders the same monogram in the same `AppText` treatment
+(`FONT_FAMILY.inter.semibold`, `colors.text.secondary`), and the `SvgIcon` import is gone.
+
+---
+
+## 9. Phase 5 — the Music row opens the track's page
+
+### 9.1 B13-9 — the decision, and what it broke
+
+`MusicDetailScreen` existed, was routed, and was **unreachable from a tap**: the Music list's
+row was the play action, so a track had no page of its own. The carried item offered three
+answers — keep-and-fix, wire, or delete — and the **owner's decision was to promote it to a
+real detail screen**.
+
+That is a grammar change, so it was made carefully:
+
+* the Music row now **opens the track's page** (`navigate('MusicDetail', {trackId, source})`);
+* the **play action lives on the detail screen**, where the Movie and Podcast details keep
+  theirs; and
+* **no trailing play button was invented.** The row used to be the play action and now it is
+  the navigation, so a row that carried both would be two actions in one target — the same
+  mistake the Music board's own comment warned about ("a second affordance inside it read as
+  a button that did nothing").
+
+The deep link keeps working: `source` is optional and **defaults to `'jamendo'`** (B13.11), so
+an old `simbaplayer://music/123` still resolves.
+
+### 9.2 B13-10 — the six defects the old screen carried
+
+| id | the defect | now |
+|---|---|---|
+| M-07 | four bare `fontWeight` props | the weight lives in the family key, like every other style |
+| M-09 | hand-rolled loading and error states | the shared `Placeholder`, inside the list |
+| M-11 | the title drawn **three** times | drawn **twice** — the header and the hero — like the Movie detail |
+| M-12 | a `FlatList` inside a `ScrollView` | **one** list: the hero is its `ListHeaderComponent`, the states its `ListEmptyComponent` |
+| M-13 | the launch was the pre-V21 `openPlayer`, unawaited | the typed `usePlay()` facade, awaited, with the five typed failure messages |
+| M-28 | `source` sat in the play handler's deps unread | gone |
+
+The share action moved to the **header** (the Movie detail's treatment). It used to be a third
+button in the actions block, which made three buttons for two actions.
+
+The screen's **second duration formatter** is gone: `formatDuration` comes from
+`utils/timeAgo`, the app's one. A duration of zero means "unknown", so the badge is not drawn
+at all rather than drawn empty.
+
+### 9.3 The All Audio list honours its route params
+
+`AllAudioScreen` declared `{filter?: string; sort?: string}`, and the app **sent** both:
+
+* the Artist screen's "view all tracks" sent `filter: artistName`, and the page opened
+  showing **every track on the device**; and
+* the Library's "View All Artists" sent `sort: 'artist'`, and the page opened **sorted by
+  title**.
+
+A param the screen ignores is a promise the app does not keep. The hook now reads both — the
+artist filter case-insensitively, exactly, because the caller sends the name it knows the
+track by.
+
+**One extra fix, found by writing the test.** The artist sort compared the artists only, so
+two tracks by the same artist kept the **device's scan order** — the list's order would change
+with the folder the media happened to be found in. The comparator now breaks the tie on the
+title.
+
+### 9.4 A note for the next person writing a jest mock
+
+The All Audio suite's fixture is built by a `makeTrack(...)` helper rather than an object
+literal, and that made jest's **hoist plugin** refuse the file: the plugin lifts the
+`jest.mock` calls above the binding and then refuses to let a factory close over an
+out-of-scope variable whose name does not start with `mock` (or whose initialiser is not a
+pure literal). The fixture is named `mockTracks` for that reason — the prefix is the
+exemption, and renaming it back breaks the suite.
+
+

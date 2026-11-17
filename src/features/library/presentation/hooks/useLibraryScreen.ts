@@ -1,4 +1,4 @@
-import {useState, useMemo, useCallback, useRef, useEffect} from 'react';
+import {useState, useCallback, useRef, useEffect} from 'react';
 import {useTheme} from '../../../../theme';
 import {spacing} from '../../../../theme/tokens';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
@@ -6,31 +6,26 @@ import {FAB_SIZE} from '../../../../components/core/Fab/Fab';
 import {useBottomChromeInset} from '../../../../infrastructure/player/miniPlayerChrome';
 import {useSettingsStore} from '../../../../state';
 
-import {usePlaylists} from '../../../../features/playlists';
-
 import {useMediaScanner} from '../../../../hooks/useMediaScanner';
 import {isVideoFile} from '../../../../utils/timeAgo';
 import {useToast} from '../../../../components/feedback/Toast';
 import {ViewMode} from '../components/ViewToggle';
-import type {PlaylistKind} from '../../../../types/playlist';
 import type {LibraryScreenProps} from '../../../../navigation/types';
 import {normalizeMediaClassification} from '../../../../types/media';
-import { resolveStreamType, useOpenPlaylist, usePlayer, useResumeAwareLaunch } from '../../../../infrastructure/player';
-import {useMediaStore, usePlayerStore, playlistItemsToEntries, type ScannedTrack} from '../../../../state';
+import { resolveStreamType, usePlayer, useResumeAwareLaunch } from '../../../../infrastructure/player';
+import {useMediaStore, usePlayerStore, type ScannedTrack} from '../../../../state';
 import type {
-  ContentMode,
-  FilterType,
+  LibraryMenuEntryKey,
   LocalMediaFilter,
   Segment,
   SortOption,
 } from '../types';
 import {
-  LOCAL_CONTENT_MODES,
   LOCAL_FILE_SEGMENTS,
   LOCAL_FILTER_SEGMENTS,
   LOCAL_GRID_GAP,
+  LOCAL_LIBRARY_MENU_ENTRIES,
   LOCAL_MEDIA_FILTERS,
-  LOCAL_PLAYLIST_FILTERS,
   LOCAL_SORT_OPTIONS,
   LOCAL_SORT_SEGMENTS,
   LOCAL_VIEW_TOGGLE_SEGMENTS,
@@ -40,8 +35,7 @@ import {
 const SEGMENTS = LOCAL_FILE_SEGMENTS;
 const FILTER_CHIPS = LOCAL_MEDIA_FILTERS;
 const SORT_OPTIONS = LOCAL_SORT_OPTIONS;
-const CONTENT_MODE_OPTIONS = LOCAL_CONTENT_MODES;
-const PLAYLIST_FILTER_TYPES = LOCAL_PLAYLIST_FILTERS;
+const LIBRARY_MENU_ENTRIES = LOCAL_LIBRARY_MENU_ENTRIES;
 const GRID_GAP = LOCAL_GRID_GAP;
 const VIEW_TOGGLE_SEGMENTS = LOCAL_VIEW_TOGGLE_SEGMENTS;
 const SORT_SEGMENTS = LOCAL_SORT_SEGMENTS;
@@ -51,8 +45,7 @@ export {
   SEGMENTS,
   FILTER_CHIPS,
   SORT_OPTIONS,
-  CONTENT_MODE_OPTIONS,
-  PLAYLIST_FILTER_TYPES,
+  LIBRARY_MENU_ENTRIES,
   GRID_GAP,
 };
 
@@ -76,20 +69,19 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
   const bottomChromeInset = useBottomChromeInset();
   const fabBottomInset = bottomChromeInset;
   /**
-   * The scroll padding that lets the last row clear the FAB.
+   * The scroll padding at the bottom of the Library's scroll view.
    *
-   * It has to reach the FAB's TOP edge, or the last row stops under
-   * the button instead of above it.
+   * It clears the bottom chrome (the safe area or the mini-player dock,
+   * whichever is taller) and keeps the room a floating button used to
+   * take: the Library has no floating button of its own any more — the
+   * create-playlist FAB moved to All Playlists (spec §6.4) — and the
+   * padding is left where the page has always ended it.
    */
   const contentBottomInset = bottomChromeInset + FAB_SIZE + spacing.md;
   const {openPlayer} = useResumeAwareLaunch();
-  // V15 Phase 64: `useOpenPlaylist` absorbs the "play all" two-step
-  // pattern (entries extraction + start-track dispatch + openPlayer).
-  const {openPlaylist} = useOpenPlaylist();
 
   // ── Library State ──
   const [activeSegment, setActiveSegment] = useState<Segment>('folders');
-  const [contentMode, setContentMode] = useState<ContentMode>('library');
   const [showDropdown, setShowDropdown] = useState(false);
 
   // ── View / Sort / Filter ──
@@ -97,10 +89,6 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
   const [sortBy, setSortBy] = useState<SortOption>('name');
   const [filterType, setFilterType] = useState<LocalMediaFilter>('all');
   const [sortPickerVisible, setSortPickerVisible] = useState(false);
-
-  // ── Playlist State ──
-  const [playlistFilterType, setPlaylistFilterType] = useState<FilterType>('ALL');
-  const [createModalVisible, setCreateModalVisible] = useState(false);
 
   // ── Pull-to-refresh ──
   // V20.10: the local `isRefreshing` state was redundant — the
@@ -116,7 +104,6 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
   const lastScanTimestamp = useSettingsStore(s => s.lastScanTimestamp ?? null);
   const scannedTracks = useMediaStore(s => s.tracks);
   const scannedTrackCount = scannedTracks.length;
-  const {list: allPlaylists, createPlaylist} = usePlaylists();
 
   // ── Player Selectors (for AudioWaveform) ──
   const currentFile = usePlayerStore(s => s.currentFile);
@@ -139,16 +126,7 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
   }, [scanHistory, toast]);
 
   // ── Computed ──
-  const filteredPlaylists = useMemo(() => {
-    if (playlistFilterType === 'ALL') return allPlaylists;
-    return allPlaylists.filter(p => p.kind === playlistFilterType);
-  }, [allPlaylists, playlistFilterType]);
-
   const selectedSortLabel = SORT_OPTIONS.find(o => o.key === sortBy)?.label ?? 'Name';
-  const currentTitle = useMemo(() => {
-    if (contentMode === 'playlists') return 'Playlists';
-    return 'Library';
-  }, [contentMode]);
   const showSortControls = SORT_SEGMENTS.includes(activeSegment);
   const showFilterChips = FILTER_SEGMENTS.includes(activeSegment);
   const showViewToggle = VIEW_TOGGLE_SEGMENTS.includes(activeSegment);
@@ -254,88 +232,36 @@ const navigateToLinkedFolders = useCallback(
     [openPlayer],
   );
 
-  // ── Playlist Handlers ──
-  const handleCreatePlaylist = useCallback(
-    (name: string, kind: PlaylistKind) => {
-      const result = createPlaylist({name, kind});
-      if (result.status === 'created') {
-        setCreateModalVisible(false);
-      } else {
-        toast.show('You can have up to 20 playlists', 'error');
+  /**
+   * The title dropdown's two entries.
+   *
+   * The Library has ONE content mode: its own segments. "Playlists" is
+   * a DESTINATION, not a mode — All Playlists owns the playlist list and
+   * the kind chips (spec §6.4), so choosing it leaves the Library and
+   * opens that page. "Library" is the page you are already on: it closes
+   * the sheet and nothing else.
+   */
+  const handleLibraryMenuSelect = useCallback(
+    (entry: LibraryMenuEntryKey) => {
+      if (entry === 'playlists') {
+        navigation.navigate('AllPlaylistsScreen');
       }
+      setShowDropdown(false);
     },
-    [createPlaylist, toast],
-  );
-
-  const handlePlayAllPlaylist = useCallback(
-    (playlistId: string) => {
-      const pl = allPlaylists.find(p => p.id === playlistId);
-      if (pl && pl.items.length > 0) {
-        const entries = playlistItemsToEntries(pl.items);
-        usePlayerStore.getState().loadPlaylistToPlayer(entries);
-        const first = entries[0];
-        if (!first) return;
-        // No `startPositionMs`. The seam resolves resume from bookmarks and
-        // history for the track it actually starts, which is the only authority
-        // that can be right once the caller is one screen among eight.
-        // `first.resumePosition` was read here and is ALWAYS
-        // undefined — `playlistItemsToEntries` never populates it. It
-        // did nothing except read as if this launch resumed. The other six
-        // `openPlaylist` call sites pass nothing; this one did not.
-        openPlaylist(entries, {
-          type: resolveStreamType(first.type),
-        });
-      }
-    },
-    [allPlaylists, openPlaylist],
-  );
-
-  const handleShufflePlaylist = useCallback(
-    (playlistId: string) => {
-      const pl = allPlaylists.find(p => p.id === playlistId);
-      if (pl && pl.items.length > 0) {
-        const entries = playlistItemsToEntries(pl.items);
-        usePlayerStore.getState().loadPlaylistToPlayer(entries);
-        const first = entries[0];
-        if (!first) return;
-        // No `startPositionMs` here either, and this is the site where it
-        // could not be correct even if it were populated: the seam picks its
-        // own start index when shuffling, so `entries[0]` is not the track
-        // that plays. A position read off entry 0 would resume a different
-        // file than the one audio comes from.
-        openPlaylist(entries, {
-          type: resolveStreamType(first.type),
-          shuffle: true,
-        });
-      }
-    },
-    [allPlaylists, openPlaylist],
-  );
-
-  const handlePlaylistCardPress = useCallback(
-    (playlistId: string) => {
-      const pl = allPlaylists.find(p => p.id === playlistId);
-      if (pl) {
-        navigation.navigate('PlaylistDetail', {playlistId, playlistName: pl.name});
-      }
-    },
-    [allPlaylists, navigation],
+    [navigation],
   );
 
   return {
     theme, colors, isDark, insets, fabBottomInset, contentBottomInset,
     activeSegment, setActiveSegment,
-    contentMode, setContentMode, showDropdown, setShowDropdown,
+    showDropdown, setShowDropdown,
     viewMode, setViewMode,
     sortBy, setSortBy,
     filterType, setFilterType,
     sortPickerVisible, setSortPickerVisible,
-    playlistFilterType, setPlaylistFilterType,
-    createModalVisible, setCreateModalVisible,
     videoFolders, audioFolders, lastScanTimestamp,
     scannedTracks, scannedTrackCount,
-    allPlaylists, filteredPlaylists,
-    selectedSortLabel, currentTitle,
+    selectedSortLabel,
     showSortControls, showFilterChips, showViewToggle,
     isScanning, scanProgress, scanHistory,
     cancelScan,
@@ -344,7 +270,6 @@ const navigateToLinkedFolders = useCallback(
     handleRefresh,
     navigateToLinkedFolders, navigateToFolderBrowser, handleLinkFolder,
     handleArtistPress, handleAlbumPress, handleScanAudioFolders, handleMediaPress,
-    handleCreatePlaylist, handlePlayAllPlaylist, handleShufflePlaylist,
-    handlePlaylistCardPress,
+    handleLibraryMenuSelect,
   };
 }

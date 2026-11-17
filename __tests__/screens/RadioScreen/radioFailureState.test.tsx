@@ -29,7 +29,7 @@ import {renderWithProviders} from '../../helpers/renderWithProviders';
 // `const` would be in the temporal dead zone when the factory runs
 // (babel hoists `jest.mock` above the imports), so the mock reads
 // its state through this handle instead.
-jest.mock('../../../src/screens/RadioScreenNew/hooks/useRadioBrowser', () => {
+jest.mock('../../../src/screens/RadioScreen/hooks/useRadioBrowser', () => {
   const mock = {
     scope: {
       items: [] as unknown[],
@@ -85,8 +85,8 @@ jest.mock('../../../src/hooks/useKeyboard', () => ({
   useKeyboard: () => ({keyboardVisible: false}),
 }));
 
-import * as radioBrowserHook from '../../../src/screens/RadioScreenNew/hooks/useRadioBrowser';
-import {RadioScreenNew} from '../../../src/screens/RadioScreenNew/components/RadioContent';
+import * as radioBrowserHook from '../../../src/screens/RadioScreen/hooks/useRadioBrowser';
+import {RadioScreen} from '../../../src/screens/RadioScreen/components/RadioContent';
 
 interface MockHandle {
   scope: {
@@ -104,7 +104,7 @@ interface MockHandle {
 const mock = (radioBrowserHook as unknown as {__mock: MockHandle}).__mock;
 
 async function renderScreen() {
-  return await renderWithProviders(RadioScreenNew, {
+  return await renderWithProviders(RadioScreen, {
     routeName: 'RadioScreen',
   });
 }

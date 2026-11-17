@@ -5,7 +5,7 @@
 // stream + FAB" pattern. The Moods tab was a unique feature but
 // added significant complexity for a single FAB; deferred to a
 // future Moods entry point. The Radio tab duplicates
-// RadioScreenNew; the user can navigate there from the Library tab.
+// RadioScreen; the user can navigate there from the Library tab.
 
 import React, {useCallback} from 'react';
 import {

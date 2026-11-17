@@ -51,8 +51,12 @@ const PAGE_SIZE = 40;
  * HTTP 507 Insufficient Storage**. The Archive will not page past
  * 10,000 rows, so the hook stops there instead of asking for a page
  * the server will refuse — and the footer says what that means.
+ *
+ * Exported because the footer's ending sentence may only claim the
+ * archive stopped paging when the archive's cap is the reason the list
+ * ended — see `MoviesContent.tsx`'s `windowEndLabel`.
  */
-const IA_MAX_RETRIEVABLE = 10_000;
+export const IA_MAX_RETRIEVABLE = 10_000;
 
 export interface MovieScopeState {
   items: InternetArchiveVideoResult[];
@@ -62,6 +66,12 @@ export interface MovieScopeState {
   isLoading: boolean;
   isLoadingMore: boolean;
   error: string | null;
+  /**
+   * The error from a failed NEXT PAGE — the load-more that did not make
+   * it. `error` covers the FIRST page (the error card), so the footer
+   * reports this one and the two never say the same failure twice.
+   */
+  pageError: string | null;
   categoryIds: string[];
   term: string;
   /** True if there are more items to fetch. */
@@ -226,11 +236,16 @@ export function useMoviesScreen({
       isLoading: q.isFetching,
       isLoadingMore: q.isFetchingNextPage,
       error: errorMessage(q.error),
+      // ONE FAILURE, ONE MESSAGE. `error` is the FIRST page's failure and
+      // the error card owns it; the footer's copy is only for a failed
+      // load-more. (The Podcasts screen already works this way —
+      // `usePodcastsScreen.ts:162`.)
+      pageError: q.isFetchNextPageError ? errorMessage(q.error) : null,
       categoryIds: [...sortedIds],
       term: trimmed,
       hasMore,
     }),
-    [items, numFound, q.data, q.error, q.isFetching, q.isFetchingNextPage, sortedIds, trimmed, hasMore],
+    [items, numFound, q.data, q.error, q.isFetching, q.isFetchingNextPage, q.isFetchNextPageError, sortedIds, trimmed, hasMore],
   );
 
   const loadMore = useCallback(() => {

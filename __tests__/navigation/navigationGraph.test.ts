@@ -433,3 +433,81 @@ describe('the Genre deep link says only what the screen can do', () => {
     expect(types).not.toContain("'radio'");
   });
 });
+
+/**
+ * The deep links that the browse screens carry.
+ *
+ * Two defects lived here, and both were invisible until the paths were
+ * resolved against the real parser:
+ *
+ *  1. `simbaplayer://radio/favorites` and `simbaplayer://tv/favorites`
+ *     resolved to the BROWSE screen. React Navigation matches the first
+ *     config whose regex fits (`@react-navigation/core`'s
+ *     `getStateFromPath.tsx` — the loop over the configs returns on the
+ *     first match), and the parametric path (`radio/:initialTab?`) was
+ *     declared BEFORE the static one (`radio/favorites`), so it
+ *     swallowed it. The favourites pages were unreachable by deep link.
+ *
+ *  2. A param the screen READS but the config did not DECODE arrived
+ *     exactly as it was typed: `?genre=Rock%20Roll` reached the screen
+ *     as the literal string "Rock%20Roll". React Navigation does put
+ *     every query param on the route it resolved (`parseQueryParams()`
+ *     in the same file) — the `parse` map is what decodes the value.
+ */
+describe('the browse screens answer their own deep links', () => {
+  it('resolves the FAVOURITES paths to the favourites screens', () => {
+    expect(resolve('/radio/favorites')!.last.name).toBe('RadioFavoritesScreen');
+    expect(resolve('/tv/favorites')!.last.name).toBe('LiveTVFavoritesScreen');
+  });
+
+  it('still resolves the browse screens themselves', () => {
+    expect(resolve('/radio')!.last.name).toBe('RadioScreen');
+    expect(resolve('/tv')!.last.name).toBe('LiveTVScreen');
+    expect(resolve('/tv/news')!.last.name).toBe('LiveTVScreen');
+  });
+
+  it('does not promise a tab the tab-less screens do not have', () => {
+    // The Radio screen replaced the old TabView screen and the
+    // Audiobooks screen dropped its three-tab layout in V18.11.3. A
+    // route that still promised an `initialTab` was a promise the
+    // screen could not keep.
+    const types = codeOf(path.join(NAV, 'types.ts'));
+    expect(types).not.toContain("initialTab?: 'top' | 'genres'");
+    expect(types).not.toContain("initialTab?: 'search' | 'genres' | 'recent'");
+  });
+
+  it('delivers a decoded query param to the screen that reads it', () => {
+    expect(
+      (resolve('/radio?initialTag=Jazz%20Funk')!.last.params as {initialTag?: string})
+        .initialTag,
+    ).toBe('Jazz Funk');
+
+    expect(
+      (resolve('/movies?categoryId=5')!.last.params as {categoryId?: string})
+        .categoryId,
+    ).toBe('5');
+
+    expect(
+      (resolve('/music?genre=Rock%20Roll')!.last.params as {genre?: string}).genre,
+    ).toBe('Rock Roll');
+
+    expect(
+      (resolve('/audiobooks?initialGenre=mystery')!.last.params as {
+        initialGenre?: string;
+      }).initialGenre,
+    ).toBe('mystery');
+
+    expect(
+      (resolve('/archive?query=lovecraft')!.last.params as {query?: string}).query,
+    ).toBe('lovecraft');
+
+    expect(
+      (resolve('/shows?initialGenre=comedy')!.last.params as {initialGenre?: string})
+        .initialGenre,
+    ).toBe('comedy');
+
+    expect(
+      (resolve('/movie/tt123?title=Alien')!.last.params as {title?: string}).title,
+    ).toBe('Alien');
+  });
+});

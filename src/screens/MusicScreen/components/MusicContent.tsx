@@ -36,6 +36,7 @@ export const MusicContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => {
     isLoadingMore,
     hasNextPage,
     error,
+    pageError,
     setActiveGenre,
     setSearchTerm,
     fetchNextPage,
@@ -149,7 +150,11 @@ export const MusicContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => {
           <BrowseFooter
             isLoadingMore={isLoadingMore}
             hasLoaded={hasLoaded}
-            error={error}
+            // The LOAD-MORE error, not the list's error: a first-load
+            // failure is the error card's business, and the footer saying
+            // it too announced the same failure twice — and wrongly
+            // ("Couldn't load MORE" for a load-more that never started).
+            error={pageError}
             reachedEnd={reachedEnd}
             shown={items.length}
             onLoadMore={fetchNextPage}

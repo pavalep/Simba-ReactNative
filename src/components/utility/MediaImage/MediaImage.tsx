@@ -62,6 +62,10 @@ import {
  *   - FAILED — the image draws nothing at all, so the placeholder stays
  *     and the box is never a hole.
  *
+ * The three states belong to ONE artwork: a NEW `source` resets them,
+ * because a row whose artwork URL changes must draw the new image over
+ * the placeholder again, not over nothing.
+ *
  * The placeholder is dropped rather than covered, and the artwork paints
  * over it in the meantime, so there is no flash and no layout shift: the
  * box is the same box in every state.
@@ -119,7 +123,33 @@ export const MediaImage: React.FC<MediaImageProps> = React.memo(
     testID,
   }) => {
     const resolved = typeof source === 'string' ? {uri: source} : source;
+
+    // ── The artwork's identity ────────────────────────────────────────
+    // The three-state machine below belongs to ONE artwork. When the
+    // caller's `source` changes, the old artwork's "loaded" must not
+    // cover the new one's placeholder — so the machine restarts.
+    //
+    // The comparison is on the SOURCE KEY, not the `source` object: a
+    // caller that builds `{uri}` inline gets a new object every render,
+    // and comparing objects would reset the state on every render.
+    const sourceKey =
+      typeof source === 'string'
+        ? source
+        : typeof source === 'number'
+          ? String(source)
+          : (source?.uri ?? '');
+
     const [state, setState] = useState<ArtworkState>('pending');
+    const [prevSourceKey, setPrevSourceKey] = useState(sourceKey);
+
+    // Adjusting the state when a prop changes (React's own pattern):
+    // the reset happens during this render, so the new artwork never
+    // paints with the previous artwork's state — an effect would paint
+    // once with the stale state first.
+    if (sourceKey !== prevSourceKey) {
+      setPrevSourceKey(sourceKey);
+      setState('pending');
+    }
 
     // ── No placeholder: the artwork stands alone ──────────────────────
     // The historical output, byte for byte. A caller that does not

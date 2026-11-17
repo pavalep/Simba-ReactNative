@@ -10,7 +10,6 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  RefreshControl,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../../theme';
@@ -75,12 +74,13 @@ export const HistoryScreen: React.FC<Props> = ({navigation}) => {
   // 58.4/58.5: standard long-press menu (Play Next / Queue / Remove)
   const [menuItem, setMenuItem] = useState<RecentHistoryEntry | null>(null);
   const {playNext, addToQueue} = useQueueActions();
-  // 54.3: pull-to-refresh — local store data, so just pulse the spinner
-  const [refreshing, setRefreshing] = useState(false);
-  const handleRefresh = useCallback(() => {
-    setRefreshing(true);
-    requestAnimationFrame(() => setRefreshing(false));
-  }, []);
+  // ── No pull-to-refresh ──────────────────────────────────────────────
+  // 54.3 shipped a `RefreshControl` whose handler flipped a boolean for
+  // one animation frame and re-read nothing: the History list is fed by
+  // a live persisted store, so there is nothing to refresh. The control
+  // was a spinner that never fetched anything — the same reasoning that
+  // already removed Home's pull-to-refresh (spec §6.3.3,
+  // `md/CONTENT_OWNERSHIP.md`).
 
   const filtered = useMemo(() => {
     let items = recentFiles;
@@ -333,14 +333,6 @@ export const HistoryScreen: React.FC<Props> = ({navigation}) => {
           renderItem={renderRow}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-              tintColor={colors.accent.gold}
-              colors={[colors.accent.gold]}
-            />
-          }
         />
       )}
 

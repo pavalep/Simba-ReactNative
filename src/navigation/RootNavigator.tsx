@@ -45,10 +45,10 @@ import {PodcastDetailScreen} from '../screens/PodcastDetailScreen';
 import {MusicScreen} from '../screens/MusicScreen';
 import {MusicDetailScreen} from '../screens/MusicDetailScreen';
 import {MovieDetailScreen} from '../screens/MovieDetailScreen';
-import {RadioScreenNew} from '../screens/RadioScreenNew';
-import {RadioFavoritesScreen} from '../screens/RadioScreenNew';
-import {LiveTVScreenNew} from '../screens/LiveTVScreenNew';
-import {LiveTVFavoritesScreen} from '../screens/LiveTVScreenNew';
+import {RadioScreen} from '../screens/RadioScreen';
+import {RadioFavoritesScreen} from '../screens/RadioScreen';
+import {LiveTVScreen} from '../screens/LiveTVScreen';
+import {LiveTVFavoritesScreen} from '../screens/LiveTVScreen';
 import {AudiobooksScreen} from '../screens/AudiobooksScreen';
 import {AudiobookDetailScreen} from '../screens/AudiobookDetailScreen';
 import {ArchiveScreen} from '../screens/ArchiveScreen';
@@ -396,7 +396,7 @@ export const RootNavigator: React.FC = () => {
       />
       <Stack.Screen
         name="RadioScreen"
-        component={RadioScreenNew}
+        component={RadioScreen}
         options={{animation: 'slide_from_right'}}
       />
       <Stack.Screen
@@ -406,7 +406,7 @@ export const RootNavigator: React.FC = () => {
       />
       <Stack.Screen
         name="LiveTVScreen"
-        component={LiveTVScreenNew}
+        component={LiveTVScreen}
         options={{animation: 'slide_from_right'}}
       />
       <Stack.Screen

@@ -12,7 +12,7 @@
  * React throws at 50 nested updates.
  *
  * Measured on emulator-5554 (API 37) on 2026-11-05 against
- * `src/screens/RadioScreenNew/hooks/useRadioBrowser.ts:239`:
+ * `src/screens/RadioScreen/hooks/useRadioBrowser.ts:239`:
  *
  *   const favorites = useLiveFavoritesStore(s =>
  *     s.items.filter(f => f.kind === 'radio'),
@@ -309,7 +309,7 @@ describe('zustand selectors — no reference-building selectors', () => {
     expect(
       files.some(f =>
         f.endsWith(
-          path.join('screens', 'RadioScreenNew', 'hooks', 'useRadioBrowser.ts'),
+          path.join('screens', 'RadioScreen', 'hooks', 'useRadioBrowser.ts'),
         ),
       ),
     ).toBe(true);

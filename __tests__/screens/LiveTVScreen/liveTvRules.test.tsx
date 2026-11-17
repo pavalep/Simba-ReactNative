@@ -36,7 +36,7 @@ import {renderWithProviders} from '../../helpers/renderWithProviders';
 // would be in the temporal dead zone when the factory runs (babel hoists
 // `jest.mock` above the imports), so the mock reads its state through
 // this handle instead.
-jest.mock('../../../src/screens/LiveTVScreenNew/hooks/useLiveTVBrowser', () => {
+jest.mock('../../../src/screens/LiveTVScreen/hooks/useLiveTVBrowser', () => {
   const mock = {
     scope: {
       items: [] as unknown[],
@@ -99,8 +99,8 @@ jest.mock('../../../src/hooks/useKeyboard', () => ({
   useKeyboard: () => ({keyboardVisible: false}),
 }));
 
-import * as liveTvHook from '../../../src/screens/LiveTVScreenNew/hooks/useLiveTVBrowser';
-import {LiveTVScreenNew} from '../../../src/screens/LiveTVScreenNew/components/LiveTVContent';
+import * as liveTvHook from '../../../src/screens/LiveTVScreen/hooks/useLiveTVBrowser';
+import {LiveTVScreen} from '../../../src/screens/LiveTVScreen/components/LiveTVContent';
 
 interface MockHandle {
   scope: {
@@ -120,7 +120,7 @@ interface MockHandle {
 const mock = (liveTvHook as unknown as {__mock: MockHandle}).__mock;
 
 async function renderScreen() {
-  return await renderWithProviders(LiveTVScreenNew, {
+  return await renderWithProviders(LiveTVScreen, {
     routeName: 'LiveTVScreen',
   });
 }

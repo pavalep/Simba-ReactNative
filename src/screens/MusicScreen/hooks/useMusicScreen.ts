@@ -105,6 +105,12 @@ export interface UseMusicScreenResult {
   isLoadingMore: boolean;
   hasNextPage: boolean;
   error: string | null;
+  /**
+   * The error from a failed NEXT PAGE — the load-more that did not make
+   * it. `error` covers the FIRST page (the error card), so the footer
+   * reports this one and the two never say the same failure twice.
+   */
+  pageError: string | null;
   fetchNextPage: () => void;
   refetch: () => void;
   /**
@@ -162,6 +168,13 @@ export function useMusicScreen(): UseMusicScreenResult {
     isLoadingMore: query.isFetchingNextPage,
     hasNextPage: query.hasNextPage ?? false,
     error: query.error?.message ?? null,
+    // ONE FAILURE, ONE MESSAGE. `error` is the FIRST page's failure and
+    // the error card owns it; the footer's copy is only for a failed
+    // load-more. (The Podcasts screen already works this way —
+    // `usePodcastsScreen.ts:162`.)
+    pageError: query.isFetchNextPageError
+      ? (query.error?.message ?? null)
+      : null,
     fetchNextPage: () => {
       void query.fetchNextPage();
     },

@@ -23,21 +23,15 @@ import {LibraryFoldersSegment} from './LibraryFoldersSegment';
 import {LibraryAudioSegment} from './LibraryAudioSegment';
 import {LibraryArtistsSegment} from './LibraryArtistsSegment';
 import {LibraryAlbumsSegment} from './LibraryAlbumsSegment';
-import {LibraryPlaylistsSegment} from './LibraryPlaylistsSegment';
 import {ViewToggle} from './ViewToggle';
-import {PlaylistCreateModal} from '../../../../components/playlist/PlaylistCreateModal';
-import {PlaylistActionMenu} from '../../../../components/playlist/PlaylistActionMenu';
-import {usePlaylists} from '../../../playlists';
 import {
   useLibraryScreen,
   SEGMENTS,
   FILTER_CHIPS,
   SORT_OPTIONS,
-  CONTENT_MODE_OPTIONS,
-  PLAYLIST_FILTER_TYPES,
+  LIBRARY_MENU_ENTRIES,
   GRID_GAP,
 } from '../hooks/useLibraryScreen';
-import {Fab} from '../../../../components/core/Fab/Fab';
 
 type Props = LibraryScreenProps;
 
@@ -45,17 +39,14 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
   const {
     colors, isDark, contentBottomInset,
     activeSegment, setActiveSegment,
-    contentMode, setContentMode, showDropdown, setShowDropdown,
+    showDropdown, setShowDropdown,
     viewMode, setViewMode,
     sortBy, setSortBy,
     filterType, setFilterType,
     sortPickerVisible, setSortPickerVisible,
-    playlistFilterType, setPlaylistFilterType,
-    createModalVisible, setCreateModalVisible,
     videoFolders, audioFolders, lastScanTimestamp,
     scannedTrackCount, scannedTracks,
-    filteredPlaylists,
-    selectedSortLabel, currentTitle,
+    selectedSortLabel,
     showSortControls, showFilterChips, showViewToggle,
     isScanning, scanProgress, scanHistory,
     cancelScan,
@@ -64,40 +55,8 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
     handleRefresh,
     navigateToLinkedFolders, navigateToFolderBrowser, handleLinkFolder,
     handleArtistPress, handleAlbumPress, handleScanAudioFolders, handleMediaPress,
-    handleCreatePlaylist, handlePlayAllPlaylist, handleShufflePlaylist,
-    handlePlaylistCardPress,
+    handleLibraryMenuSelect,
   } = useLibraryScreen(navigation);
-
-  // ── The pin menu ──
-  // The Library is a BROWSING surface: the card carries no permanent pin
-  // button, so the long-press menu is how a playlist gets pinned from here.
-  // The management row and the detail header carry the VISIBLE toggle, so
-  // the pin is never reachable only by a gesture (D-P8).
-  const [actionPlaylistId, setActionPlaylistId] = React.useState<string | null>(null);
-  const {setPinned} = usePlaylists();
-
-  // The menu reads the LIVE playlist, so a pin changed elsewhere shows in
-  // the menu's label instead of a stale snapshot.
-  const actionPlaylist = React.useMemo(
-    () => filteredPlaylists.find(p => p.id === actionPlaylistId) ?? null,
-    [filteredPlaylists, actionPlaylistId],
-  );
-
-  const handlePlaylistCardLongPress = React.useCallback((playlistId: string) => {
-    setActionPlaylistId(playlistId);
-  }, []);
-
-  const handleCloseActionMenu = React.useCallback(() => {
-    setActionPlaylistId(null);
-  }, []);
-
-  const handleTogglePin = React.useCallback(
-    (playlistId: string, pinned: boolean) => {
-      setPinned(playlistId, pinned);
-      setActionPlaylistId(null);
-    },
-    [setPinned],
-  );
 
   // ── Stagger entrance animation ──
   const entranceAnim = useRef(new Animated.Value(0)).current;
@@ -258,25 +217,6 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
           paddingTop: 12,
           paddingBottom: contentBottomInset,
         },
-        playlistFilterRow: {
-          flexDirection: 'row',
-          paddingHorizontal: 20,
-          marginBottom: 16,
-          gap: spacing.sm,
-        },
-        playlistFilterChip: {
-          paddingVertical: 6,
-          paddingHorizontal: 16,
-          borderRadius: radius.full,
-          borderWidth: StyleSheet.hairlineWidth,
-          borderColor: colors.border.subtle,
-          backgroundColor: colors.background.elevated,
-        },
-        playlistFilterChipActive: {
-          backgroundColor: colors.accent.goldDim,
-          borderColor: colors.accent.gold,
-        },
-        playlistFilterRail: {flexDirection: 'row', gap: spacing.sm},
         gridRow: {flexDirection: 'row', gap: GRID_GAP},
         gridCol: {flex: 1},
 
@@ -394,53 +334,6 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
     </>
   );
 
-  const renderPlaylistContent = () => (
-    <>
-      <View style={styles.playlistFilterRow}>
-        <FlatList
-          horizontal
-          data={PLAYLIST_FILTER_TYPES}
-          keyExtractor={item => item.key}
-          renderItem={({item}) => {
-            const isActive = playlistFilterType === item.key;
-            return (
-              <TouchableOpacity style={[styles.playlistFilterChip, isActive && styles.playlistFilterChipActive]} onPress={() => setPlaylistFilterType(item.key)} activeOpacity={0.7}>
-                <AppText variant="caption" color={isActive ? 'accent' : 'secondary'} style={{fontFamily: FONT_FAMILY.inter.semibold}}>{item.label}</AppText>
-              </TouchableOpacity>
-            );
-          }}
-          contentContainerStyle={styles.playlistFilterRail}
-          showsHorizontalScrollIndicator={false}
-          scrollEnabled={false}
-          initialNumToRender={PLAYLIST_FILTER_TYPES.length}
-        />
-      </View>
-
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <LibraryPlaylistsSegment
-          playlists={filteredPlaylists}
-          onPlaylistCardPress={handlePlaylistCardPress}
-          onPlayAllPlaylist={handlePlayAllPlaylist}
-          onShufflePlaylist={handleShufflePlaylist}
-          onPlaylistCardLongPress={handlePlaylistCardLongPress}
-        />
-      </ScrollView>
-
-      <Fab
-        label="+"
-        onPress={() => setCreateModalVisible(true)}
-        accessibilityLabel="Create playlist"
-      />
-
-      <PlaylistActionMenu
-        visible={actionPlaylist !== null}
-        playlist={actionPlaylist}
-        onTogglePin={handleTogglePin}
-        onClose={handleCloseActionMenu}
-      />
-    </>
-  );
-
   return (
     <SafeAreaView style={styles.root} edges={['top']}>
       <SimbaStatusBar variant="home" />
@@ -449,25 +342,26 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
 
       <View style={styles.header}>
         <TouchableOpacity style={styles.titleWrapper} activeOpacity={0.7} onPress={() => setShowDropdown(true)}>
-          <AppText variant="displaySans" color="primary">{currentTitle}</AppText>
+          {/* The Library is the Library: the dropdown's "Playlists" entry
+              navigates to All Playlists, which owns the playlist list
+              (spec §6.4). There is no second content mode to title. */}
+          <AppText variant="displaySans" color="primary">Library</AppText>
           <SvgIcon name="chevronDown" size={20} color={colors.text.primary} style={styles.titleChevron} />
         </TouchableOpacity>
         <View style={styles.headerRight}>
-          {contentMode === 'library' && showViewToggle && <ViewToggle value={viewMode} onChange={setViewMode} />}
-          {contentMode === 'library' && (
-            <TouchableOpacity
-              style={styles.downloadsBtn}
-              onPress={() => navigation.navigate('Downloads')}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel="Downloads">
-              <SvgIcon name="download" size={18} color={colors.text.primary} />
-            </TouchableOpacity>
-          )}
+          {showViewToggle && <ViewToggle value={viewMode} onChange={setViewMode} />}
+          <TouchableOpacity
+            style={styles.downloadsBtn}
+            onPress={() => navigation.navigate('Downloads')}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Downloads">
+            <SvgIcon name="download" size={18} color={colors.text.primary} />
+          </TouchableOpacity>
         </View>
       </View>
 
-      {contentMode === 'library' ? renderLibraryContent() : renderPlaylistContent()}
+      {renderLibraryContent()}
 
       <Modal transparent visible={sortPickerVisible} onRequestClose={() => setSortPickerVisible(false)} animationType="fade">
         <TouchableOpacity style={styles.sortPickerScrim} activeOpacity={1} onPress={() => setSortPickerVisible(false)}>
@@ -506,34 +400,39 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
         <TouchableOpacity style={styles.dropdownScrim} activeOpacity={1} onPress={() => setShowDropdown(false)}>
           <View style={[styles.dropdownPanel, {backgroundColor: colors.background.elevated, borderColor: colors.border.subtle}]}>
             <View style={styles.dropdownHeader}>
-              <AppText variant="body2" color="secondary">Select View</AppText>
+              {/* The sheet no longer SWITCHES a view: "Playlists" leaves
+                  the Library for All Playlists, which owns the playlist
+                  list (spec §6.4). "Select View" promised a switch this
+                  list cannot make. */}
+              <AppText variant="body2" color="secondary">Go to</AppText>
               <TouchableOpacity onPress={() => setShowDropdown(false)}>
                 <SvgIcon name="close" size={20} color={colors.text.secondary} />
               </TouchableOpacity>
             </View>
             <View style={[styles.dropdownDivider, {backgroundColor: colors.border.subtle}]} />
             <FlatList
-              data={CONTENT_MODE_OPTIONS}
+              data={LIBRARY_MENU_ENTRIES}
               keyExtractor={option => option.key}
               renderItem={({item: option}) => {
-                const isSelected = contentMode === option.key;
+                // The dot marks the page you are ON. The Library is
+                // always the Library — the other entry navigates away,
+                // so no entry can be "selected" in the old sense.
+                const isCurrentPage = option.key === 'library';
                 return (
-                  <TouchableOpacity style={[styles.dropdownOption, {borderBottomColor: colors.border.subtle}]} onPress={() => { setContentMode(option.key); setShowDropdown(false); }} activeOpacity={0.7}>
-                    <AppText variant="body2" color={isSelected ? 'accent' : 'primary'}>{option.label}</AppText>
-                    <View style={[styles.sortRadio, {borderColor: isSelected ? colors.accent.gold : colors.border.subtle}]}>
-                      {isSelected && <View style={[styles.sortRadioInner, {backgroundColor: colors.accent.gold}]} />}
+                  <TouchableOpacity style={[styles.dropdownOption, {borderBottomColor: colors.border.subtle}]} onPress={() => handleLibraryMenuSelect(option.key)} activeOpacity={0.7}>
+                    <AppText variant="body2" color={isCurrentPage ? 'accent' : 'primary'}>{option.label}</AppText>
+                    <View style={[styles.sortRadio, {borderColor: isCurrentPage ? colors.accent.gold : colors.border.subtle}]}>
+                      {isCurrentPage && <View style={[styles.sortRadioInner, {backgroundColor: colors.accent.gold}]} />}
                     </View>
                   </TouchableOpacity>
                 );
               }}
               scrollEnabled={false}
-              initialNumToRender={CONTENT_MODE_OPTIONS.length}
+              initialNumToRender={LIBRARY_MENU_ENTRIES.length}
             />
           </View>
         </TouchableOpacity>
       </Modal>
-
-      <PlaylistCreateModal visible={createModalVisible} onClose={() => setCreateModalVisible(false)} onCreate={handleCreatePlaylist} />
     </SafeAreaView>
   );
 };

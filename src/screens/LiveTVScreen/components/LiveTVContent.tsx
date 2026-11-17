@@ -108,7 +108,7 @@ const ItemSeparator: React.FC = () => {
 
 // ─── Screen ───────────────────────────────────────────────────────────
 
-export const LiveTVScreenNew: React.FC<Props> = ({navigation, route}) => {
+export const LiveTVScreen: React.FC<Props> = ({navigation, route}) => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
   // The app's ONE bottom-chrome rule: the safe area, or the mini-player

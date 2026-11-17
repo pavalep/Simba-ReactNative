@@ -33,10 +33,32 @@ export interface UseAllAudioScreenResult {
   handleRefresh: () => void;
 }
 
-export function useAllAudioScreen(): UseAllAudioScreenResult {
+/**
+ * The All Audio screen's hook.
+ *
+ * `initialSort` and `initialFilter` are the route's params. They were
+ * declared by the route and sent by two callers, and the screen read
+ * NEITHER of them:
+ *
+ *   • the Artist screen's "view all tracks" sent `filter: artistName`
+ *     and the page opened showing every track on the device; and
+ *   • the Library's "View All Artists" sent `sort: 'artist'` and the
+ *     page opened sorted by title.
+ *
+ * A param the screen ignores is a promise the app does not keep, so
+ * the screen keeps them now.
+ */
+export function useAllAudioScreen(
+  initialSort?: string,
+  initialFilter?: string,
+): UseAllAudioScreenResult {
   const {openPlayer} = useResumeAwareLaunch();
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortMode, setSortMode] = useState<SortMode>('title');
+  // The route's `sort` picks the opening order; the toggle still works
+  // after that, because the sort is the screen's own state.
+  const [sortMode, setSortMode] = useState<SortMode>(
+    initialSort === 'artist' ? 'artist' : 'title',
+  );
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   // V20.10: `isScanning` comes from the media-scan store directly
   // (via `useMediaScanner()`). No local `refreshing` state — the
@@ -56,6 +78,15 @@ export function useAllAudioScreen(): UseAllAudioScreenResult {
   const filteredTracks = useMemo(() => {
     let result = [...audioTracks];
 
+    // The route's `filter` — the Artist screen's "view all tracks"
+    // sends the artist's name, and the page is that artist's tracks.
+    // The match is on the ARTIST, case-insensitively: the caller sends
+    // the name it knows the track by.
+    const artistFilter = initialFilter?.trim().toLowerCase();
+    if (artistFilter) {
+      result = result.filter(t => t.artist.toLowerCase() === artistFilter);
+    }
+
     // Apply search
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
@@ -70,11 +101,15 @@ export function useAllAudioScreen(): UseAllAudioScreenResult {
     // Apply sort
     result.sort((a, b) => {
       if (sortMode === 'title') return a.title.localeCompare(b.title);
-      return a.artist.localeCompare(b.artist);
+      // The artist sort breaks ties on the TITLE: without it, two tracks
+      // by the same artist keep the device's scan order, so the list's
+      // order would change with the folder the media was found in.
+      const byArtist = a.artist.localeCompare(b.artist);
+      return byArtist !== 0 ? byArtist : a.title.localeCompare(b.title);
     });
 
     return result;
-  }, [audioTracks, searchQuery, sortMode]);
+  }, [audioTracks, searchQuery, sortMode, initialFilter]);
 
   const handlePlayTrack = useCallback(
     (uri: string, title: string) => {

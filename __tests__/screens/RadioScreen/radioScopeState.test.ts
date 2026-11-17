@@ -59,7 +59,7 @@ jest.mock('../../../src/hooks/useNetworkStatus', () => ({
   useNetworkStatus: () => ({isOnline: true}),
 }));
 
-import {useRadioBrowser} from '../../../src/screens/RadioScreenNew/hooks/useRadioBrowser';
+import {useRadioBrowser} from '../../../src/screens/RadioScreen/hooks/useRadioBrowser';
 
 describe('useRadioBrowser — the scope state', () => {
   beforeEach(() => {

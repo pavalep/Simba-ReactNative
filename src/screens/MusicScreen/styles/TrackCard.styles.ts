@@ -3,9 +3,9 @@
 // as horizontal rows with thumb + meta, never as a grid).
 // Thumb is 52×52 with rounded corners.
 //
-// The row IS the play action, so there is no play button inside it: a
-// gold disc in a row that already plays read as a second button that
-// did nothing.
+// The row OPENS THE TRACK'S OWN PAGE, so there is no play button
+// inside it: a gold disc in a row that already carries one action
+// read as a second button that did nothing.
 
 import {StyleSheet} from 'react-native';
 import {radius, spacing} from '../../../theme/tokens';

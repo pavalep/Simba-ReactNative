@@ -75,8 +75,6 @@ export interface SettingsState {
   scanOnLaunch: boolean;
   notificationsEnabled: boolean;
   appLanguage: string;
-  /** 49.6: keep the last N completed downloads (0 = off). */
-  autoDeleteDownloads: number;
 
   // P61: home greeting.
   homeCity: string;
@@ -141,7 +139,6 @@ export interface SettingsActions {
   setNotificationsEnabled: (on: boolean) => void;
   setAppLanguage: (lang: string) => void;
 
-  setAutoDeleteDownloads: (count: number) => void;
   setHomeCity: (city: string) => void;
 
   reset: () => void;
@@ -206,8 +203,6 @@ const initialState: SettingsState = {
   scanOnLaunch: false,
   notificationsEnabled: true,
   appLanguage: 'system',
-
-  autoDeleteDownloads: 0,
 
   homeCity: '',
 };
@@ -359,9 +354,6 @@ export const useSettingsStore = create<SettingsState & SettingsActions>()(
         set({notificationsEnabled}),
       setAppLanguage: (appLanguage) => set({appLanguage}),
 
-      setAutoDeleteDownloads: (autoDeleteDownloads) =>
-        set({autoDeleteDownloads: Math.max(0, Math.floor(autoDeleteDownloads))}),
-
       setHomeCity: (homeCity) => set({homeCity}),
 
       reset: () => set({...initialState}),
@@ -391,10 +383,22 @@ export const useSettingsStore = create<SettingsState & SettingsActions>()(
        * splash screen. It is not part of the state any more, so it is
        * dropped on the way in — an install that still carries it sheds it
        * here rather than keeping a key nothing reads.
+       *
+       * `autoDeleteDownloads` is the same case: the auto-delete policy
+       * has ONE owner now — the download service, which persists it and
+       * applies it (`src/services/downloadService.ts`). The store's copy
+       * was a second owner whose value only reached the service when the
+       * Downloads page was mounted, so the chip could say "Off" while
+       * the app kept 5 finished downloads. The key is dropped here.
        */
       merge: (persisted, current) => {
-        const {hasLaunched: _dropped, ...rest} = (persisted ?? {}) as Partial<SettingsState> & {
+        const {
+          hasLaunched: _dropped,
+          autoDeleteDownloads: _droppedAutoDelete,
+          ...rest
+        } = (persisted ?? {}) as Partial<SettingsState> & {
           hasLaunched?: boolean;
+          autoDeleteDownloads?: number;
         };
         staleLaunchFlagOnDisk = _dropped !== undefined;
         return {...current, ...rest};

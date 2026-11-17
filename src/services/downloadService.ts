@@ -57,7 +57,21 @@ const DOWNLOAD_DIR = `${RNFS.DocumentDirectoryPath}/downloads`;
 
 // ─── W7 P27 — Download Policy (count + age, opt-in) ──────────
 
-export const DEFAULT_KEEP_LAST_N = 5;
+/**
+ * The default auto-delete count: OFF.
+ *
+ * It used to be 5, and that was a second owner of the same fact. The
+ * Downloads screen's chip showed the SETTINGS store's value (0 = Off),
+ * and the store's value only reached this service when the Downloads
+ * page was mounted — so on a fresh install the app silently kept the
+ * last 5 finished downloads while the chip said "Off", and the chip
+ * said "Off" until the user happened to open the page.
+ *
+ * This module is the ONE owner of the policy now: it persists it, it
+ * reads it back at load time, and the screen reads it from here. The
+ * default therefore has to be the value the app SHOWS — 0, "Off".
+ */
+export const DEFAULT_KEEP_LAST_N = 0;
 /** Default max-age is 30 days, matching the W7 P27 brief. */
 export const DEFAULT_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 

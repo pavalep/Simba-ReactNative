@@ -22,8 +22,8 @@ import React from 'react';
 import {screen, render} from '@testing-library/react-native';
 
 import {ThemeProvider} from '../../../src/theme';
-import {toRadioTagRow} from '../../../src/screens/RadioScreenNew/related/stationRow';
-import {stationSubtitle} from '../../../src/screens/RadioScreenNew/related/stationRow';
+import {toRadioTagRow} from '../../../src/screens/RadioScreen/related/stationRow';
+import {stationSubtitle} from '../../../src/screens/RadioScreen/related/stationRow';
 
 describe('Radio — the filter rows carry a real key', () => {
   it('keys a tag by its NAME', () => {

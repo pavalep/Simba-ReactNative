@@ -124,7 +124,7 @@ export const RadioFavoritesScreen: React.FC<Props> = () => {
         case 'share':
           // ONE share target for the whole feature, and the params the
           // linking config actually parses. This used to share to
-          // `route: 'RadioScreen'`, whose linking config parses only
+          // `route: 'RadioScreen'`, whose linking config carried only
           // `initialTab` — so the station was lost entirely and the
           // recipient landed on the browse screen with nothing.
           shareContent({

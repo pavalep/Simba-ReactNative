@@ -1,8 +1,8 @@
 import type {SvgIconName} from '../../../../components/utility/SvgIcon';
 import {PLAYLIST_KIND_LABELS} from '../../../../types/playlist';
 import type {
-  ContentMode,
   FilterType,
+  LibraryMenuEntryKey,
   LocalMediaFilter,
   Segment,
   SortOption,
@@ -40,8 +40,16 @@ export const LOCAL_SORT_OPTIONS: Array<{
   {key: 'album', label: 'Album'},
 ];
 
-export const LOCAL_CONTENT_MODES: Array<{
-  key: ContentMode;
+/**
+ * The Library title dropdown's two entries.
+ *
+ * This is a NAVIGATION menu, not a list of content modes: the Library has
+ * no playlists content mode any more. All Playlists owns the playlist list
+ * and the kind chips (spec §6.4), so the "Playlists" entry here LEAVES the
+ * Library and opens that page - it does not swap what the Library renders.
+ */
+export const LOCAL_LIBRARY_MENU_ENTRIES: Array<{
+  key: LibraryMenuEntryKey;
   label: string;
 }> = [
   {key: 'library', label: 'Library'},
@@ -49,7 +57,10 @@ export const LOCAL_CONTENT_MODES: Array<{
 ];
 
 /**
- * The Library's playlist kind filter.
+ * The playlist kind filter CHIPS.
+ *
+ * All Playlists draws them - it owns the playlist list (spec §6.4) - and
+ * the list lives here so the kind labels have ONE owner.
  *
  * The labels come from `PLAYLIST_KIND_LABELS` - the ONE owner of the
  * kind labels - so a kind can never be spelled two ways, and a kind
