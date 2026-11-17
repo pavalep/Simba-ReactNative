@@ -34,7 +34,7 @@ function fmtDur(s: number): string {
 }
 
 export const MusicDetailScreen: React.FC<Props> = ({navigation, route}) => {
-  const {trackId, source} = route.params;
+  const {trackId, source = 'jamendo'} = route.params;
   const {track, isLoading, error} = useMusicDetailScreen(trackId, source);
   const {colors} = useTheme();
   const {openPlayer} = useResumeAwareLaunch();

@@ -251,7 +251,6 @@ export const BrowseLayout: React.FC<Props> = ({
       <FilterSheet
         visible={sheetVisible}
         onClose={() => setSheetVisible(false)}
-        title={`${config.title} filter`}
         groups={(config.options?.groups ?? []).map<FilterSheetGroup>(g => ({
           id: g.id,
           title: g.title,

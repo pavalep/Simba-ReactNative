@@ -287,14 +287,19 @@ export const LiveTVScreenNew: React.FC<Props> = ({navigation, route}) => {
           break;
         }
         case 'share':
+          // ONE share target for the whole feature, and the params the
+          // linking config actually parses: `SongScreen` parses
+          // `fileUri` and `title` (`navigation/linking.ts:130-138`).
+          //
+          // This sent `route: 'LiveTVScreen'` with `fileUri`/`fileTitle` —
+          // and the Live TV path is `tv/:categoryId?`, which parses
+          // NEITHER. The shared link became `simbaplayer://tv?fileUri=…`
+          // and the recipient landed on the Live TV browser with no
+          // channel at all. The Radio twin of this row was fixed to
+          // `SongScreen` in Wave B13; this is the same fix.
           shareContent({
-            route: 'LiveTVScreen',
-            params: {
-              fileUri: row.url,
-              fileTitle: row.name,
-              source: 'api',
-            provider: 'iptv',
-            },
+            route: 'SongScreen',
+            params: {fileUri: row.url, title: row.name, source: 'iptv'},
             title: row.name,
             subtitle: row.subtitle,
           });
@@ -482,7 +487,6 @@ export const LiveTVScreenNew: React.FC<Props> = ({navigation, route}) => {
       <FilterSheet
         visible={sheetVisible}
         onClose={() => setSheetVisible(false)}
-        title="Filter channels"
         groups={[
           {
             id: 'category',

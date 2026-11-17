@@ -100,10 +100,26 @@ export interface FilterSheetGroup {
   rows: FilterSheetRow[];
 }
 
+/**
+ * The sheet's props.
+ *
+ * There is NO `title` prop, and there was one until 2026-11-17.
+ *
+ * It was destructured with a default and then handed to `BottomSheet` as
+ * `title={undefined}` — the sheet drew no heading at all. Four callers
+ * passed a title ("Filter channels", "Filter radio stations", "Search
+ * filters", "<section> filter"), so every caller believed the sheet was
+ * labelled and no sheet ever was.
+ *
+ * It is deleted rather than wired up because the sheet's DESIGN has no
+ * heading: no board in `designs/penpot/` draws one — they draw the GROUP
+ * titles only (`music-radio.js`, `movies.js`, `podcasts.js`, `search.js`) —
+ * and `BottomSheet` drops its bottom padding for a titleless sheet
+ * (`BottomSheet.tsx:275-281`). Rendering it would make eight boards wrong.
+ */
 interface FilterSheetProps {
   visible: boolean;
   onClose: () => void;
-  title?: string;
   groups: FilterSheetGroup[];
   /** Current selection — a partial record {groupId: selectedKeys[]}. */
   value: Record<string, string[]>;
@@ -271,7 +287,7 @@ const GroupChipRow: React.FC<{
 );
 
 export const FilterSheet: React.FC<FilterSheetProps> = React.memo(
-  ({visible, onClose, title = 'Filter', groups, value, onChange, onReset}) => {
+  ({visible, onClose, groups, value, onChange, onReset}) => {
     const {colors} = useTheme();
     const insets = useSafeAreaInsets();
     const sheetRef = useRef<BottomSheetHandle>(null);

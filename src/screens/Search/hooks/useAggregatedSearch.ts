@@ -14,6 +14,7 @@
 // / error / stale-request cancellation logic.
 
 import {useEffect, useMemo, useState} from 'react';
+import type {QueryFunctionContext} from '@tanstack/react-query';
 import {useApiQueries} from '../../../hooks/useApiQuery';
 import {searchAudiobooks} from '../../../infrastructure/api/librivox/adapter';
 import {getIPTVCatalogue, type IPTVCatalogue} from '../../../infrastructure/api/iptv/adapter';
@@ -22,6 +23,7 @@ import {searchJamendoTracks} from '../../../infrastructure/api/jamendo/adapter';
 import {searchInternetArchiveAudio} from '../../../infrastructure/api/internetArchive/adapter';
 import {searchAudiusTracks} from '../../../infrastructure/api/audius/adapter';
 import {getPopularJamendoTracks} from '../../../infrastructure/api/jamendo/adapter';
+import {scopeShowsTV, type SearchScope} from '../utils/searchFilters';
 import type {
   AggregatedSearchResults,
   AudiobookResult,
@@ -82,6 +84,7 @@ const IPTV_CATALOGUE_GC_MS = 60 * 60_000;
 export function useAggregatedSearch(
   query: string,
   debounceMs: number = 0,
+  scope: SearchScope = 'all',
 ): AggregatedSearch {
   // ── Debounce (UI-level concern; ideally pushed to the SearchBar) ──
   const [debouncedQuery, setDebouncedQuery] = useState(query.trim());
@@ -131,8 +134,21 @@ export function useAggregatedSearch(
         // for EVERY term and the "TV" group of the search page was
         // permanently empty. It reads the catalogue now, and the same
         // cache entry is the one Live TV reads.
-        queryFn: () => getIPTVCatalogue(),
-        enabled,
+        //
+        // The signal is forwarded: the catalogue is 2.8 MB, and without
+        // it a user who types and clears left the download running to
+        // completion. Live TV passes one (`useLiveTVBrowser.ts:116`).
+        // The context is annotated explicitly: `useApiQueries` types its
+        // queries through a tuple spread (`readonly [...QueriesOptions<T>]`),
+        // which does not contextually type the `queryFn` parameter, so a
+        // destructured `{signal}` would be an implicit `any`.
+        queryFn: ({signal}: QueryFunctionContext) => getIPTVCatalogue(signal),
+        // The catalogue is 2.8 MB, so it is fetched ONLY for the scopes
+        // that show the TV group. The scope row is part of the results
+        // state and keeps its value while the user types, so a user who
+        // searched Music never paid for the catalogue at all — the leg
+        // fired for every query and the result was filtered away.
+        enabled: enabled && scopeShowsTV(scope),
         staleTime: IPTV_CATALOGUE_STALE_MS,
         gcTime: IPTV_CATALOGUE_GC_MS,
       },

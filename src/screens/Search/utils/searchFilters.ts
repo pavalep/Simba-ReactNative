@@ -120,6 +120,19 @@ const SCOPE_SOURCES: Record<Exclude<SearchScope, 'local'>, RemoteSourceKey[]> = 
   archive: ['internetArchiveItems'],
 };
 
+/**
+ * Whether a scope shows the TV group.
+ *
+ * The scope→sources map above is the ONE owner of that knowledge, so this
+ * asks it rather than repeating it. The IPTV catalogue is 2.8 MB, and the
+ * search page's TV leg used to fetch it for EVERY scope — including the
+ * scopes that filtered the result away.
+ */
+export function scopeShowsTV(scope: SearchScope): boolean {
+  if (scope === 'local') return false;
+  return SCOPE_SOURCES[scope].includes('iptvChannels');
+}
+
 /** The scopes, in the order the scope row draws them. */
 export const SEARCH_SCOPES: {key: SearchScope; label: string}[] = [
   {key: 'all', label: 'All'},

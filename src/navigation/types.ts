@@ -100,7 +100,15 @@ export type RootStackParamList = {
   // title is what the header and the share sheet carry now.
   PodcastDetail: {podcastId: number};
   MusicScreen: {genre?: string} | undefined;
-  MusicDetail: {trackId: string; source: 'jamendo' | 'audius'};
+  // The deep link `simbaplayer://music/<trackId>` carries NO source — the
+  // path is `music/:trackId/:source?` (`navigation/linking.ts:173`). The
+  // type used to REQUIRE one, so the type and the parser disagreed: a link
+  // without a source reached the screen with `source === undefined`, fell
+  // into the Audius branch, and asked Audius for a Jamendo id.
+  //
+  // The source is optional, and the screen defaults it to 'jamendo' — the
+  // source the Music screen lists and the one its own share links carry.
+  MusicDetail: {trackId: string; source?: 'jamendo' | 'audius'};
   MovieDetail: {identifier: string; title?: string};
   // ── P36: live radio + TV browse (wired RadioBrowser + IPTV-org) ──
   RadioScreen:

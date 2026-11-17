@@ -466,7 +466,6 @@ export const RadioScreenNew: React.FC<Props> = ({navigation, route}) => {
       <FilterSheet
         visible={sheetVisible}
         onClose={() => setSheetVisible(false)}
-        title="Filter radio stations"
         groups={[
           {
             id: 'genre',

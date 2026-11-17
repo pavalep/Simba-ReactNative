@@ -283,11 +283,15 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
   // 2026-11-12: the hook's own 450 ms debounce is gone (it is 0 now),
   // so the remote results answer at the SAME 300 ms as the local ones
   // instead of 750 ms after the last keystroke.
+  //
+  // 2026-11-17 (WAVE B13.1): the scope is passed in, because the IPTV
+  // catalogue is 2.8 MB and the TV leg used to fetch it for every scope —
+  // including the scopes that filter the TV group away.
   const {
     results: remoteResults,
     isLoading: remoteLoading,
     trending,
-  } = useAggregatedSearch(debouncedQuery);
+  } = useAggregatedSearch(debouncedQuery, 0, scope);
 
   const hasQuery = searchText.trim().length > 0;
 
@@ -624,7 +628,6 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
       <FilterSheet
         visible={sheetVisible}
         onClose={() => setSheetVisible(false)}
-        title="Search filters"
         groups={FILTER_GROUPS}
         value={{
           type: [kind],

@@ -48,7 +48,15 @@ export const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
+    // The list's top inset is 16, the same as Radio's twin and the same
+    // as the board that draws the Radio list
+    // (`designs/penpot/music-radio.js:820` — the stations start at the
+    // chip strip's bottom + 12 + 16).
+    //
+    // This screen used 8, so the first row sat 8 dp higher than the same
+    // row on Radio, whose search section, chip row and rhythm are
+    // otherwise identical — the vertical drift of one family.
+    paddingTop: spacing.lg,
   },
   listSlotGrow: {
     // Let the state slot fill the viewport, so the error card and the

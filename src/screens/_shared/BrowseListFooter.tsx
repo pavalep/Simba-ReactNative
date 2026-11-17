@@ -162,5 +162,18 @@ const createBrowseFooterStyles = (colors: ColorTokens) =>
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.xs,
       borderColor: colors.background.highlight,
+      // The app's touch-target floor, and this pill was 28 dp.
+      //
+      // Its own height was `borderWidth 1 + paddingVertical 4 + a caption
+      // at lineHeight 18` = 28 — under the 44 dp the app states as its
+      // minimum everywhere else (`PlayerControl.tsx` CONTROL_TARGET = 44,
+      // "Never smaller"; `AudioSeekBar.tsx`; `FollowedPodcastsScreen`).
+      // The text and the border do not change: the pill is the same, with
+      // the height a finger can actually hit.
+      //
+      // The footer's own slot is `minHeight: 56`, so the list's bottom edge
+      // does not move, and no board draws this pill.
+      minHeight: 44,
+      justifyContent: 'center' as const,
     },
   });
