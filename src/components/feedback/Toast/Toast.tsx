@@ -66,7 +66,6 @@ const ToastContent: React.FC<{
 }> = ({visible, message, type, action, onDismiss, onActionPress}) => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
-  const topInset = insets.top;
   const height = action ? TOAST_HEIGHT_WITH_ACTION : TOAST_HEIGHT;
   // [FIX-TOAST-POSITION] Toast slides up from below the screen
   // (bottom-anchored). Initial translateY is positive (hidden below),

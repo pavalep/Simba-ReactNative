@@ -31,9 +31,7 @@ import type {
 import {sha1} from 'js-sha1';
 import {
   AdapterParseError,
-  isArray,
   isFiniteNumber,
-  isNonEmptyString,
   isRecord,
   isString,
   assertShape,
@@ -52,12 +50,6 @@ export const PODCAST_INDEX_RETRIES = 2;
 
 const PODCAST_INDEX_USER_AGENT = 'SimbaMediaPlayer/1.0.0 (paval@simba.app)';
 
-const CACHE = {
-  search: 10 * 60 * 1000,
-  trending: 15 * 60 * 1000,
-  episodes: 5 * 60 * 1000,
-  categories: 24 * 60 * 60 * 1000,
-} as const;
 
 function buildAuthHeaders(): Record<string, string> {
   const {apiKey, apiSecret} = API_CONFIG.podcastIndex;
@@ -268,30 +260,6 @@ function parseRawEpisode(raw: unknown, path: string): RawEpisode {
   };
 }
 
-/** Unwrap the Podcast Index status envelope; throws on non-ok. */
-function unwrap<T>(envelope: RawEnvelope<T> | undefined): T | undefined {
-  if (envelope?.status !== 'true') {
-    throw new AdapterParseError(
-      'podcastIndex',
-      'envelope.status',
-      'Podcast Index request returned non-ok status',
-    );
-  }
-  return undefined;
-}
-
-function unwrapArray<T>(envelope: RawEnvelope<T> | undefined): T[] {
-  unwrap(envelope);
-  if (Array.isArray(envelope?.feeds)) return envelope.feeds;
-  if (Array.isArray(envelope?.items)) return envelope.items;
-  return [];
-}
-
-function unwrapSingle<T>(envelope: RawEnvelope<T> | undefined): T | undefined {
-  unwrap(envelope);
-  return (envelope?.feed ?? undefined) as T | undefined;
-}
-
 /**
  * The artwork URL, with the scheme forced to https.
  *
@@ -363,12 +331,6 @@ export function podcastEpisodesFromRaw(
     .filter((e): e is PodcastEpisodeResult => e !== null);
 }
 
-function categoryFromRaw(
-  raw: {id: number; name: string} | undefined,
-): PodcastCategoryResult | null {
-  if (!raw || !Number.isFinite(raw.id) || !raw.name?.trim()) return null;
-  return {id: raw.id, name: raw.name.trim()};
-}
 
 export async function searchPodcasts(
   query: string,

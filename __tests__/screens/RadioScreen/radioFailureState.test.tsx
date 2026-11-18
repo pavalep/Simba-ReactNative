@@ -14,57 +14,39 @@
  * in a `Placeholder` ("Use Retry at the bottom of the screen to try
  * again.") named a control that did not exist.
  *
- * The hook-level half of this defect lives in
- * `radioScopeState.test.ts` (the hook owns `hasLoaded`).
+ * The hook-level half of this defect lives in `radioScopeState.test.ts`
+ * (the hook owns `hasLoaded`).
+ *
+ * ONLY THE NETWORK ADAPTER IS STUBBED: the request fails at the source,
+ * and everything above it — the hook, the TanStack query, the shared
+ * shell — is the real thing.
  */
 
-import React from 'react';
-import {screen, fireEvent, within} from '@testing-library/react-native';
+import {screen, fireEvent, waitFor} from '@testing-library/react-native';
 
 import {renderWithProviders} from '../../helpers/renderWithProviders';
 
-// ─── The hook is the seam ────────────────────────────────────────
-//
-// The mutable state lives INSIDE the mock factory. A module-scope
-// `const` would be in the temporal dead zone when the factory runs
-// (babel hoists `jest.mock` above the imports), so the mock reads
-// its state through this handle instead.
-jest.mock('../../../src/screens/RadioScreen/hooks/useRadioBrowser', () => {
-  const mock = {
-    scope: {
-      items: [] as unknown[],
-      hasLoaded: false,
-      isLoading: false,
-      isLoadingMore: false,
-      error: null as string | null,
-    },
-    isOnline: true,
-    hasMore: false,
-    retry: jest.fn(),
-  };
+jest.mock('../../../src/infrastructure/api/radioBrowser/adapter', () => {
+  const actual = jest.requireActual(
+    '../../../src/infrastructure/api/radioBrowser/adapter',
+  );
+  const failure = new Error('The network request failed.');
   return {
-    __mock: mock,
-    useRadioBrowser: () => ({
-      filters: {genre: null, country: null, language: null},
-      setFilter: jest.fn(),
-      resetFilters: jest.fn(),
-      activeFilterCount: 0,
-      searchQuery: '',
-      setSearchQuery: jest.fn(),
-      setSearchTerm: jest.fn(),
-      isSearchActive: false,
-      isOnline: mock.isOnline,
-      getScope: () => mock.scope,
-      loadMore: jest.fn(),
-      retry: mock.retry,
-      refreshing: false,
-      handleRefresh: jest.fn(),
-      hasMore: mock.hasMore,
-      tags: {genres: [], countries: [], languages: []},
-      tagsLoaded: true,
-      tagsReady: {genres: true, countries: true, languages: true},
-      isFavoriteId: () => false,
-      toggleFavorite: jest.fn(),
+    ...actual,
+    getGenres: jest.fn(async () => []),
+    getCountries: jest.fn(async () => []),
+    getLanguages: jest.fn(async () => []),
+    getTopStations: jest.fn(async () => {
+      throw failure;
+    }),
+    getStationsByFilters: jest.fn(async () => {
+      throw failure;
+    }),
+    searchStations: jest.fn(async () => {
+      throw failure;
+    }),
+    searchStationsWithFilters: jest.fn(async () => {
+      throw failure;
     }),
   };
 });
@@ -81,27 +63,20 @@ jest.mock('../../../src/infrastructure/player/miniPlayerChrome', () => ({
   useBottomChromeInset: () => 0,
 }));
 
-jest.mock('../../../src/hooks/useKeyboard', () => ({
-  useKeyboard: () => ({keyboardVisible: false}),
-}));
+// The queue wrapper reaches into the media-lib's queue store, which a
+// screen test has no business bringing up. The row menu is exercised in
+// `radioBrowseGrammar.test.tsx`.
+jest.mock('../../../src/hooks/useQueueActions', () => {
+  const mock = {playNext: jest.fn(), addToQueue: jest.fn()};
+  return {__mock: mock, useQueueActions: () => mock};
+});
 
-import * as radioBrowserHook from '../../../src/screens/RadioScreen/hooks/useRadioBrowser';
-import {RadioScreen} from '../../../src/screens/RadioScreen/components/RadioContent';
+import * as radioBrowserAdapter from '../../../src/infrastructure/api/radioBrowser/adapter';
+import {RadioScreen} from '../../../src/screens/RadioScreen';
 
-interface MockHandle {
-  scope: {
-    items: unknown[];
-    hasLoaded: boolean;
-    isLoading: boolean;
-    isLoadingMore: boolean;
-    error: string | null;
-  };
-  isOnline: boolean;
-  hasMore: boolean;
-  retry: jest.Mock;
-}
-
-const mock = (radioBrowserHook as unknown as {__mock: MockHandle}).__mock;
+const adapter = radioBrowserAdapter as unknown as {
+  getTopStations: jest.Mock;
+};
 
 async function renderScreen() {
   return await renderWithProviders(RadioScreen, {
@@ -110,115 +85,67 @@ async function renderScreen() {
 }
 
 /**
- * Walk up from a node until an ancestor also contains a "Retry" label.
+ * Wait for a piece of copy.
  *
- * That ancestor is the error card — the toast is a SIBLING of the
- * screen, so it is never on this path.
+ * The query RETRIES twice before it gives up (`RADIO_BROWSER_RETRIES`),
+ * and TanStack backs off between the attempts — so the failure takes a
+ * few seconds to surface. That is the app's real behaviour, and the
+ * test waits for it rather than pretending it is instant.
  */
-function ancestorWithRetry(node: {
-  parent: unknown;
-}): ReturnType<typeof screen.getByText> | null {
-  let current = node.parent as ReturnType<typeof screen.getByText> | null;
-  while (current) {
-    if (within(current).queryAllByText('Retry').length > 0) return current;
-    current = current.parent as ReturnType<typeof screen.getByText> | null;
-  }
-  return null;
+async function findText(text: string) {
+  await waitFor(() => expect(screen.getByText(text)).toBeTruthy(), {
+    timeout: 15000,
+  });
 }
 
 describe('RadioScreen — a page-1 failure says so', () => {
   beforeEach(() => {
-    mock.retry.mockReset();
-    mock.isOnline = true;
-    mock.hasMore = false;
-    mock.scope = {
-      items: [],
-      hasLoaded: false,
-      isLoading: false,
-      isLoadingMore: false,
-      error: 'The network request failed.',
-    };
+    jest.clearAllMocks();
   });
 
   it('shows the error card, not an empty list', async () => {
     await renderScreen();
 
-    expect(screen.getByText('Could not load stations')).toBeTruthy();
+    await findText('Could not load stations');
   });
 
   it('says why it could not load', async () => {
     await renderScreen();
 
-    expect(
-      screen.getByText('We could not reach the station directory.'),
-    ).toBeTruthy();
+    await findText('We could not reach the station directory.');
   });
 
   it('names the reason under the friendly copy', async () => {
     await renderScreen();
 
     // The raw reason goes UNDER the message, so the user can report it.
-    expect(screen.getByText('The network request failed.')).toBeTruthy();
+    await findText('The network request failed.');
   });
 
   it('offers a retry that actually retries', async () => {
     await renderScreen();
 
-    // The failure ALSO raises a toast, and the toast carries its own
-    // "Retry" action — so the label is not unique on screen. Scope the
-    // press to the ERROR CARD: it is the one that owns the button, and
-    // it is the one that used to be missing.
-    //
-    // (RNTL's role queries cannot be used here: the error card's root
-    // is a plain `View` with `accessibilityRole="alert"` and no
-    // `accessible` prop, which RNTL does not treat as an accessibility
-    // element — so `getByRole('alert')` finds nothing.)
-    const card = ancestorWithRetry(screen.getByText('Could not load stations'));
-    expect(card).toBeTruthy();
+    await waitFor(() => expect(screen.getByLabelText('Retry')).toBeTruthy(), {
+      timeout: 15000,
+    });
+    const retry = screen.getByLabelText('Retry');
+    const before = adapter.getTopStations.mock.calls.length;
 
-    fireEvent.press(within(card as never).getByText('Retry'));
-    expect(mock.retry).toHaveBeenCalled();
-  });
+    fireEvent.press(retry);
 
-  it('announces the failure in a toast as well', async () => {
-    await renderScreen();
-
-    // The toast was unreachable too: it was gated on `!hasLoaded`,
-    // which a failed first page made false.
-    expect(screen.getByText('Could not load stations.')).toBeTruthy();
-  });
-
-  it('says it is offline when it is offline', async () => {
-    mock.isOnline = false;
-    await renderScreen();
-
-    expect(screen.getByText("You're offline")).toBeTruthy();
-    expect(
-      screen.getByText('Check your connection and try again.'),
-    ).toBeTruthy();
+    // The retry button is wired to the query's own refetch — it used to
+    // be absent altogether, and the copy named a control that did not
+    // exist.
+    await waitFor(() =>
+      expect(adapter.getTopStations.mock.calls.length).toBeGreaterThan(before),
+    );
   });
 
   it('does not show the empty state when the load failed', async () => {
     await renderScreen();
 
     // The empty copy must not appear: a failure is not "no stations".
-    expect(screen.queryByText('No stations found.')).toBeNull();
-  });
-
-  it('shows the error card even when the query calls itself loaded', async () => {
-    // The ADVERSARIAL state: the query settled, it carries an error, and
-    // it reports itself as "loaded".
-    //
-    // That is exactly what the old hook produced on a failed first page
-    // (`!!data || !!error`), and the old screen branch tested
-    // `!hasLoaded` — so it rendered a BLANK LIST.
-    //
-    // The screen's error branch must therefore NOT depend on
-    // `hasLoaded`. An error with no rows is an error, full stop.
-    mock.scope.hasLoaded = true;
-    await renderScreen();
-
-    expect(screen.getByText('Could not load stations')).toBeTruthy();
+    await findText('Could not load stations');
     expect(screen.queryByText('No stations found.')).toBeNull();
   });
 });

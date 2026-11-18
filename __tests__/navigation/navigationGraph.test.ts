@@ -37,7 +37,6 @@ import fs from 'fs';
 import path from 'path';
 import {getStateFromPath} from '@react-navigation/native';
 import {linking} from '../../src/navigation/linking';
-import type {RootStackParamList} from '../../src/navigation/types';
 
 const APP = path.resolve(__dirname, '..', '..');
 const NAV = path.join(APP, 'src', 'navigation');
@@ -502,9 +501,16 @@ describe('the browse screens answer their own deep links', () => {
     ).toBe('lovecraft');
 
     expect(
-      (resolve('/shows?initialGenre=comedy')!.last.params as {initialGenre?: string})
-        .initialGenre,
-    ).toBe('comedy');
+      (resolve('/shows?query=bluey')!.last.params as {query?: string}).query,
+    ).toBe('bluey');
+
+    // The Shows scope segment: only the two scopes the screen has.
+    expect((resolve('/shows/today')!.last.params as {initialTab?: string}).initialTab).toBe('today');
+    expect((resolve('/shows/browse')!.last.params as {initialTab?: string}).initialTab).toBe('browse');
+    // The legacy 'search' tab is not a scope — it is dropped, so the
+    // screen falls back to its default instead of promising a tab it
+    // does not have.
+    expect((resolve('/shows/search')!.last.params as {initialTab?: string}).initialTab).toBeUndefined();
 
     expect(
       (resolve('/movie/tt123?title=Alien')!.last.params as {title?: string}).title,

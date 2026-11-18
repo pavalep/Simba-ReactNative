@@ -1,0 +1,49 @@
+{
+  "title": "Live Radio",
+  "search": {
+    "placeholder": "Search stations…"
+  },
+  "groups": {
+    "genre": "Genre",
+    "country": "Country",
+    "language": "Language"
+  },
+  "pills": {
+    "loading": "Loading stations…"
+  },
+  "states": {
+    "errorTitle": "Could not load stations",
+    "errorMessage": "We could not reach the station directory.",
+    "errorOfflineTitle": "You're offline",
+    "errorOfflineMessage": "Check your connection and try again.",
+    "emptySearchTitle": "No stations match your search.",
+    "emptySearchSuggestion": "Try a different search term.",
+    "emptyFilterTitle": "No stations match your filters.",
+    "emptyFilterSuggestion": "Try another genre, country or language.",
+    "emptyAllTitle": "No stations found.",
+    "emptyAllSuggestion": "Try a search or pick a filter."
+  },
+  "menu": {
+    "playNext": "Play Next",
+    "addToQueue": "Add to Queue",
+    "addFavorite": "Add to Favorites",
+    "removeFavorite": "Remove Favorite",
+    "share": "Share"
+  },
+  "toasts": {
+    "savedToFavorites": "Saved to favorites",
+    "removedFromFavorites": "Removed from favorites"
+  },
+  "favorites": {
+    "accessibilityLabel": "Radio favorites",
+    "screenTitle": "Favorite Stations",
+    "emptyTitle": "No favorite stations yet.",
+    "emptyMessage": "Long-press any station to save it here.",
+    "menu": {
+      "bookmark": "Bookmark"
+    },
+    "toasts": {
+      "stationBookmarked": "Station bookmarked"
+    }
+  }
+}

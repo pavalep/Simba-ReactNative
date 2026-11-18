@@ -15,7 +15,6 @@
  *     user's oldest bookmark.
  */
 
-import * as React from 'react';
 import {renderHook, act} from '@testing-library/react-native';
 
 let mockTransportState = {

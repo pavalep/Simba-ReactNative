@@ -42,12 +42,6 @@ interface RawScheduleItem {
 
 export type TVMazeScheduleItem = RawScheduleItem;
 
-const CACHE = {
-  SEARCH: 600_000, // 10 min
-  SCHEDULE: 1_800_000, // 30 min
-  DETAILS: 3_600_000, // 1 hour
-  BROWSE: 3_600_000, // 1 hour
-} as const;
 
 /**
  * V21 W6 P21c — per-show shape validation for search results.
@@ -124,15 +118,30 @@ export async function searchShows(
   return showsFromSearchRaw(raw);
 }
 
-export async function getPopularShows(
+/**
+ * One page of the TVMaze catalogue.
+ *
+ * The name used to be `getPopularShows` and it LIED: TVMaze's
+ * `/shows` is id-ascending (page 1 is Downton Abbey, Hell's Kitchen —
+ * not Peaky Blinders), so nothing here is "popular". The `genre`
+ * argument is gone for the same reason: the endpoint IGNORES a
+ * `genre` parameter (measured 2026-11-18 — `?page=1&genre=Comedy`,
+ * `&genres=Comedy` and `&type=Scripted` all return the identical 245
+ * shows) and `/genres` is a 404, so there is no genre catalogue to
+ * filter by.
+ *
+ * Paging is by an id window of 250: page N holds ids
+ * `[N·250 … N·250+249]`. The last populated page is 382; page 383 is a
+ * 404.
+ */
+export async function getShowsPage(
   page: number,
-  genre?: string,
   signal?: AbortSignal,
 ): Promise<TVMazeShow[]> {
   return apiFetch<TVMazeShow[]>({
     config: API_CONFIG.tvmaze,
     path: '/shows',
-    params: genre ? {page, genre} : {page},
+    params: {page},
     signal,
   });
 }

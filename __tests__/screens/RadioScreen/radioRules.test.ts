@@ -16,45 +16,48 @@
  *    branches tested `!hasLoaded` — so on a failure every branch was
  *    skipped and the user got an empty list with no message, no spinner,
  *    no button, and no toast.
+ *
+ * The tag → option mapping moved to `related/browseConfig.ts` when the
+ * screen moved onto the shared browse shell: a tag is a FILTER OPTION,
+ * not a station row, and the option model is built where the config is
+ * built.
  */
 
-import React from 'react';
-import {screen, render} from '@testing-library/react-native';
+import {toRadioTagOption} from '../../../src/screens/RadioScreen/related/browseConfig';
+import {
+  stationSubtitle,
+  stationQueueItem,
+} from '../../../src/screens/RadioScreen/related/stationRow';
 
-import {ThemeProvider} from '../../../src/theme';
-import {toRadioTagRow} from '../../../src/screens/RadioScreen/related/stationRow';
-import {stationSubtitle} from '../../../src/screens/RadioScreen/related/stationRow';
-
-describe('Radio — the filter rows carry a real key', () => {
+describe('Radio — the filter options carry a real key', () => {
   it('keys a tag by its NAME', () => {
     // The live shape: the tag has a name and a station count, and NO id.
-    const row = toRadioTagRow({name: 'pop', stationCount: 5139});
+    const option = toRadioTagOption({name: 'pop', stationCount: 5139});
 
-    expect(row.key).toBe('pop');
-    expect(row.label).toBe('pop');
+    expect(option.key).toBe('pop');
+    expect(option.label).toBe('pop');
   });
 
   it('never produces an undefined key', () => {
-    const rows = [
+    const options = [
       {name: 'pop', stationCount: 5139},
       {name: 'rock', stationCount: 2617},
       {name: 'news', stationCount: 2691},
-    ].map(toRadioTagRow);
+    ].map(toRadioTagOption);
 
-    for (const row of rows) {
-      expect(typeof row.key).toBe('string');
-      expect(row.key.length).toBeGreaterThan(0);
+    for (const option of options) {
+      expect(typeof option.key).toBe('string');
+      expect(option.key.length).toBeGreaterThan(0);
     }
-    // Every chip in a group must have its OWN key — the sheet renders
-    // them with `key={row.key || \`${group.id}-empty\`}`.
-    expect(new Set(rows.map(r => r.key)).size).toBe(rows.length);
+    // Every chip in a group must have its OWN key.
+    expect(new Set(options.map(o => o.key)).size).toBe(options.length);
   });
 
   it('is the same name the source filters on', () => {
-    // The adapter sends `params.tag = filters.genre`, and
-    // `getChannelsByCategory`-style matching compares against the NAME.
-    const row = toRadioTagRow({name: 'Sports', stationCount: 10});
-    expect(row.key).toBe('Sports');
+    // The adapter sends `params.tag = filters.genre`, and the radio
+    // browser filters on the tag's NAME.
+    const option = toRadioTagOption({name: 'Sports', stationCount: 10});
+    expect(option.key).toBe('Sports');
   });
 });
 
@@ -69,5 +72,24 @@ describe('Radio — one subtitle rule', () => {
     expect(stationSubtitle({country: 'Germany'})).toBe('Germany');
     expect(stationSubtitle({tags: 'pop'})).toBe('pop');
     expect(stationSubtitle({})).toBe('');
+  });
+});
+
+describe('Radio — a station is classified truthfully', () => {
+  it('is an API stream on the audio lane, and its KIND is radio', () => {
+    const item = stationQueueItem({
+      url: 'https://stream.example/station',
+      name: 'Example FM',
+    });
+
+    expect(item.uri).toBe('https://stream.example/station');
+    expect(item.title).toBe('Example FM');
+    expect(item.source).toBe('api');
+    // The KIND — the app has a label for it (`src/types/media.ts`:
+    // radio → 'Radio'), and the lane is DERIVED from it.
+    expect(item.type).toBe('radio');
+    expect(item.mediaType).toBe('audio');
+    // The provider is the ADAPTER's name, not the kind again.
+    expect(item.provider).toBe('radioBrowser');
   });
 });

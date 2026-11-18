@@ -28,7 +28,6 @@
  *      audio lane, and the bridge needs its own `'video' | 'audio'`.
  */
 
-import React from 'react';
 import {fireEvent, screen, waitFor} from '@testing-library/react-native';
 
 import {renderWithProviders} from '../../helpers/renderWithProviders';

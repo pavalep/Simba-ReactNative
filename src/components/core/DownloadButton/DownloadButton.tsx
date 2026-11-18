@@ -11,7 +11,7 @@ import {useDownloadsSync} from '../../../hooks/useDownloadsSync';
 
 import {useHaptics} from '../../../hooks/useHaptics';
 import {SvgIcon, SvgIconName} from '../../utility/SvgIcon';
-import {useDownloadsStore, useDownloadByUri} from '../../../state';
+import {useDownloadByUri} from '../../../state';
 
 /**
  * 49.2: core download action button (idle / downloading / paused / done /

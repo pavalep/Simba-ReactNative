@@ -33,7 +33,7 @@
  */
 
 import * as React from 'react';
-import {act, fireEvent, render, screen} from '@testing-library/react-native';
+import {act, render, screen} from '@testing-library/react-native';
 
 const mockCommands: Record<string, jest.Mock> = {
   play: jest.fn(),

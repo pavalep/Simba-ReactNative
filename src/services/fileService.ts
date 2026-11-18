@@ -14,7 +14,6 @@ import {logger} from '../lib/logger';
 
 
 import {linkedMediaFolderId} from '../types/media';
-import {useMediaStore} from '../state';
 
 /** Subtitle file types for document picker */
 const SUBTITLE_TYPES = [

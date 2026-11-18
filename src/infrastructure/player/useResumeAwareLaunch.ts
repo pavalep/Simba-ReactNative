@@ -9,7 +9,7 @@
  * `PlaybackId` type, so the reverse edge would be a runtime cycle).
  */
 
-import React, {useMemo, useRef} from 'react';
+import React, {useMemo} from 'react';
 import {
   resolveStreamType,
   useOpenWithResume,

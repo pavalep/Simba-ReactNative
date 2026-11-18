@@ -15,7 +15,6 @@ import {SimbaStatusBar} from '../../../components/StatusBar';
 import {InternalHeader} from '../../../components/layout/InternalHeader/InternalHeader';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
-import {ActivityOrb} from '../../../components/feedback/ActivityOrb/ActivityOrb';
 import {Placeholder} from '../../../components/feedback/Placeholder';
 import {MediaImage} from '../../../components/utility/MediaImage';
 import {PlaylistSheet} from '../../../components/sheets/PlaylistSheet/PlaylistSheet';

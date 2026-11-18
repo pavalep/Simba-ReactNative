@@ -45,7 +45,6 @@
  * more, and a test that still looked for it was pressing nothing.
  */
 
-import React from 'react';
 import {fireEvent, screen} from '@testing-library/react-native';
 import {renderWithProviders} from '../../helpers/renderWithProviders';
 import {SearchScreen} from '../../../src/screens/Search/components/SearchScreen';

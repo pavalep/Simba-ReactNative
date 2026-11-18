@@ -62,13 +62,79 @@ function validBook(id = 1) {
     url_iarchive: 'https://archive.org/' + id,
     totaltime: '1:30:00',
     language: 'English',
-    authors: {name: 'Author ' + id},
+    authors: [{id: String(id), first_name: 'Author', last_name: String(id)}],
   };
 }
 
 describe('librivox adapter — V21 W6 P21c', () => {
   it('exposes a documented retries constant', () => {
     expect(LIBRIVOX_RETRIES).toBe(2);
+  });
+
+  /**
+   * The author line.
+   *
+   * The wire carries `authors` as an ARRAY of records that split the name
+   * into `first_name` / `last_name` — measured 2026-11-18 against
+   * `librivox.org/api/feed/audiobooks/?format=json`:
+   * `"authors":[{"id":"431","first_name":"Alexandre","last_name":"Dumas",…}]`.
+   *
+   * The adapter read `b.authors.name` — a property on an OBJECT, where the
+   * wire has an array of objects with no `name` at all — so EVERY book in
+   * the app was labelled "Unknown Author". The device proof of the
+   * Audiobooks screen showed it, ten rows deep.
+   */
+  it('maps the author array to a full name', async () => {
+    mockedApiFetch.mockResolvedValueOnce({
+      books: [
+        {
+          ...validBook(1),
+          authors: [
+            {id: '431', first_name: 'Alexandre', last_name: 'Dumas'},
+          ],
+        },
+      ],
+    });
+    const results = await searchAudiobooks('count');
+    expect(results[0].author).toBe('Alexandre Dumas');
+  });
+
+  it('names the second author, and says et al. for a third', async () => {
+    mockedApiFetch.mockResolvedValueOnce({
+      books: [
+        {
+          ...validBook(1),
+          authors: [
+            {id: '1', first_name: 'A', last_name: 'One'},
+            {id: '2', first_name: 'B', last_name: 'Two'},
+          ],
+        },
+      ],
+    });
+    expect((await searchAudiobooks('count'))[0].author).toBe('A One & B Two');
+
+    mockedApiFetch.mockResolvedValueOnce({
+      books: [
+        {
+          ...validBook(1),
+          authors: [
+            {id: '1', first_name: 'A', last_name: 'One'},
+            {id: '2', first_name: 'B', last_name: 'Two'},
+            {id: '3', first_name: 'C', last_name: 'Three'},
+          ],
+        },
+      ],
+    });
+    expect((await searchAudiobooks('count'))[0].author).toBe(
+      'A One & B Two et al.',
+    );
+  });
+
+  it('says "Unknown Author" when the wire carries no author', async () => {
+    mockedApiFetch.mockResolvedValueOnce({
+      books: [{...validBook(1), authors: undefined}],
+    });
+    expect((await searchAudiobooks('count'))[0].author).toBe('Unknown Author');
   });
 
   it('searchAudiobooks threads the AbortSignal', async () => {

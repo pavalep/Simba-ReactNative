@@ -17,10 +17,6 @@
 // decision points (V16 out-of-scope fix that V17 picked up).
 
 import * as RNLocalize from 'react-native-localize';
-import {useSettingsStore} from '../state';
-import {useWeatherStore} from '../state';
-import {useLiveFavoritesStore} from '../state';
-import {useFollowedPodcastsStore} from '../state';
 
 /** Resolve the device timezone (IANA string). */
 export function resolveTimezone(): string | null {

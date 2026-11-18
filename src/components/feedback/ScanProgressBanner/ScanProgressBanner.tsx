@@ -7,7 +7,6 @@ import {useTheme} from '../../../theme';
 import {radius, spacing} from '../../../theme/tokens';
 import {FONT_FAMILY} from '../../../constants/fontFamily';
 import {AppText} from '../../core/AppText/AppText';
-import {useMediaStore} from '../../../state';
 
 interface ScanProgressBannerProps {
   /** Whether a scan is currently in progress */

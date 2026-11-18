@@ -912,3 +912,18 @@ async function getInternetArchiveVideoDetailsOnce(
 // V21 W6 P21 (T21.04): documented retries for TanStack Query.
 // Adapter itself doesn't retry — hook layer honors this constant.
 export const INTERNET_ARCHIVE_RETRIES = 2;
+
+/**
+ * The Internet Archive's paging limit — ONE owner.
+ *
+ * Measured against the live endpoint on 2026-11-12 and again on
+ * 2026-11-18: with `rows=40`, page 250 (10,000 items) answers
+ * normally and **page 251 answers HTTP 507 Insufficient Storage**.
+ * The Archive will not page past 10,000 rows.
+ *
+ * It lives here, next to the request that would earn the 507, so
+ * the Movies screen and the Archive screen cannot disagree about
+ * where the source stops. Both footers may claim the archive
+ * stopped paging ONLY when this cap is what ended the list.
+ */
+export const IA_MAX_RETRIEVABLE = 10_000;

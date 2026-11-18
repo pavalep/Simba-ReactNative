@@ -22,5 +22,10 @@ export type SectionRouteKey =
   | 'ArchiveScreen'
   | 'LocalFiles';
 
-export type SectionRouteParams<T extends SectionRouteKey = SectionRouteKey> =
-  Readonly<Record<string, unknown>>;
+// The params a section route may carry. The shape is deliberately
+// loose — the shell hands route-time params to the content's
+// `renderContent`, and each screen narrows its own params in its own
+// hook. The type used to declare a phantom `<T extends SectionRouteKey>`
+// that the body never used; a type parameter that constrains nothing
+// is a lie about what the type guarantees, so it is gone.
+export type SectionRouteParams = Readonly<Record<string, unknown>>;

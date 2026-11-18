@@ -58,7 +58,6 @@
  * of live subscribers still cannot drag the others along.
  */
 
-import React from 'react';
 import {act, renderHook} from '@testing-library/react-native';
 import {usePresentation} from '../../../src/infrastructure/player/usePresentation';
 import {usePresentationStore} from '../../../src/state/usePresentationStore';

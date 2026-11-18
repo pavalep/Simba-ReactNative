@@ -16,7 +16,6 @@
  * the AUDIO one.
  */
 
-import React from 'react';
 import {act, fireEvent, screen, waitFor} from '@testing-library/react-native';
 
 import {renderWithProviders} from '../../helpers/renderWithProviders';

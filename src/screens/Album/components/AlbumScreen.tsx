@@ -4,14 +4,13 @@
 // ────────────────────────────────────────────────────────
 
 import React, {useMemo, useRef} from 'react';
-import {View, Animated, TouchableOpacity, StyleSheet} from 'react-native';
+import {View, Animated, StyleSheet} from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useBottomChromeInset} from '../../../infrastructure/player/miniPlayerChrome';
 import {useTheme} from '../../../theme';
 import {spacing} from '../../../theme/tokens';
 import {AppText} from '../../../components/core/AppText/AppText';
-import {SvgIcon} from '../../../components/utility/SvgIcon';
 import {BackButton} from '../../../components/utility/BackButton/BackButton';
 import {SimbaStatusBar} from '../../../components/StatusBar';
 import {useAnimatedEntrance} from '../../../hooks/useAnimatedEntrance';

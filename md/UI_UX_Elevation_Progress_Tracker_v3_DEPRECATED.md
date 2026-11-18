@@ -496,14 +496,14 @@ The following bugs were discovered during the Phase 20 audit and fixed — these
 **Status:** ✅ COMPLETE (8/8)
 **Spec Ref:** Phase 21 (v3 spec)
 **Dependencies:** Phase 20 (uses AppCard with glass effect)
-**Files:** `LibraryScreen.tsx` (REWRITE layout), `MediaGridItem.tsx` (NEW), `MediaListItem.tsx` (ENHANCE with context menu), `ViewToggle.tsx` (NEW), `MediaContextMenu.tsx` (NEW), `LibraryVideosSegment.tsx` (ADD viewMode prop), `LibraryAudioSegment.tsx` (ADD viewMode prop)
+**Files:** `LibraryScreen.tsx` (REWRITE layout), `MediaGridItem.tsx` (NEW), `MediaListItem.tsx` (ENHANCE with context menu), `ViewToggle.tsx` (NEW), `MediaContextMenu.tsx` (NEW — **deleted in Wave B15**, replaced by the shared `MediaActionsSheet`), `LibraryVideosSegment.tsx` (ADD viewMode prop), `LibraryAudioSegment.tsx` (ADD viewMode prop)
 
 | # | Checklist Item | Status | Notes |
 |---|---|---|---|
 | 21.1 | Grid view: 2-column layout with thumbnail, title, duration badge, type icon | ✅ | `MediaGridItem.tsx` created — `AppCard elevated` wrapper, `aspectRatio` 16:9 video / 1:1 audio, duration badge overlay, media type icon corner badge, 1-2 line title, optional artist subtitle |
 | 21.2 | List view: single-column with thumbnail, metadata, duration (enhanced v2) | ✅ | `MediaListItem.tsx` enhanced — uses `AppCard elevated` with `active` gold border state, circular thumbnail, title+artist metadata, duration label, `ITEM_HEIGHT=66` for FlatList |
 | 21.3 | View toggle button: grid-icon / list-icon with active state | ✅ | `ViewToggle.tsx` created — inline View-based grid icon (2x2 squares) and list icon (3 bars), gold accent active state via `colors.accent.goldDim` background, `colors.accent.gold` icon color, `colors.text.secondary` inactive |
-| 21.4 | Long-press context menu: Play, Add to Playlist, Add to Queue, Share, Info | ✅ | `MediaContextMenu.tsx` created — animated slide-up panel with scrim, spring animation, header (title+subtitle), horizontal rule divider, action rows with icon+label. Integrated into `MediaListItem.tsx` via custom `contextMenuActions` prop or defaults |
+| 21.4 | Long-press context menu: Play, Add to Playlist, Add to Queue, Share, Info | ✅ | **SUPERSEDED (Wave B15, 2026-11-18).** `MediaContextMenu.tsx` was deleted — the app now has ONE media menu, `MediaActionsSheet` (`src/components/sheets/MediaActionsSheet/MediaActionsSheet.tsx`), and the "Info" row was REMOVED from it (it had nothing to show). The Library's rows open that sheet on a long press, and their queue actions go through the app's one wrapper `useQueueActions`. The row below records what this wave built, not what ships. |
 | 21.5 | Grid cards: 16:9 video, 1:1 audio album art | ✅ | `aspectRatio` prop in `MediaGridItem` — `16/9` for video, `1` for audio. Gold-dim placeholder background when no thumbnail |
 | 21.6 | Sort options: Name, Date Added, Duration, Artist, Album | ✅ | `SortOption` type + bottom-sheet picker (Modal + FlatList) in `LibraryScreen.tsx` — radio button selection with gold accent. Sort button with sliders icon in control bar |
 | 21.7 | Filter chips: All, Video Only, Audio Only | ✅ | `FILTER_CHIPS` array + horizontal ScrollView in `LibraryScreen.tsx` — pill chips with `radius.full`, gold accent active state (`accent.goldDim` bg + `accent.gold` border), secondary text inactive |

@@ -53,7 +53,7 @@ function isStreamingUri(uri: string): boolean {
   return /^https?:\/\//i.test(uri);
 }
 
-export const HistoryScreen: React.FC<Props> = ({navigation}) => {
+export const HistoryScreen: React.FC<Props> = () => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
   const toast = useToast();

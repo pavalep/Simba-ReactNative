@@ -28,7 +28,6 @@ import {
   CONTROL_PRIMARY_TARGET,
   CONTROL_TARGET,
 } from '../../../../../src/components/player/shared/PlayerControl/PlayerControl';
-import {useHaptic} from '../../../../../src/infrastructure/player';
 
 const mockHaptic = jest.fn();
 jest.mock('../../../../../src/infrastructure/player', () => {

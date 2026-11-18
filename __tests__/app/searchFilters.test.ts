@@ -19,8 +19,6 @@ import {
   countRemoteResults,
   REMOTE_SOURCES,
   SEARCH_SCOPES,
-  type MediaKindFilter,
-  type SearchScope,
 } from '../../src/screens/Search/utils/searchFilters';
 import type {AggregatedSearchResults} from '../../src/types/api';
 import type {SearchResultItem} from '../../src/hooks/useSearch';

@@ -1,104 +1,58 @@
-// ─── Live TV Screen (New) ───────────────────────────────────────────
-// Wave 8: standalone FAB-only page for Live TV.
-//   • Header (heart icon → Favorites page)
-//   • SearchBar (search persists across filter changes)
-//   • Active-filter chips row (gold pill per active filter, tap to clear)
-//   • Single content stream (no tabs)
-//   • Bottom-right gold FAB → LiveTVOptionsSheet (Category filter)
-//   • Long-press a channel → favorite / playlist / bookmark / share
-//   • Press a channel → VideoPlayer
+// ─── Live TV — Browse Content ──────────────────────────────────────────
+// The list the browse shell hosts.
+//
+// WAVE W22 — rewritten from the screen's own hand-rolled shell.
+//
+// It used to draw its own `SimbaStatusBar`, its own `InternalHeader`, its
+// own `SearchBar`, its own gold-pill active-filter row, its own `Fab` and
+// `FilterSheet`, and it opened the row menu with an `OptionSheetDialog`
+// that offered "Add to Playlist" — an action the app's playlist rule
+// refuses for live TV — and no queue action at all.
+//
+// It is now the same content component every other browse screen has:
+//
+//   • the shell owns the header, the search field, the chip strip, the
+//     filter FAB and the filter sheet;
+//   • `ListStates` owns loading / error / empty;
+//   • `BrowseFooter` owns the four footer branches;
+//   • `useListEnd` tells the shell when the list is finished AND the user
+//     is at its end, so the filter button can step aside;
+//   • the drag guard stops a list that fits on one screen from fetching a
+//     slice nobody asked for;
+//   • `usePullToRefresh` owns the refresh spinner, so it tracks the
+//     GESTURE and not the query.
+//
+// THE LIST IS ALWAYS A LIST
+// -------------------------
+// The loading and error states render INSIDE the list, so the list — and
+// with it the pull-to-refresh gesture — is there while the catalogue is
+// downloading. The catalogue is 2.8 MB, so that first load is slow, and
+// the gesture the user reaches for must not be missing while it happens.
+//
+// (The Music and Movies screens return the loading state INSTEAD of the
+// list. Live TV keeps the list, and this is the screen's own rule — it is
+// what the Live TV suite pins.)
 
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
-import {
-  View,
-  FlatList,
-  TouchableOpacity,
-  RefreshControl,
-} from 'react-native';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {useTheme} from '../../../theme';
-import type {RootStackScreenProps} from '../../../navigation/types';
-import {useLiveTVBrowser} from '../hooks/useLiveTVBrowser';
-import {SimbaStatusBar} from '../../../components/StatusBar';
-import {InternalHeader} from '../../../components/layout/InternalHeader/InternalHeader';
-import {AppText} from '../../../components/core/AppText/AppText';
-import {SearchBar} from '../../../components/core/SearchBar/SearchBar';
-import {SvgIcon} from '../../../components/utility/SvgIcon';
-import {Placeholder} from '../../../components/feedback/Placeholder';
-import {ErrorState} from '../../../components/feedback/ErrorState/ErrorState';
-import {shareContent} from '../../../services/shareService';
-import {useBookmarks} from '../../../features/bookmarks';
-import {confirmBookmarkAdd} from '../../../features/bookmarks/confirmAdd';
-import {useToast} from '../../../components/feedback/Toast';
-import {resolveStreamType, useResumeAwareLaunch} from '../../../infrastructure/player';
-import {useHaptics} from '../../../hooks/useHaptics';
-import {PlaylistSheet} from '../../../components/sheets/PlaylistSheet/PlaylistSheet';
-import {OptionSheetDialog} from '../../../components/core/OptionSheetDialog/OptionSheetDialog';
-import {styles} from '../styles';
-import {Fab, FAB_SIZE} from '../../../components/core/Fab/Fab';
+import React, {useEffect, useMemo, useRef} from 'react';
+import {FlatList, RefreshControl, View} from 'react-native';
+import {FAB_SIZE} from '../../../components/core/Fab/Fab';
 import {useBottomChromeInset} from '../../../infrastructure/player/miniPlayerChrome';
-import {useKeyboard} from '../../../hooks/useKeyboard';
-import {ChannelCard, toRow} from './ChannelCard';
-import {FilterSheet} from '../../../components/sheets/FilterSheet/FilterSheet';
+import {useListEnd} from '../../_shared/useListEnd';
 import {BrowseFooter} from '../../_shared/BrowseListFooter';
-import {BrowseLoadingState} from '../../_shared/BrowseLoadingState';
+import {useTheme} from '../../../theme';
 import {spacing} from '../../../theme/tokens';
-import type {
-  ActiveFilterChipsProps,
-  ChannelRow,
-} from '../types';
+import {useLiveTVData} from './LiveTVDataProvider';
+import {ChannelCard} from './ChannelCard';
+import {ListStates} from './ListStates';
+import {toRow} from '../related/channelRow';
+import {createLiveTVScreenStyles} from '../styles';
+import type {SectionRenderContext} from '../types';
 
-type Props = RootStackScreenProps<'LiveTVScreen'>;
-
-// ─── Active-filter chip row ───────────────────────────────────────────
-
-const ActiveFilterChips: React.FC<ActiveFilterChipsProps> = React.memo(
-  ({filters, label, onClear}) => {
-    const {colors} = useTheme();
-    if (!filters.category) return null;
-    return (
-      <View style={styles.chipRow}>
-        <TouchableOpacity
-          activeOpacity={0.8}
-          onPress={() => onClear('category')}
-          accessibilityRole="button"
-          accessibilityLabel={`Clear ${label} filter`}
-          style={[
-            styles.chip,
-            {
-              // The shared `FilterChips` chip's ACTIVE state: a gold fill
-              // with inverse text and a gold border — the family now
-              // speaks ONE chip language.
-              backgroundColor: colors.accent.gold,
-              borderColor: colors.accent.gold,
-            },
-          ]}>
-          <AppText
-            variant="caption"
-            style={[styles.chipText, {color: colors.text.inverse}]}>
-            {label}
-          </AppText>
-          <SvgIcon
-            name="close"
-            size={12}
-            color={colors.text.inverse}
-          />
-        </TouchableOpacity>
-      </View>
-    );
-  },
-);
-
-// ─── Item separator (renders hairline with theme color) ────────────
-
+/** A MODULE-level separator — an inline arrow would be a new component
+ *  type on every render, so the FlatList re-created every separator. */
 const ItemSeparator: React.FC = () => {
   const {colors} = useTheme();
+  const styles = useMemo(() => createLiveTVScreenStyles(), []);
   return (
     <View
       style={[styles.separator, {backgroundColor: colors.background.primary}]}
@@ -106,437 +60,161 @@ const ItemSeparator: React.FC = () => {
   );
 };
 
-// ─── Screen ───────────────────────────────────────────────────────────
-
-export const LiveTVScreen: React.FC<Props> = ({navigation, route}) => {
+export const LiveTVContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => {
   const {colors} = useTheme();
-  const insets = useSafeAreaInsets();
+  const styles = useMemo(() => createLiveTVScreenStyles(), []);
   // The app's ONE bottom-chrome rule: the safe area, or the mini-player
-  // dock if one is up. The FAB's own height goes on top so the last row
-  // clears the BUTTON.
+  // dock if one is up, plus a spacing step. The FAB's own height goes on
+  // top so the last row clears the BUTTON.
   const bottomChromeInset = useBottomChromeInset();
-  // The button steps aside while the keyboard is up — the sheet it
-  // opens needs the room, and a floating button over the keyboard is
-  // a control nobody can reach.
-  const {keyboardVisible} = useKeyboard();
-  const toast = useToast();
-  const haptics = useHaptics();
-  const {add: addBookmark} = useBookmarks();
-
   const {
-    filters,
-    setFilter,
-    resetFilters,
-    activeFilterCount,
-    categoryName,
-    searchQuery,
-    setSearchQuery,
+    items,
+    hasLoaded,
+    isLoading,
+    isLoadingMore,
+    hasMore,
+    error,
+    pageError,
+    setActiveCategory,
     setSearchTerm,
     isSearchActive,
-    isOnline,
-    getScope,
-    loadMore,
-    retry,
+    scopeLabel,
+    fetchNextPage,
+    refetch,
     refreshing,
-    handleRefresh,
-    tags,
-    tagsLoaded,
-    hasMore: scopeHasMore,
+    refresh,
     isFavoriteId,
-    toggleFavorite,
-  } = useLiveTVBrowser(
-    route.params?.categoryId && route.params.categoryId !== 'all'
-      ? route.params.categoryId
-      : undefined,
-  );
+    handleChannelPress,
+  } = useLiveTVData();
+  const {offline} = ctx;
 
-  const [sheetVisible, setSheetVisible] = useState(false);
-  const [menuRow, setMenuRow] = useState<ChannelRow | null>(null);
-  const [menuVisible, setMenuVisible] = useState(false);
-  const [sheetItem, setSheetItem] = useState<
-    React.ComponentProps<typeof PlaylistSheet>['currentItem'] | null
-  >(null);
+  // The rows, in the shape the card draws. ONE rule for the row
+  // (`related/channelRow.ts`) — the browse list and the favourites list
+  // draw the same card, so they cannot disagree about it.
+  const rows = useMemo(() => items.map(toRow), [items]);
 
-  const scope = getScope();
-  const {items, hasLoaded, isLoading, isLoadingMore, error} = scope;
-  const rows = useMemo<ChannelRow[]>(() => items.map(toRow), [items]);
-  // The hook owns `hasMore` — it is the client's own count against the
-  // page size. The screen used to re-derive it from a SECOND copy of
-  // PAGE_SIZE, which says "maybe more" even when every channel is
-  // already loaded, and the footer's "tap to retry" then rendered and
-  // did nothing.
-  const hasMore = scopeHasMore;
+  // The shell owns the selected category; the content hands it down.
+  // The category group is SINGLE-select (the catalogue's scope is ONE
+  // category), so the first key is the only key there can be.
+  const rawFilter = ctx.options.filter;
+  const category = Array.isArray(rawFilter)
+    ? rawFilter[0] ?? ''
+    : rawFilter ?? '';
 
-  // ── Page-1 failure toast (with Retry) ──
-  const lastShownErrorRef = useRef<string | null>(null);
+  // Keep the scope keyed by the shell's debounced search term.
   useEffect(() => {
-    const shouldShow = !hasLoaded && !isLoading && !!error;
-    const currentError = shouldShow
-      ? isOnline
-        ? 'Could not load channels.'
-        : 'You are offline.'
-      : null;
-    if (currentError && currentError !== lastShownErrorRef.current) {
-      lastShownErrorRef.current = currentError;
-      toast.show(currentError, 'error', {
-        duration: 8000,
-        action: {
-          label: 'Retry',
-          onPress: () => {
-            lastShownErrorRef.current = null;
-            retry();
-          },
-        },
-      });
-    } else if (!currentError) {
-      lastShownErrorRef.current = null;
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasLoaded, isLoading, error, isOnline]);
+    setSearchTerm(ctx.query);
+  }, [ctx.query, setSearchTerm]);
 
-  const {openPlayer} = useResumeAwareLaunch();
+  // Sync the shell's filter → the hook's active scope. The scope is
+  // applied IN MEMORY over the one catalogue, so changing it costs
+  // nothing.
+  useEffect(() => {
+    setActiveCategory(category);
+  }, [category, setActiveCategory]);
 
-  const handleChannelPress = useCallback(
-    (row: ChannelRow) => {
-      openPlayer({
-        uri: row.url,
-        title: row.name,
-        // The LANE comes from the app's own mapping, not from a literal —
-        // the browse screen used a raw 'video' while its own favourites
-        // screen used `resolveStreamType('live-tv')`, so the same channel
-        // was labelled differently depending on which screen you tapped
-        // it from.
-        type: resolveStreamType('live-tv'),
-        // The KIND and the LANE. Without the kind, the seam defaults it
-        // to the lane and the channel is recorded in Recently Played as
-        // a plain video instead of 'live-tv' — and the app HAS a label
-        // for it (`src/types/media.ts`: 'live-tv' → 'Live TV').
-        mediaKind: 'live-tv',
-        mediaLane: 'video',
-        ...(row.image ? {thumbnailPath: row.image} : {}),
-      });
-    },
-    [openPlayer],
-  );
+  // Set by the first touch-scroll — see the `onEndReached` guard below.
+  const userDraggedRef = useRef(false);
 
-  const handleLongPress = useCallback((row: ChannelRow) => {
-    setMenuRow(row);
-    setMenuVisible(true);
-  }, []);
-
-  const handleMenuSelect = useCallback(
-    (value: string | number) => {
-      const row = menuRow;
-      if (!row) return;
-      switch (value) {
-        case 'favorite': {
-          const channel = items.find(c => c.id === row.id);
-          const wasFavorite = isFavoriteId(row.id);
-          // The channel is always in `items` — `rows` is derived from it —
-          // so the old `else { removeFavorite(...) }` branch was
-          // unreachable.
-          if (channel) {
-            toggleFavorite(channel);
-            toast.show(
-              wasFavorite
-                ? 'Removed from favorites'
-                : 'Saved to favorites',
-            );
-          }
-          haptics.light();
-          break;
-        }
-        case 'playlist':
-          setSheetItem({
-            fileUri: row.url,
-            title: row.name,
-            duration: 0,
-            thumbnailPath: row.image || undefined,
-            source: 'api',
-            provider: 'iptv',
-            mediaType: 'video',
-            // The KIND. Without it a TV channel was filed as `type:
-            // 'video'` by the playlist/bookmark path that reads the kind
-            // back.
-            type: 'live-tv',
-          });
-          break;
-        case 'bookmark': {
-          const input = {
-            fileUri: row.url,
-            title: row.name,
-            position: 0,
-            duration: 0,
-            label: '',
-            thumbnailPath: row.image || undefined,
-            mediaType: 'video' as const,
-            source: 'api' as const,
-            provider: 'iptv',
-            type: 'live-tv' as const,
-          };
-          // The cap is the store's business, and the confirmation is ONE
-          // owner's. The result used to be discarded here, so adding a
-          // bookmark past the cap did NOTHING and still toasted
-          // "Channel bookmarked".
-          confirmBookmarkAdd(
-            addBookmark(input),
-            row.name,
-            addBookmark,
-            () => toast.show('Channel bookmarked'),
-          );
-          break;
-        }
-        case 'share':
-          // ONE share target for the whole feature, and the params the
-          // linking config actually parses: `SongScreen` parses
-          // `fileUri` and `title` (`navigation/linking.ts:130-138`).
-          //
-          // This sent `route: 'LiveTVScreen'` with `fileUri`/`fileTitle` —
-          // and the Live TV path is `tv/:categoryId?`, which parses
-          // NEITHER. The shared link became `simbaplayer://tv?fileUri=…`
-          // and the recipient landed on the Live TV browser with no
-          // channel at all. The Radio twin of this row was fixed to
-          // `SongScreen` in Wave B13; this is the same fix.
-          shareContent({
-            route: 'SongScreen',
-            params: {fileUri: row.url, title: row.name, source: 'iptv'},
-            title: row.name,
-            subtitle: row.subtitle,
-          });
-          break;
-      }
-      setMenuRow(null);
-    },
-    [
-      menuRow,
-      items,
-      isFavoriteId,
-      toggleFavorite,
-      addBookmark,
-      toast,
-      haptics,
-    ],
-  );
-
-  const handleOptionChange = useCallback(
-    (id: 'category', key: string) => {
-      setFilter(id, key);
-      haptics.light();
-    },
-    [setFilter, haptics],
-  );
-
-  // A STABLE callback — the chip row is memoized, and an inline arrow
-  // meant the memo never hit.
-  const handleClearFilter = useCallback(
-    (id: 'category') => setFilter(id, ''),
-    [setFilter],
-  );
-
-  // ── Content states ──
-  //
-  // The list is ALWAYS mounted and the states live INSIDE it — the way
-  // Music, Movies and Podcasts do it. It used to be REPLACED by the
-  // state, which meant there was no list, and so no pull-to-refresh,
-  // while the first page was loading — and none after a failed first
-  // load either. The gesture the user reaches for was not there.
-  const listState: 'loading' | 'error' | 'empty' | 'ready' =
+  const listState: 'loading' | 'error' | 'empty' | undefined =
     !hasLoaded && isLoading
       ? 'loading'
-      : !!error && rows.length === 0
-        ? 'error'
-        : rows.length === 0
-          ? 'empty'
-          : 'ready';
+      : !!error && items.length === 0
+      ? 'error'
+      : !error && items.length === 0
+      ? 'empty'
+      : undefined;
 
-  const listEmptyState =
-    listState === 'loading' ? (
-      // The browse family's ONE loading component.
-      <BrowseLoadingState label="Loading channels…" />
-    ) : listState === 'error' ? (
-      // The house error card, with its OWN retry button.
-      //
-      // It used to be a `Placeholder` whose message said "Use Retry at the
-      // bottom of the screen to try again." — there is no bottom retry —
-      // and the branch was unreachable besides: `hasLoaded` was true when
-      // the first page failed, so a page-1 failure fell through every
-      // branch and rendered a BLANK LIST.
-      <ErrorState
-        title={isOnline ? 'Could not load channels' : "You're offline"}
-        message={
-          isOnline
-            ? 'We could not reach the channel directory.'
-            : 'Check your connection and try again.'
-        }
-        errorDetail={error ?? undefined}
-        onRetry={retry}
-      />
-    ) : listState === 'empty' ? (
-      <Placeholder
-        variant="empty"
-        anchor="top-third"
-        icon="video"
-        title={
-          isSearchActive
-            ? 'No channels match your search.'
-            : activeFilterCount > 0
-              ? 'No channels match your filters.'
-              : 'No channels found.'
-        }
-      />
-    ) : null;
+  // The source has nothing further to give. The paging is a client-side
+  // slice of the catalogue, so "the end" is simply "everything in this
+  // scope is on screen".
+  const reachedEnd = hasLoaded && !error && !hasMore;
 
-  const content = (
-    <FlatList
-      testID="section-LiveTVScreen-list"
-      data={rows}
-      keyExtractor={item => item.id}
-      renderItem={({item}) => (
-        <ChannelCard
-          row={item}
-          isFavorite={isFavoriteId(item.id)}
-          onPress={handleChannelPress}
-          onLongPress={handleLongPress}
-        />
-      )}
-      contentContainerStyle={[
-        styles.listContent,
-        {paddingBottom: bottomChromeInset + FAB_SIZE + spacing.md},
-        // The state slot fills the viewport, so the error card and the
-        // empty state have real height to anchor against.
-        listState === 'ready' ? null : styles.listSlotGrow,
-      ]}
-      showsVerticalScrollIndicator={false}
-      ItemSeparatorComponent={ItemSeparator}
-      ListEmptyComponent={listEmptyState}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={handleRefresh}
-          tintColor={colors.accent.gold}
-          colors={[colors.accent.gold]}
-        />
-      }
-      onEndReached={() => hasMore && loadMore()}
-      onEndReachedThreshold={0.4}
-      ListFooterComponent={
-        <BrowseFooter
-          isLoadingMore={isLoadingMore}
-          hasLoaded={hasLoaded}
-          // The catalogue is already IN MEMORY — there is no next page to
-          // fail, so the footer's "couldn't load more" branch would be
-          // a lie here. The failure belongs to the error card above,
-          // which owns its own Retry.
-          error={null}
-          reachedEnd={!hasMore}
-          shown={rows.length}
-          onLoadMore={loadMore}
-        />
-      }
-      windowSize={5}
-      maxToRenderPerBatch={10}
-    />
+  // The list tells the shell when it is finished AND the user is at its
+  // end, so the shell can get the floating filter button out of the way
+  // (see `_shared/useListEnd.ts`).
+  const {onScroll, onContentSizeChange} = useListEnd(
+    ctx.setAtListEnd,
+    reachedEnd,
   );
 
   return (
-    <View
-      style={[
-        styles.root,
-        {
-          backgroundColor: colors.background.primary,
-          paddingTop: insets.top,
-        },
-      ]}>
-      <SimbaStatusBar variant="home" />
-      <InternalHeader
-        title="Live TV"
-        rightAction={{
-          icon: 'heartPulse',
-          onPress: () => navigation.navigate('LiveTVFavoritesScreen'),
-          // A button that carries only an icon has no name, and a
-          // screen-reader user hears "button" for it.
-          accessibilityLabel: 'Live TV favorites',
-        }}
-      />
-
-      <View style={styles.searchSection}>
-        <SearchBar
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          onDebouncedChange={setSearchTerm}
-          placeholder="Search channels…"
-        />
-      </View>
-
-      <ActiveFilterChips
-        filters={filters}
-        label={categoryName}
-        onClear={handleClearFilter}
-      />
-
-      {content}
-
-      <Fab
-        icon="sliders"
-        accessibilityLabel="Filter channels"
-        badgeCount={activeFilterCount}
-        onPress={() => setSheetVisible(true)}
-        visible={!keyboardVisible}
-      />
-
-      <FilterSheet
-        visible={sheetVisible}
-        onClose={() => setSheetVisible(false)}
-        groups={[
-          {
-            id: 'category',
-            title: 'Category',
-            // The row's KEY is the category's ID — the source's own slug,
-            // the same thing the deep link carries and the same thing the
-            // channel's own group-title is. The label is the NAME. The
-            // filter used to be keyed by the name, so a deep link's id
-            // had to be translated into a name before it could match
-            // anything.
-            rows:
-              tagsLoaded
-                ? tags.categories.map(c => ({key: c.id, label: c.name}))
-                : [],
-          },
+    <View style={styles.sectionRoot}>
+      <FlatList
+        testID="section-LiveTVScreen-list"
+        style={styles.list}
+        data={rows}
+        keyExtractor={item => item.id}
+        renderItem={({item}) => (
+          <ChannelCard
+            row={item}
+            isFavorite={isFavoriteId(item.id)}
+            onPress={handleChannelPress}
+          />
+        )}
+        contentContainerStyle={[
+          styles.listContent,
+          {paddingBottom: bottomChromeInset + FAB_SIZE + spacing.md},
+          // The state slot fills the viewport, so the error card and the
+          // empty state have real height to anchor against.
+          listState ? styles.listSlotGrow : null,
         ]}
-        value={{category: filters.category ? [filters.category] : []}}
-        onChange={(groupId, keys) =>
-          handleOptionChange(groupId as 'category', keys[0] ?? '')
+        ItemSeparatorComponent={ItemSeparator}
+        ListEmptyComponent={
+          listState ? (
+            <ListStates
+              state={listState}
+              offline={offline}
+              isSearchActive={isSearchActive}
+              categoryLabel={scopeLabel}
+              error={error}
+              onRetry={refetch}
+            />
+          ) : null
         }
-        onReset={resetFilters}
-      />
-
-      <OptionSheetDialog
-        visible={menuVisible}
-        title={menuRow?.name ?? 'Channel Options'}
-        options={[
-          {
-            label: isFavoriteId(menuRow?.id ?? '')
-              ? 'Remove Favorite'
-              : 'Add to Favorites',
-            value: 'favorite',
-          },
-          {label: 'Add to Playlist', value: 'playlist'},
-          {label: 'Bookmark', value: 'bookmark'},
-          {label: 'Share', value: 'share'},
-        ]}
-        selectedValue={null}
-        onSelect={handleMenuSelect}
-        onClose={() => setMenuVisible(false)}
-        colors={colors}
-      />
-      <PlaylistSheet
-        visible={sheetItem !== null}
-        onClose={() => setSheetItem(null)}
-        currentItem={
-          sheetItem ?? {fileUri: '', title: '', duration: 0}
+        ListFooterComponent={
+          <BrowseFooter
+            isLoadingMore={isLoadingMore}
+            hasLoaded={hasLoaded}
+            // The LOAD-MORE error, not the list's error: a first-load
+            // failure is the error card's business, and the footer saying
+            // it too announced the same failure twice — and wrongly.
+            error={pageError}
+            reachedEnd={reachedEnd}
+            shown={items.length}
+            onLoadMore={fetchNextPage}
+          />
+        }
+        onScrollBeginDrag={() => {
+          userDraggedRef.current = true;
+        }}
+        onEndReached={() => {
+          // The drag guard: a scope whose whole result set fits on one
+          // screen fires `onEndReached` the moment the list mounts, and
+          // the slice nobody asked for is wasted work. Any touch-scroll
+          // sets the flag first.
+          if (!userDraggedRef.current) return;
+          if (hasMore && !isLoadingMore) fetchNextPage();
+        }}
+        onEndReachedThreshold={0.4}
+        onScroll={onScroll}
+        onContentSizeChange={onContentSizeChange}
+        removeClippedSubviews={false}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            // The GESTURE owns the spinner, not the query. `isLoading`
+            // is TanStack's `isFetching`, which is also true while a
+            // BACKGROUND refetch runs — so the refresh spinner used to
+            // appear for work the user never asked for. See
+            // `_shared/pullToRefresh.ts`.
+            refreshing={refreshing}
+            onRefresh={refresh}
+            tintColor={colors.accent.gold}
+            colors={[colors.accent.gold]}
+          />
         }
       />
     </View>
   );
 };
-

@@ -170,3 +170,11 @@ lint_*.txt
 # its renders and the export are meant to be committed; the intermediate
 # build is not.
 designs/.build/
+
+# ── The Metro verification bundle (2026-11-18) ─────────────────────────
+# `.verification/` held the Metro BUNDLE the app was last verified with:
+# a build artefact, regenerated on the next build. It was version-controlled
+# by accident, and what it carried was the names of the build it was — so
+# `ScreenNew` and other retired names survived in the repo as if they were
+# live. The files stay on disk; only the tracking is gone.
+.verification/

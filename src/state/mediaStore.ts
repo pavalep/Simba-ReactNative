@@ -195,7 +195,7 @@ export const useMediaStore = create<MediaState & MediaActions>()(
       ...initialState,
 
       setScanning: (isScanning) =>
-        set((s) =>
+        set((_s) =>
           isScanning
             ? {
                 isScanning: true,

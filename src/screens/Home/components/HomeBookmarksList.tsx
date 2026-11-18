@@ -54,7 +54,6 @@ export const HomeBookmarksList: React.FC<Props> = ({
     maxItems={MAX_BOOKMARK_ENTRIES}
     onSeeAll={onSeeAll}
     renderItem={item => {
-      const hasDuration = typeof item.duration === 'number' && item.duration > 0;
       return (
         <MediaRailCard
           title={item.title}

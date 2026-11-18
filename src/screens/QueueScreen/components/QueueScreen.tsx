@@ -34,7 +34,6 @@ import {SimbaStatusBar} from '../../../components/StatusBar';
 import {useHaptics} from '../../../hooks/useHaptics';
 import {useQueueScreen} from '../hooks/useQueueScreen';
 import type {QueueScreenProps} from '../types';
-import {usePlayerStore} from '../../../state';
 
 // ─── Constants ──────────────────────────────────────────
 

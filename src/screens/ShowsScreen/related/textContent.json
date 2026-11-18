@@ -1,0 +1,23 @@
+{
+  "pills": {
+    "loading": "Loading shows…"
+  },
+  "states": {
+    "errorOfflineTitle": "You're offline",
+    "errorOfflineMessage": "Check your connection and try again.",
+    "errorLoadFailed": "Couldn't load shows.",
+    "emptySearchTitle": "No shows match your search.",
+    "emptySearchSuggestion": "Try a different title.",
+    "emptyTodayTitle": "Nothing is scheduled today.",
+    "emptyTodaySuggestion": "Check back later, or pick All shows.",
+    "emptyAllTitle": "No shows found.",
+    "emptyAllSuggestion": "Try a search or pick Airing today."
+  },
+  "row": {
+    "openA11y": "Open show {title}"
+  },
+  "rail": {
+    "title": "Airing Today",
+    "openA11y": "Open show {title}"
+  }
+}

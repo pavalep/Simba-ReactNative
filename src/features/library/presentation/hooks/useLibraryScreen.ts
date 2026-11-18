@@ -7,11 +7,9 @@ import {useBottomChromeInset} from '../../../../infrastructure/player/miniPlayer
 import {useSettingsStore} from '../../../../state';
 
 import {useMediaScanner} from '../../../../hooks/useMediaScanner';
-import {isVideoFile} from '../../../../utils/timeAgo';
 import {useToast} from '../../../../components/feedback/Toast';
 import {ViewMode} from '../components/ViewToggle';
 import type {LibraryScreenProps} from '../../../../navigation/types';
-import {normalizeMediaClassification} from '../../../../types/media';
 import { resolveStreamType, usePlayer, useResumeAwareLaunch } from '../../../../infrastructure/player';
 import {useMediaStore, usePlayerStore, type ScannedTrack} from '../../../../state';
 import type {
@@ -67,7 +65,6 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
    * revised. See `infrastructure/player/miniPlayerChrome`.
    */
   const bottomChromeInset = useBottomChromeInset();
-  const fabBottomInset = bottomChromeInset;
   /**
    * The scroll padding at the bottom of the Library's scroll view.
    *
@@ -252,7 +249,7 @@ const navigateToLinkedFolders = useCallback(
   );
 
   return {
-    theme, colors, isDark, insets, fabBottomInset, contentBottomInset,
+    theme, colors, isDark, insets, contentBottomInset,
     activeSegment, setActiveSegment,
     showDropdown, setShowDropdown,
     viewMode, setViewMode,

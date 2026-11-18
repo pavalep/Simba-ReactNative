@@ -35,8 +35,6 @@ import {TransportBar} from '../../../../../src/components/player/video/Transport
 
 // ── Mocks ────────────────────────────────────────────────────────────
 
-const mockSeek = jest.fn();
-const mockSeekBy = jest.fn();
 
 jest.mock('../../../../../src/theme', () => {
   // Built from the REAL palette, not a hand-written stub.

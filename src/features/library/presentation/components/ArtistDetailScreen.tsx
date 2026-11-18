@@ -17,7 +17,7 @@ import {BackButton} from '../../../../components/utility/BackButton/BackButton';
 import AudioWaveform from '../../../../components/player/AudioWaveform/AudioWaveform';
 import {SimbaStatusBar} from '../../../../components/StatusBar';
 import {MediaImage} from '../../../../components/utility/MediaImage';
-import {radius, spacing} from '../../../../theme/tokens';
+import {radius} from '../../../../theme/tokens';
 import {useCachedArt} from '../../../../hooks/useCachedArt';
 import {useMoreFromArtist} from '../../../../hooks/useMoreFromArtist';
 import {StreamingRow} from '../../../../components/media/StreamingRow/StreamingRow';

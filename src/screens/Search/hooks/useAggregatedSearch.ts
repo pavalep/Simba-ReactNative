@@ -148,7 +148,7 @@ export function useAggregatedSearch(
         //
         // The signal is forwarded: the catalogue is 2.8 MB, and without
         // it a user who types and clears left the download running to
-        // completion. Live TV passes one (`useLiveTVBrowser.ts:116`).
+        // completion. Live TV passes one (`useLiveTVCatalogue.ts`).
         // The context is annotated explicitly: `useApiQueries` types its
         // queries through a tuple spread (`readonly [...QueriesOptions<T>]`),
         // which does not contextually type the `queryFn` parameter, so a

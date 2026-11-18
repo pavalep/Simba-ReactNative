@@ -93,7 +93,20 @@ module.exports = {
         'no-restricted-syntax': 'off',
         'react-native/no-inline-styles': 'off',
         'no-unused-vars': 'off',
-        '@typescript-eslint/no-unused-vars': 'off',
+        // B16-F / R6 — unused-vars is ON for the tests too. The old
+        // comment claimed the tests "exercise dead code"; in fact they
+        // carried dead IMPORTS (a `React` default the automatic JSX
+        // runtime never reads, a `fireEvent` the file stopped using).
+        // The `_` convention is the escape hatch for a name that is kept
+        // on purpose — the same one the production rule uses.
+        '@typescript-eslint/no-unused-vars': [
+          'error',
+          {
+            argsIgnorePattern: '^_',
+            varsIgnorePattern: '^_',
+            ignoreRestSiblings: true,
+          },
+        ],
         '@typescript-eslint/no-shadow': 'off',
         'no-restricted-imports': 'off',
       },
@@ -144,7 +157,22 @@ module.exports = {
         // unused imports. The chrome is strict (chrome lives outside
         // this override scope: src/components/player/video/ and
         // src/components/player/audio/).
-        '@typescript-eslint/no-unused-vars': 'off',
+        //
+        // B16-F / R6 — this is now ON. The override used to switch the
+        // rule off for the whole legacy surface, which is how ~79 dead
+        // imports and bindings accumulated across 55 files without
+        // anything complaining. The dead code was removed instead of
+        // hidden; the `_` prefix is the escape hatch for a binding that
+        // is kept on purpose (a callback the API demands, a value the
+        // shape requires).
+        '@typescript-eslint/no-unused-vars': [
+          'error',
+          {
+            argsIgnorePattern: '^_',
+            varsIgnorePattern: '^_',
+            ignoreRestSiblings: true,
+          },
+        ],
         // Legacy `void someExpression()` pattern — V20 sweep will keep
         // the eslint-disable-next-line comments or refactor to
         // explicit `await` chains. The chrome is strict.

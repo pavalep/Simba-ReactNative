@@ -93,12 +93,6 @@ export const MusicDetailScreen: React.FC<Props> = ({route}) => {
     track && 'albumName' in track
       ? (track as JamendoTrackResult).albumName
       : undefined;
-  const genreName =
-    track && 'genreName' in track
-      ? (track as JamendoTrackResult).genreName
-      : track && 'genre' in track
-        ? (track as AudiusTrackResult).genre
-        : undefined;
   const duration = track?.duration ?? 0;
   const description =
     track && 'description' in track
@@ -337,13 +331,6 @@ export const MusicDetailScreen: React.FC<Props> = ({route}) => {
           <View style={styles.badge}>
             <AppText variant="caption" color="accent">
               {durationLabel}
-            </AppText>
-          </View>
-        ) : null}
-        {genreName ? (
-          <View style={styles.badge}>
-            <AppText variant="caption" color="accent">
-              {genreName}
             </AppText>
           </View>
         ) : null}

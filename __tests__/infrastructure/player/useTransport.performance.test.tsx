@@ -26,8 +26,7 @@
  *     re-attached the gesture handlers mid-gesture.
  */
 
-import * as React from 'react';
-import {render, renderHook} from '@testing-library/react-native';
+import {renderHook} from '@testing-library/react-native';
 
 // ── Mocks ────────────────────────────────────────────────────────────
 

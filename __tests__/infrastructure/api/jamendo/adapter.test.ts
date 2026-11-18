@@ -54,7 +54,6 @@ function validTrack(id = 1) {
     duration: 180,
     audio: `https://example.com/audio-${id}.mp3`,
     image: `https://example.com/image-${id}.jpg`,
-    genre_name: 'rock',
   };
 }
 
@@ -167,7 +166,6 @@ describe('jamendo adapter — V21 W6 P21c', () => {
       name: 'Track 1',
       artistName: 'Artist 1',
       audioUrl: 'https://example.com/audio-1.mp3',
-      genreName: 'rock',
     });
   });
 
@@ -409,7 +407,6 @@ describe('jamendo adapter — the escaped text fields', () => {
           name: 'Rock &amp; Roll',
           artist_name: 'Besson&amp;sa',
           album_name: 'Hits &lt;Live&gt;',
-          genre_name: 'rock &amp; roll',
         },
       ],
     });
@@ -418,7 +415,6 @@ describe('jamendo adapter — the escaped text fields', () => {
       name: 'Rock & Roll',
       artistName: 'Besson&sa',
       albumName: 'Hits <Live>',
-      genreName: 'rock & roll',
     });
   });
 

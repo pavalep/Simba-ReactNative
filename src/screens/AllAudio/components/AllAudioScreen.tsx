@@ -17,7 +17,6 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import {useTheme} from '../../../theme';
 import {spacing, radius} from '../../../theme/tokens';
 import {FONT_FAMILY} from '../../../constants/fontFamily';
-import {useNavigation} from '@react-navigation/native';
 import {useAnimatedEntrance} from '../../../hooks/useAnimatedEntrance';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
@@ -42,7 +41,6 @@ function formatDuration(sec: number): string {
 
 export const AllAudioScreen: React.FC<AllAudioScreenProps> = ({route}) => {
   const {colors} = useTheme();
-  const navigation = useNavigation();
   // The route's params — `sort` and `filter` — are what the Artist
   // screen and the Library send. They were declared and sent and
   // ignored; the screen keeps them now (see `useAllAudioScreen`).

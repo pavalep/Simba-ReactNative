@@ -25,13 +25,18 @@
 // switch back to react-native-config when upstream lands a real fix,
 // re-import from 'react-native-config' (the .env + dotenv.gradle +
 // resValue + module registration stay in place ready for it).
+//
+// WAVE B16 (2026-11-18): `JAMENDO_CLIENT_SECRET` was removed. The
+// Jamendo v3 READ api needs the client_id alone — the secret belongs to
+// the OAuth token exchange, which this app never performs (it is a
+// read-only client). Nothing in `src/` read it, and it was shipped
+// inside the APK for nothing.
 import envJson from './env.json';
 
 export const ENV = {
   PODCAST_INDEX_API_KEY: envJson.PODCAST_INDEX_API_KEY ?? '',
   PODCAST_INDEX_API_SECRET: envJson.PODCAST_INDEX_API_SECRET ?? '',
   JAMENDO_CLIENT_ID: envJson.JAMENDO_CLIENT_ID ?? '',
-  JAMENDO_CLIENT_SECRET: envJson.JAMENDO_CLIENT_SECRET ?? '',
   AUDIUS_API_KEY: envJson.AUDIUS_API_KEY ?? '',
   GOOGLE_WEB_CLIENT_ID: envJson.GOOGLE_WEB_CLIENT_ID ?? '',
 };

@@ -4,9 +4,9 @@
 //
 // The Jamendo adapter does NOT classify a track: it maps the wire
 // record to `{id, name, artistName, albumName, duration, audioUrl,
-// imageUrl, genreName}` and nothing else, so `source` / `type` /
-// `mediaType` / `provider` are all unset on the track itself. Whoever
-// queues the track owns that classification.
+// imageUrl}` and nothing else, so `source` / `type` / `mediaType` /
+// `provider` are all unset on the track itself. Whoever queues the
+// track owns that classification.
 //
 // This is the same item `StreamingRow` builds for the "More From This
 // Artist" rows (`src/components/media/StreamingRow/StreamingRow.tsx`)

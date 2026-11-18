@@ -59,6 +59,21 @@ function parseGenreInitialTab(value: string): 'local' | 'streaming' | undefined 
   return undefined;
 }
 
+/**
+ * The Shows screen's `initialTab` segment.
+ *
+ * 'browse' and 'today' are the screen's scope-group option keys;
+ * anything else (including the old 'search' tab) is DROPPED, so the
+ * screen falls back to its default scope and the promise in
+ * `navigation/types.ts` is the truth — the same rule the Genre
+ * screen's parser uses.
+ */
+function parseShowsInitialTab(value: string): 'browse' | 'today' | undefined {
+  if (value === 'today') return 'today';
+  if (value === 'browse') return 'browse';
+  return undefined;
+}
+
 export const linking: LinkingOptions<RootStackParamList> = {
   // 2026-11-12: `https://simbaplayer.app` is GONE as a prefix. There is
   // no such website — the project has no web presence — so declaring it
@@ -291,9 +306,14 @@ export const linking: LinkingOptions<RootStackParamList> = {
       ShowsScreen: {
         path: 'shows/:initialTab?',
         parse: {
-          initialTab: decodeURIComponent,
-          // The Browse tab's genre chip — the screen reads `initialGenre`.
-          initialGenre: decodeURIComponent,
+          // The scope. The old `initialGenre` parse is GONE: TVMaze
+          // ignores a `genre` parameter (measured 2026-11-18 — every
+          // variant returns the identical 245 shows) and `/genres` is a
+          // 404, so no genre option list exists to select from. The
+          // param promised a filter the source cannot apply.
+          initialTab: parseShowsInitialTab,
+          // The term the screen starts with.
+          query: decodeURIComponent,
         },
       },
       ShowDetail: {

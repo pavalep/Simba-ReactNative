@@ -37,7 +37,6 @@ const TRACK: JamendoTrackResult = {
   duration: 180,
   audioUrl: 'https://example.test/a.mp3',
   imageUrl: ARTWORK,
-  genreName: 'rock',
 };
 
 describe('Music — the end-of-stream rule', () => {

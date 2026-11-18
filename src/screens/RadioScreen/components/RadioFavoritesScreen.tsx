@@ -1,13 +1,27 @@
-// ─── Radio Favorites Screen (v10.1 Wave 7) ─────────────────────────────
-// Header-heart destination from the standalone Radio page. Pure Redux:
-// lists saved radio favorites, tap to play, long-press for the same
-// station menu (remove / playlist / bookmark / share).
+// ─── Radio Favorites Screen ────────────────────────────────────────────
+// The saved stations — the destination of the browse screen's header
+// heart.
+//
+// It used to own a DIFFERENT menu from the browse screen: an
+// `OptionSheetDialog` with "Add to Playlist" (which the app's playlist rule
+// refuses for radio — `PLAYLIST_ALLOWED_MEDIA_KINDS`: "a lane is not a
+// permission", so the sheet it opened listed NO compatible playlist), no
+// queue action at all (a saved station could not be queued from the only
+// screen a saved station lives on), and a `provider: 'radio'` that named
+// the KIND in the slot that names the SOURCE.
+//
+// It now offers the app's ONE media menu (`MediaActionsSheet`) with what a
+// station can actually do, and the queue actions go through the app's ONE
+// queue wrapper (`useQueueActions`), which owns the toast and its Undo.
+//
+// The station's classification comes from `stationQueueItem` — the same
+// owner the browse screen uses — so the same station is classified the
+// same way from either route.
 
 import React, {useCallback, useMemo, useState} from 'react';
-import {Alert, View, FlatList, StyleSheet} from 'react-native';
+import {View, FlatList} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../../theme';
-import {spacing} from '../../../theme/tokens';
 import type {RootStackScreenProps} from '../types';
 import {
   RadioStationCard,
@@ -19,13 +33,19 @@ import {InternalHeader} from '../../../components/layout/InternalHeader/Internal
 import {Placeholder} from '../../../components/feedback/Placeholder';
 import {useToast} from '../../../components/feedback/Toast';
 import {useHaptics} from '../../../hooks/useHaptics';
-import {PlaylistSheet} from '../../../components/sheets/PlaylistSheet/PlaylistSheet';
-import {OptionSheetDialog} from '../../../components/core/OptionSheetDialog/OptionSheetDialog';
+import {
+  MediaActionsSheet,
+  type MediaAction,
+} from '../../../components/sheets/MediaActionsSheet/MediaActionsSheet';
+import {useQueueActions} from '../../../hooks/useQueueActions';
 import {shareContent} from '../../../services/shareService';
 import {useBookmarks} from '../../../features/bookmarks';
 import {confirmBookmarkAdd} from '../../../features/bookmarks/confirmAdd';
-import { resolveStreamType, useResumeAwareLaunch } from '../../../infrastructure/player';
+import {resolveStreamType, useResumeAwareLaunch} from '../../../infrastructure/player';
 import {useLiveFavoritesStore} from '../../../state';
+import {createRadioFavoritesStyles} from '../styles';
+import {stationQueueItem} from '../related/stationRow';
+import text from '../related/textContent.json';
 
 type Props = RootStackScreenProps<'RadioFavoritesScreen'>;
 
@@ -36,6 +56,11 @@ export const RadioFavoritesScreen: React.FC<Props> = () => {
   const haptics = useHaptics();
   const {openPlayer} = useResumeAwareLaunch();
   const {add: addBookmark} = useBookmarks();
+  const styles = useMemo(() => createRadioFavoritesStyles(), []);
+  // The app's ONE queue wrapper: it owns the queue-store call AND the
+  // toast (with its Undo), so this screen never calls the queue store
+  // directly and never raises a queue toast by hand.
+  const {playNext, addToQueue} = useQueueActions();
 
   // V23 W24 (2026-11-05) — select the stable array, derive outside the
   // selector. Filtering inside the selector built a NEW array on every call,
@@ -49,10 +74,6 @@ export const RadioFavoritesScreen: React.FC<Props> = () => {
   const rows = useMemo<StationRow[]>(() => favorites.map(favToRow), [favorites]);
 
   const [menuRow, setMenuRow] = useState<StationRow | null>(null);
-  const [menuVisible, setMenuVisible] = useState(false);
-  const [sheetItem, setSheetItem] = useState<
-    React.ComponentProps<typeof PlaylistSheet>['currentItem'] | null
-  >(null);
 
   const handleStationPress = useCallback(
     (row: StationRow) => {
@@ -72,73 +93,77 @@ export const RadioFavoritesScreen: React.FC<Props> = () => {
 
   const handleLongPress = useCallback((row: StationRow) => {
     setMenuRow(row);
-    setMenuVisible(true);
   }, []);
 
-  const handleMenuSelect = useCallback(
-    (value: string | number) => {
-      const row = menuRow;
-      if (!row) return;
-      switch (value) {
-        case 'favorite':
-          useLiveFavoritesStore.getState().removeLiveFavorite({kind: 'radio', id: row.id});
-          toast.show('Removed from favorites');
+  const menuActions = useMemo<MediaAction[]>(() => {
+    if (!menuRow) return [];
+    const queueItem = stationQueueItem(menuRow);
+    return [
+      {
+        label: text.menu.playNext,
+        icon: 'skipForward',
+        onPress: () => playNext(queueItem),
+      },
+      {
+        label: text.menu.addToQueue,
+        icon: 'list',
+        onPress: () => addToQueue(queueItem),
+      },
+      {
+        label: text.menu.removeFavorite,
+        icon: 'heart',
+        onPress: () => {
+          useLiveFavoritesStore
+            .getState()
+            .removeLiveFavorite({kind: 'radio', id: menuRow.id});
+          toast.show(text.toasts.removedFromFavorites);
           haptics.light();
-          break;
-        case 'playlist':
-          setSheetItem({
-            fileUri: row.url,
-            title: row.name,
-            duration: 0,
-            thumbnailPath: row.image || undefined,
-            source: 'api',
-            provider: 'radio',
-            mediaType: 'audio',
-            type: 'radio',
-          });
-          break;
-        case 'bookmark': {
-          const input = {
-            fileUri: row.url,
-            title: row.name,
+        },
+      },
+      {
+        label: text.favorites.menu.bookmark,
+        icon: 'bookmark',
+        onPress: () => {
+          const result = addBookmark({
+            fileUri: menuRow.url,
+            title: menuRow.name,
             position: 0,
             duration: 0,
             label: '',
-            thumbnailPath: row.image || undefined,
-            mediaType: 'audio' as const,
-            source: 'api' as const,
-            provider: 'radio',
-            type: 'radio' as const,
-          };
-          const result = addBookmark(input);
+            thumbnailPath: menuRow.image || undefined,
+            mediaType: 'audio',
+            source: 'api',
+            provider: 'radioBrowser',
+            type: 'radio',
+          });
           // ONE owner for the cap — the same helper the browse screen and
           // the Live TV screens use.
           confirmBookmarkAdd(
             result,
-            row.name,
+            menuRow.name,
             addBookmark,
-            () => toast.show('Station bookmarked'),
+            () => toast.show(text.favorites.toasts.stationBookmarked),
           );
-          break;
-        }
-        case 'share':
-          // ONE share target for the whole feature, and the params the
-          // linking config actually parses. This used to share to
-          // `route: 'RadioScreen'`, whose linking config carried only
-          // `initialTab` — so the station was lost entirely and the
-          // recipient landed on the browse screen with nothing.
+        },
+      },
+      {
+        label: text.menu.share,
+        icon: 'share',
+        onPress: () =>
           shareContent({
+            // ONE share target for the whole feature, and the params the
+            // linking config actually parses. This used to share to
+            // `route: 'RadioScreen'`, whose linking config carried only
+            // `initialTab` — so the station was lost entirely and the
+            // recipient landed on the browse screen with nothing.
             route: 'SongScreen',
-            params: {fileUri: row.url, title: row.name, source: 'radio'},
-            title: row.name,
-            subtitle: row.subtitle,
-          });
-          break;
-      }
-      setMenuRow(null);
-    },
-    [menuRow, toast, haptics, addBookmark],
-  );
+            params: {fileUri: menuRow.url, title: menuRow.name, source: 'radio'},
+            title: menuRow.name,
+            subtitle: menuRow.subtitle,
+          }),
+      },
+    ];
+  }, [menuRow, toast, haptics, addBookmark, playNext, addToQueue]);
 
   return (
     <View
@@ -147,15 +172,15 @@ export const RadioFavoritesScreen: React.FC<Props> = () => {
         {backgroundColor: colors.background.primary, paddingTop: insets.top},
       ]}>
       <SimbaStatusBar variant="home" />
-      <InternalHeader title="Favorite Stations" />
+      <InternalHeader title={text.favorites.screenTitle} />
 
       {rows.length === 0 ? (
         <Placeholder
           variant="empty"
           anchor="top-third"
           icon="heart"
-          title="No favorite stations yet."
-          message="Long-press any station to save it here."
+          title={text.favorites.emptyTitle}
+          message={text.favorites.emptyMessage}
         />
       ) : (
         <FlatList
@@ -171,37 +196,16 @@ export const RadioFavoritesScreen: React.FC<Props> = () => {
           )}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
-          ItemSeparatorComponent={ItemSeparator}
         />
       )}
 
-      <OptionSheetDialog
-        visible={menuVisible}
-        title={menuRow?.name ?? 'Station Options'}
-        options={[
-          {label: 'Remove Favorite', value: 'favorite'},
-          {label: 'Add to Playlist', value: 'playlist'},
-          {label: 'Bookmark', value: 'bookmark'},
-          {label: 'Share', value: 'share'},
-        ]}
-        selectedValue={null}
-        onSelect={handleMenuSelect}
-        onClose={() => setMenuVisible(false)}
-        colors={colors}
-      />
-      <PlaylistSheet
-        visible={sheetItem !== null}
-        onClose={() => setSheetItem(null)}
-        currentItem={sheetItem ?? {fileUri: '', title: '', duration: 0}}
+      <MediaActionsSheet
+        visible={menuRow !== null}
+        onClose={() => setMenuRow(null)}
+        title={menuRow?.name ?? ''}
+        subtitle={menuRow?.subtitle}
+        actions={menuActions}
       />
     </View>
   );
 };
-
-const ItemSeparator = () => <View style={styles.separator} />;
-
-const styles = StyleSheet.create({
-  root: {flex: 1},
-  listContent: {padding: spacing.md, paddingBottom: spacing.xxl + 80},
-  separator: {height: spacing.sm},
-});

@@ -32,7 +32,6 @@
  * would pass even if the artwork was dropped on the way to the launch.
  */
 
-import React from 'react';
 import {fireEvent, screen} from '@testing-library/react-native';
 import {renderWithProviders} from '../../helpers/renderWithProviders';
 import {ArchiveItemDetailScreen} from '../../../src/screens/ArchiveItemDetailScreen/components/ArchiveItemDetailScreen';

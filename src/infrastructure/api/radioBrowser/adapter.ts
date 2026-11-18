@@ -307,13 +307,34 @@ export interface RadioFilterSet {
   language?: string;
 }
 
-export async function getStationsByFilters(
+/**
+ * One request that answers a TERM and the filter axes together.
+ *
+ * The endpoint takes `name` together with `tag` / `country` /
+ * `language` — measured 2026-11-18 against
+ * `de1.api.radio-browser.info`:
+ *
+ *   `?name=jazz&tag=rock` returns a set that is NEITHER the name-only
+ *   set NOR the tag-only set, so the two filters really do compose.
+ *   `?name=&tag=rock` returns exactly the tag-only set, so an EMPTY
+   term is safe to send and the filter-only path can share this
+ *   request.
+ *
+ * The `country` value must be the country's NAME exactly as the API
+ * spells it ("Germany"); the lower-cased name or the ISO code
+ * returns NOTHING (measured: `country=germany` → 0 rows,
+ * `country=Germany` → rows). The screen feeds this the `name` field
+ * of `/json/countries`, which is that spelling.
+ */
+export async function searchStationsWithFilters(
+  query: string,
   filters: RadioFilterSet,
   options?: ApiSearchOptions,
   signal?: AbortSignal,
 ): Promise<RadioStationResult[]> {
   const params: Record<string, string | number | undefined> = {
     ...buildParams(options),
+    name: query,
     order: 'clickcount',
     reverse: 'true',
     hidebroken: 'true',
@@ -328,6 +349,14 @@ export async function getStationsByFilters(
     signal,
   });
   return stationsFromRaw(raw);
+}
+
+export async function getStationsByFilters(
+  filters: RadioFilterSet,
+  options?: ApiSearchOptions,
+  signal?: AbortSignal,
+): Promise<RadioStationResult[]> {
+  return searchStationsWithFilters('', filters, options, signal);
 }
 
 export async function getTopStations(

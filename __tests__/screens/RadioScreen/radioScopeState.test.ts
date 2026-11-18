@@ -12,7 +12,7 @@
  *
  * `hasLoaded` now means "the query settled WITH DATA":
  *
- *   hasLoaded: !!stationsQ.data
+ *   hasLoaded: !!query.data
  *
  * This file pins that. The screen's half of the defect is in
  * `radioFailureState.test.tsx`.
@@ -26,6 +26,7 @@ interface StationsQuery {
   isFetching: boolean;
   isFetchingNextPage: boolean;
   hasNextPage: boolean | undefined;
+  isFetchNextPageError: boolean;
   fetchNextPage: jest.Mock;
   refetch: jest.Mock;
 }
@@ -38,6 +39,7 @@ const mockStations: StationsQuery = {
   isFetching: false,
   isFetchingNextPage: false,
   hasNextPage: undefined,
+  isFetchNextPageError: false,
   fetchNextPage: jest.fn(),
   refetch: jest.fn(),
 };
@@ -59,58 +61,71 @@ jest.mock('../../../src/hooks/useNetworkStatus', () => ({
   useNetworkStatus: () => ({isOnline: true}),
 }));
 
-import {useRadioBrowser} from '../../../src/screens/RadioScreen/hooks/useRadioBrowser';
+import {
+  useRadioScreen,
+  EMPTY_RADIO_SCOPE,
+} from '../../../src/screens/RadioScreen/hooks/useRadioScreen';
 
-describe('useRadioBrowser — the scope state', () => {
+describe('useRadioScreen — the scope state', () => {
   beforeEach(() => {
     mockStations.data = undefined;
     mockStations.error = null;
     mockStations.isFetching = false;
     mockStations.isFetchingNextPage = false;
     mockStations.hasNextPage = undefined;
+    mockStations.isFetchNextPageError = false;
   });
 
   it('is NOT loaded when the first page failed', async () => {
     mockStations.error = new Error('The network request failed.');
 
-    const {result} = await renderHook(() => useRadioBrowser());
-    const scope = result.current.getScope();
+    const {result} = await renderHook(() => useRadioScreen(EMPTY_RADIO_SCOPE));
 
     // The whole defect in one line: a failed first page used to set
     // this to TRUE, which skipped every failure branch on the screen.
-    expect(scope.hasLoaded).toBe(false);
+    expect(result.current.hasLoaded).toBe(false);
   });
 
   it('still reports the error', async () => {
     mockStations.error = new Error('The network request failed.');
 
-    const {result} = await renderHook(() => useRadioBrowser());
-    const scope = result.current.getScope();
+    const {result} = await renderHook(() => useRadioScreen(EMPTY_RADIO_SCOPE));
 
-    expect(scope.error).toBe('The network request failed.');
+    expect(result.current.error).toBe('The network request failed.');
   });
 
   it('is loaded when data arrived', async () => {
     mockStations.data = {pages: [[{id: 'a', name: 'A', url: 'http://a'}]]};
 
-    const {result} = await renderHook(() => useRadioBrowser());
-    const scope = result.current.getScope();
+    const {result} = await renderHook(() => useRadioScreen(EMPTY_RADIO_SCOPE));
 
-    expect(scope.hasLoaded).toBe(true);
-    expect(scope.items).toHaveLength(1);
-    expect(scope.error).toBeNull();
+    expect(result.current.hasLoaded).toBe(true);
+    expect(result.current.items).toHaveLength(1);
+    expect(result.current.error).toBeNull();
   });
 
   it("reports the source's own hasMore, not a re-derived guess", async () => {
     mockStations.data = {pages: [[{id: 'a'}]]};
     mockStations.hasNextPage = false;
 
-    const {result} = await renderHook(() => useRadioBrowser());
+    const {result} = await renderHook(() => useRadioScreen(EMPTY_RADIO_SCOPE));
 
     // The screen used to re-derive this from a SECOND copy of the page
     // size, so "maybe more" showed whenever the loaded count happened
     // to be a multiple of 30 — and the footer's retry button did
     // nothing.
     expect(result.current.hasMore).toBe(false);
+  });
+
+  it('keeps the FIRST page failure and the LOAD-MORE failure apart', async () => {
+    // ONE FAILURE, ONE MESSAGE. The list's error is the error card's
+    // business; the footer's copy is only for a failed load-more.
+    mockStations.data = {pages: [[{id: 'a'}]]};
+    mockStations.error = new Error('The network request failed.');
+    mockStations.isFetchNextPageError = true;
+
+    const {result} = await renderHook(() => useRadioScreen(EMPTY_RADIO_SCOPE));
+
+    expect(result.current.pageError).toBe('The network request failed.');
   });
 });

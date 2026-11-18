@@ -7,7 +7,7 @@ import {StyleSheet} from 'react-native';
 import {spacing} from '../../../theme/tokens';
 import type {ColorTokens} from '../../../theme/tokens';
 
-export const createPodcastsScreenStyles = (colors: ColorTokens) =>
+export const createPodcastsScreenStyles = (_colors: ColorTokens) =>
   StyleSheet.create({
     sectionRoot: {
       flex: 1,

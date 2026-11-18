@@ -1,7 +1,7 @@
 import React from 'react';
 import {View, StyleSheet, ViewStyle} from 'react-native';
 import {useTheme} from '../../../theme';
-import {spacing, radius} from '../../../theme/tokens';
+import {spacing} from '../../../theme/tokens';
 import {AppText} from '../../core/AppText/AppText';
 import {SvgIcon, IconName} from '../../utility/SvgIcon';
 import {ActivityOrb} from '../ActivityOrb/ActivityOrb';

@@ -50,7 +50,7 @@ const SOURCE_TOGGLE: Array<{id: 'local' | 'streaming'; label: string}> = [
   {id: 'streaming', label: 'Streaming'},
 ];
 
-export const GenreScreen: React.FC<GenreScreenProps> = ({navigation, route}) => {
+export const GenreScreen: React.FC<GenreScreenProps> = ({route}) => {
   const {colors} = useTheme();
   const bottomChromeInset = useBottomChromeInset();
   const {openPlayer} = useResumeAwareLaunch();

@@ -17,7 +17,6 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import {useTheme} from '../../../theme';
 import {spacing, radius} from '../../../theme/tokens';
 import {FONT_FAMILY} from '../../../constants/fontFamily';
-import {useNavigation} from '@react-navigation/native';
 import {useAnimatedEntrance} from '../../../hooks/useAnimatedEntrance';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
@@ -45,7 +44,6 @@ function formatDuration(sec: number): string {
 
 export const AllVideosScreen: React.FC = () => {
   const {colors} = useTheme();
-  const navigation = useNavigation();
   const {
     videoTracks,
     searchQuery,

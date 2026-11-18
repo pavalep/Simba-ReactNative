@@ -12,7 +12,6 @@ import {
   Image,
   type ListRenderItemInfo,
 } from 'react-native';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useBottomChromeBand} from '../../../infrastructure/player/miniPlayerChrome';
 import {useTheme} from '../../../theme';
 import {spacing, radius} from '../../../theme/tokens';
@@ -23,7 +22,6 @@ import type {MovieDetailScreenProps} from '../types';
 import {ScreenContainer} from '../../../components/layout/ScreenContainer/ScreenContainer';
 import {InternalHeader} from '../../../components/layout/InternalHeader/InternalHeader';
 import {SimbaStatusBar} from '../../../components/StatusBar';
-import {ActivityOrb} from '../../../components/feedback/ActivityOrb/ActivityOrb';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {Placeholder} from '../../../components/feedback/Placeholder';
 import {SvgIcon} from '../../../components/utility/SvgIcon/SvgIcon';
@@ -57,10 +55,10 @@ function extractYear(yearStr: string): string {
 const {width: SCREEN_WIDTH} = Dimensions.get('window');
 
 // ─── Component ──────────────────────────────────────────────────────────
-export const MovieDetailScreen: React.FC<Props> = ({navigation, route}) => {
+export const MovieDetailScreen: React.FC<Props> = ({route}) => {
   const {openPlayer} = useResumeAwareLaunch();
   const {identifier, title: routeTitle} = route.params;
-  const {item, isLoading, error, retry} = useMovieDetailScreen(identifier);
+  const {item, isLoading, error} = useMovieDetailScreen(identifier);
   const {colors} = useTheme();
   const bottomChromeBand = useBottomChromeBand();
 

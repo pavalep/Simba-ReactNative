@@ -8,7 +8,7 @@ import {useToast} from '../../../components/feedback/Toast';
 import {resolveInternetArchiveVideoDetails} from '../../../infrastructure/api/internetArchive/adapter';
 import {useBottomChromeInset} from '../../../infrastructure/player/miniPlayerChrome';
 import {useListEnd} from '../../_shared/useListEnd';
-import {IA_MAX_RETRIEVABLE} from '../hooks/useMoviesScreen';
+import {IA_MAX_RETRIEVABLE} from '../../../infrastructure/api/internetArchive/adapter';
 import {MOVIE_CATEGORIES} from '../../../constants/movieCategories';
 import {useTheme} from '../../../theme';
 import {spacing} from '../../../theme/tokens';
@@ -34,8 +34,6 @@ export const MoviesContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => {
     refreshing,
     refresh,
     loadMore,
-    activeCategoryIds,
-    activeSearchTerm,
     setActiveCategoryIds,
     setSearchTerm,
     isSearchActive,

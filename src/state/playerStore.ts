@@ -3,7 +3,6 @@ import {persist} from 'zustand/middleware';
 import {createJSONStorage, sharedMMKVStorage, CURRENT_PERSIST_VERSION} from './persistence';
 import {
   normalizePlaybackEntry,
-  type PlaybackEntry,
   type PlaybackEntryInput,
   type PlaybackOrigin,
 } from '../types/playback';

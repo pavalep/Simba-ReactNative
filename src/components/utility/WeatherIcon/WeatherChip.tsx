@@ -26,7 +26,7 @@
 // 32px transparent margins; contain was leaving those margins
 // visible and shrinking the subject).
 
-import React, {memo, useMemo} from 'react';
+import React, {memo} from 'react';
 import {View, StyleSheet, type ViewStyle} from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import LottieView from 'lottie-react-native';

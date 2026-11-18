@@ -220,7 +220,7 @@ describe('VideoPlayer ref — contract', () => {
       ['exitPip', () => handle.exitPip()],
     ];
 
-    for (const [name, invoke] of expected) {
+    for (const [_name, invoke] of expected) {
       const result = invoke();
       expect(
         typeof (result as {then?: unknown})?.then,

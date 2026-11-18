@@ -34,6 +34,7 @@ import {MOVIE_CATEGORIES, withJunkFilter} from '../../../constants/movieCategori
 import {
   searchInternetArchiveVideos,
   INTERNET_ARCHIVE_RETRIES,
+  IA_MAX_RETRIEVABLE,
 } from '../../../infrastructure/api/internetArchive/adapter';
 import type {
   InternetArchiveVideoResult,
@@ -42,21 +43,6 @@ import type {
 
 /** Items per page. Two grid rows of the two-column mosaic. */
 const PAGE_SIZE = 40;
-
-/**
- * The Internet Archive's paging limit.
- *
- * Measured on 2026-11-12 against the live endpoint: with `rows=40`,
- * page 250 (10,000 items) answers normally and **page 251 answers
- * HTTP 507 Insufficient Storage**. The Archive will not page past
- * 10,000 rows, so the hook stops there instead of asking for a page
- * the server will refuse — and the footer says what that means.
- *
- * Exported because the footer's ending sentence may only claim the
- * archive stopped paging when the archive's cap is the reason the list
- * ended — see `MoviesContent.tsx`'s `windowEndLabel`.
- */
-export const IA_MAX_RETRIEVABLE = 10_000;
 
 export interface MovieScopeState {
   items: InternetArchiveVideoResult[];

@@ -7,7 +7,6 @@ import {
   StyleSheet,
   RefreshControl,
 } from 'react-native';
-import {ActivityOrb} from '../../../components/feedback/ActivityOrb/ActivityOrb';
 import {Placeholder} from '../../../components/feedback/Placeholder';
 import LinearGradient from 'react-native-linear-gradient';
 import RNFS from 'react-native-fs';
@@ -15,7 +14,6 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useBottomChromeInset} from '../../../infrastructure/player/miniPlayerChrome';
 import {useTheme} from '../../../theme';
 import {FONT_FAMILY} from '../../../constants/fontFamily';
-import {isVideoFile} from '../../../utils/timeAgo';
 import {getMediaType} from '../../../services/fileService';
 import {linkedMediaFolderIdFromPath, normalizeMediaClassification} from '../../../types/media';
 
@@ -29,7 +27,7 @@ import {PlaylistCreateModal} from '../../../components/playlist/PlaylistCreateMo
 import {useToast} from '../../../components/feedback/Toast/Toast';
 import {logger} from '../../../lib/logger';
 import {usePlaylists, reportBatchAdd} from '../../../features/playlists';
-import { resolveStreamType, useResumeAwareLaunch } from '../../../infrastructure/player';
+import { useResumeAwareLaunch } from '../../../infrastructure/player';
 
 import type {PlaylistItem, PlaylistKind} from '../../../types/playlist';
 

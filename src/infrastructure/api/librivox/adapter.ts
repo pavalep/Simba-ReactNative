@@ -28,6 +28,22 @@ import type {AudiobookResult, ApiSearchOptions} from '../../../types/api';
 
 export type {AudiobookResult};
 
+/**
+ * One author on the wire.
+ *
+ * LibriVox splits the name: there is no `name` field, only a first and a
+ * last name (measured 2026-11-18 against
+ * `librivox.org/api/feed/audiobooks/?format=json`:
+ * `{"id":"431","first_name":"Alexandre","last_name":"Dumas","dob":"1802","dod":"1870"}`).
+ */
+interface LibriVoxAuthorRaw {
+  id?: string | number;
+  first_name?: string;
+  last_name?: string;
+  dob?: string;
+  dod?: string;
+}
+
 interface LibriVoxBookRaw {
   id: number | string;
   title: string;
@@ -37,7 +53,11 @@ interface LibriVoxBookRaw {
   url_iarchive?: string;
   totaltime?: string;
   language?: string;
-  authors?: {name?: string};
+  /**
+   * The book's authors — an ARRAY of records, in both the list response
+   * and the single-book response (measured 2026-11-18).
+   */
+  authors?: LibriVoxAuthorRaw[];
 }
 
 interface LibriVoxResponseRaw {
@@ -81,6 +101,29 @@ function normalizeBooks(books: unknown): LibriVoxBookRaw[] {
 }
 
 /**
+ * The book's author line.
+ *
+ * The adapter used to read `b.authors.name` — a property on an OBJECT,
+ * where the wire carries an ARRAY of records and NO `name` field at all.
+ * So EVERY book in the app was labelled "Unknown Author" — which is what
+ * the device proof of the Audiobooks screen showed on 2026-11-18, ten rows
+ * deep.
+ *
+ * The line is the first author's full name. A second author is added, and a
+ * third makes it "et al." — which is how a catalogue says it.
+ */
+function authorLine(authors: LibriVoxAuthorRaw[] | undefined): string {
+  const list = Array.isArray(authors) ? authors : [];
+  const names = list
+    .map(a => [a.first_name, a.last_name].filter(Boolean).join(' ').trim())
+    .filter(Boolean);
+  if (names.length === 0) return 'Unknown Author';
+  if (names.length === 1) return names[0];
+  if (names.length === 2) return `${names[0]} & ${names[1]}`;
+  return `${names[0]} & ${names[1]} et al.`;
+}
+
+/**
  * V21 W6 P21c — per-book shape validation.
  * Throws `AdapterParseError` for malformed records (was silent
  * `null` skip pre-W22). Required fields: `id` is number or
@@ -109,8 +152,7 @@ function parseRawAudiobook(raw: unknown, path: string): AudiobookResult {
       `expected number or string, got ${typeof b.id}`,
     );
   }
-  const authorName =
-    typeof b.authors?.name === 'string' ? b.authors.name : 'Unknown Author';
+  const authorName = authorLine(b.authors);
   return {
     id: Number(b.id) || 0,
     title: String(b.title),

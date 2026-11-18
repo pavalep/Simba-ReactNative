@@ -19,11 +19,6 @@ import {useHaptics} from '../../../hooks/useHaptics';
 import {SvgIcon} from '../../utility/SvgIcon';
 import {PlaylistCreateModal} from '../../playlist/PlaylistCreateModal';
 
-// ─── Helpers ────────────────────────────────────────────────
-
-const generateItemId = (): string =>
-  `pli_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-
 // ─── Props ──────────────────────────────────────────────────
 
 export interface PlaylistSheetProps {

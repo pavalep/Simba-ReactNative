@@ -4,7 +4,6 @@
 // states in ListStates (the shared ErrorState/EmptyState).
 
 import {StyleSheet} from 'react-native';
-import {spacing} from '../../../theme/tokens';
 import type {ColorTokens} from '../../../theme/tokens';
 
 export const createMoviesScreenStyles = (_colors: ColorTokens) =>

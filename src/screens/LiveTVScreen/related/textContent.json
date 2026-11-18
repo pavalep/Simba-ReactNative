@@ -1,0 +1,39 @@
+{
+  "pills": {
+    "loading": "Loading channels…"
+  },
+  "states": {
+    "errorOfflineTitle": "You're offline",
+    "errorOfflineMessage": "Check your connection and try again.",
+    "errorLoadFailed": "Couldn't load channels.",
+    "emptySearchTitle": "No channels match your search.",
+    "emptySearchSuggestion": "Try another name, country or category.",
+    "emptyCategoryTitle": "No {category} channels found.",
+    "emptyCategorySuggestion": "Try another category.",
+    "emptyAllTitle": "No channels found.",
+    "emptyAllSuggestion": "Try a search or pick a category."
+  },
+  "menu": {
+    "playNext": "Play Next",
+    "addToQueue": "Add to Queue",
+    "addFavorite": "Add to Favorites",
+    "removeFavorite": "Remove Favorite",
+    "bookmark": "Bookmark",
+    "share": "Share"
+  },
+  "row": {
+    "favoriteSuffix": "{name}, favorite",
+    "longPressHint": "Long press for more actions"
+  },
+  "favorites": {
+    "title": "Favorite Channels",
+    "entryA11y": "Open Live TV favorites",
+    "emptyTitle": "No favorite channels yet.",
+    "emptyMessage": "Long-press any channel on Live TV to save it here."
+  },
+  "toasts": {
+    "savedToFavorites": "Saved to favorites",
+    "removedFromFavorites": "Removed from favorites",
+    "bookmarked": "Channel bookmarked"
+  }
+}

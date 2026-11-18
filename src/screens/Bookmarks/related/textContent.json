@@ -1,0 +1,24 @@
+{
+  "header": {
+    "title": "Bookmarks",
+    "countSaved": "{count} saved",
+    "clearAllLabel": "Clear All",
+    "clearAllA11y": "Clear all bookmarks"
+  },
+  "search": {
+    "placeholder": "Search bookmarks…",
+    "a11y": "Search bookmarks"
+  },
+  "empty": {
+    "title": "No Bookmarks Yet",
+    "description": "Save your position in any video or audio file to create bookmarks. They will appear here."
+  },
+  "dialogs": {
+    "removeTitle": "Remove Bookmark",
+    "removeMessage": "Remove this bookmark?",
+    "removeConfirmLabel": "Remove",
+    "clearAllTitle": "Clear All Bookmarks?",
+    "clearAllMessage": "This will remove all your saved bookmarks. This action cannot be undone.",
+    "clearAllConfirmLabel": "Clear All"
+  }
+}

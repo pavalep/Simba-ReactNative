@@ -16,7 +16,7 @@ import {startDownload} from '../../../services/downloadService';
 import {useToast} from '../../feedback/Toast/Toast';
 import {jamendoQueueItem} from '../../../infrastructure/api/jamendo/jamendoQueueItem';
 import type {JamendoTrackResult} from '../../../types/api';
-import {useDownloadsStore, useDownloadedUriSet} from '../../../state';
+import {useDownloadedUriSet} from '../../../state';
 
 interface StreamingRowProps {
   track: JamendoTrackResult;

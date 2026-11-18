@@ -1,0 +1,20 @@
+{
+  "pills": {
+    "loading": "Loading the archive…"
+  },
+  "footer": {
+    "windowEnd": "Showing {shown} of {total} items — the archive stops paging here"
+  },
+  "states": {
+    "errorOfflineTitle": "You're offline",
+    "errorOfflineMessage": "Check your connection and try again.",
+    "errorLoadFailed": "Couldn't load the archive.",
+    "emptySearchTitle": "Nothing in the archive matches your search.",
+    "emptySearchSuggestion": "Try a different term.",
+    "emptyScopeTitle": "Nothing found in this part of the archive.",
+    "emptyScopeSuggestion": "Try the other media type, or search for something else."
+  },
+  "row": {
+    "openA11y": "Open {title}"
+  }
+}

@@ -20,9 +20,13 @@ Open `android/.env` and fill in:
 | `PODCAST_INDEX_API_KEY` | `src/services/api/podcastIndexAdapter.ts` (podcast search, episodes, categories) | Podcast search returns an empty list |
 | `PODCAST_INDEX_API_SECRET` | Same adapter (SHA-1 auth) | Same |
 | `JAMENDO_CLIENT_ID` | `src/services/api/jamendoAdapter.ts` (music search, trending) | Music search returns an empty list |
-| `JAMENDO_CLIENT_SECRET` | Same adapter | Same |
 | `AUDIUS_API_KEY` | `src/services/api/audiusAdapter.ts` (music search) | Audius search returns an empty list |
 | `GOOGLE_WEB_CLIENT_ID` | `src/services/authService.ts` (OAuth sign-in) | App falls back to guest session |
+
+> `JAMENDO_CLIENT_SECRET` was removed on 2026-11-18 (Wave B16). The Jamendo
+> v3 **read** api needs the client_id alone — the secret belongs to the
+> OAuth token exchange, which this app never performs. Nothing read it,
+> and it was shipped inside the APK for nothing.
 
 Free keys (no payment required):
 - **Podcast Index**: https://api.podcastindex.org/signup
@@ -79,7 +83,6 @@ In a CI workflow, the recommended pattern is to base64-encode the keystore and s
     echo "PODCAST_INDEX_API_KEY=${{ secrets.PODCAST_INDEX_API_KEY }}" >> android/.env
     echo "PODCAST_INDEX_API_SECRET=${{ secrets.PODCAST_INDEX_API_SECRET }}" >> android/.env
     echo "JAMENDO_CLIENT_ID=${{ secrets.JAMENDO_CLIENT_ID }}" >> android/.env
-    echo "JAMENDO_CLIENT_SECRET=${{ secrets.JAMENDO_CLIENT_SECRET }}" >> android/.env
     echo "AUDIUS_API_KEY=${{ secrets.AUDIUS_API_KEY }}" >> android/.env
     echo "GOOGLE_WEB_CLIENT_ID=${{ secrets.GOOGLE_WEB_CLIENT_ID }}" >> android/.env
 

@@ -1,340 +1,169 @@
-// ─── Radio Browser Hook ─────────────────────────────────────────────────
-// V20.1: rewritten on `useApiQuery` + `useInfiniteApiQuery` per the
-// V18 ideal. The pre-V18 implementation was 329 lines with a
-// per-scope `Map<key, ScopeState>`, `seqRef` for stale-request
-// cancellation, `guardRef` for in-flight dedup, `failedKeyRef`
-// for auto-retry, `wasOnlineRef` for reconnect tracking, an
-// `ensureLoadedRef` to swallow identical triggers, and a
-// hand-rolled debounce of `searchQuery` → `searchTerm`. The
-// V18-ideal version is ~140 lines: 2 useStates (for UI), 1
-// useInfiniteApiQuery (for the active scope's stations), 3
-// useApiQuery (for the tag sheets), no per-scope Map, no refs.
+// ─── Radio — the browse query ────────────────────────────────────────
 //
-// The "scope" is just a TanStack queryKey. Every
-// (filters, searchTerm) combination is its own cache entry;
-// revisiting a combination shows its cached list instantly.
+// The radio-browser adapter's station list for ONE scope.
 //
-// The public surface (UseRadioBrowserReturn) is preserved
-// where the screen consumer uses it; the methods that took
-// `key` arguments in the legacy API now take no args (the
-// hook tracks the active scope internally).
+// The scope is the (genre, country, language, search term) tuple. Every
+// tuple is its own TanStack cache entry, and revisiting a tuple shows
+// its cached list instantly.
+//
+// THE SCOPE IS ONE REQUEST — MEASURED
+// ---------------------------------
+// The radio-browser ENDPOINT takes a term and the filter axes in ONE
+// request: `?name=jazz&tag=rock` answers both, and the answer is
+// neither the name-only set nor the tag-only set (measured 2026-11-18
+// against `de1.api.radio-browser.info`). The adapter exposes that
+// request as `searchStationsWithFilters`.
+//
+// The screen used to enforce "one thing at a time" instead: the
+// adapter had no combined request, so the shell's
+// `autoClearFilterOnSearch` / `autoClearSearchOnFilter` rules made the
+// last choice win and the other axis disappear. The rules are OFF now,
+// because the source CAN answer both — a filter that is silently
+// dropped is the exact defect those rules existed to prevent.
 
-import {useCallback, useEffect, useMemo, useState} from 'react';
+import {useMemo} from 'react';
 import {
-  searchStations,
-  getStationsByFilters,
+  searchStationsWithFilters,
   getTopStations,
-  getGenres,
-  getCountries,
-  getLanguages,
   RADIO_BROWSER_RETRIES,
   type RadioFilterSet,
 } from '../../../infrastructure/api/radioBrowser/adapter';
-import {useApiQuery, useInfiniteApiQuery} from '../../../hooks/useApiQuery';
-import {useNetworkStatus} from '../../../hooks/useNetworkStatus';
+import {useInfiniteApiQuery} from '../../../hooks/useApiQuery';
 import {usePullToRefresh} from '../../_shared/pullToRefresh';
-import {useLiveFavoritesStore} from '../../../state';
 import type {RadioStationResult} from '../../../types/api';
-import type {RadioBrowseTag} from '../../../infrastructure/api/radioBrowser/adapter';
-import {stationSubtitle} from '../related/stationRow';
 
+/** The station list's page size. */
 const PAGE_SIZE = 30;
-const TAGS_LIMIT = 40;
 
-export type RadioFilterId = 'genre' | 'country' | 'language';
-
-export interface RadioFilters {
-  genre: string | null;
-  country: string | null;
-  language: string | null;
+/**
+ * The active scope — the three filter axes and the search term.
+ *
+ * An empty axis means "no filter on this axis".
+ */
+export interface RadioScope {
+  genre: string;
+  country: string;
+  language: string;
+  searchTerm: string;
 }
 
-export interface RadioScopeState {
+export const EMPTY_RADIO_SCOPE: RadioScope = {
+  genre: '',
+  country: '',
+  language: '',
+  searchTerm: '',
+};
+
+export interface RadioBrowseState {
   items: RadioStationResult[];
+  /**
+   * "The query settled WITH DATA".
+   *
+   * It used to mean "the query settled" (`!!data || !!error`), which is
+   * TRUE when the FIRST page failed — and every failure branch on the
+   * screen tested `!hasLoaded`, so a page-1 failure fell through every
+   * branch and rendered a BLANK LIST: no message, no spinner, no
+   * button.
+   */
   hasLoaded: boolean;
   isLoading: boolean;
   isLoadingMore: boolean;
+  /** The source's own `hasNextPage` — not a re-derived guess. */
+  hasMore: boolean;
+  /** The FIRST page's failure — the error card's business. */
   error: string | null;
-}
-
-export interface RadioBrowseTags {
-  genres: RadioBrowseTag[];
-  countries: RadioBrowseTag[];
-  languages: RadioBrowseTag[];
-}
-
-interface UseRadioBrowserReturn {
-  // filters + search
-  filters: RadioFilters;
-  setFilter: (id: RadioFilterId, key: string) => void;
-  resetFilters: () => void;
-  activeFilterCount: number;
-  searchQuery: string;
-  setSearchQuery: (q: string) => void;
-  setSearchTerm: (q: string) => void;
-  isSearchActive: boolean;
-  isOnline: boolean;
-  // data
-  getScope: () => RadioScopeState;
+  /**
+   * The failed NEXT PAGE's error — the footer's copy.
+   *
+   * ONE FAILURE, ONE MESSAGE: the list's error and the footer's error
+   * are different failures, and the footer used to announce the first
+   * one too ("Couldn't load MORE" for a load-more that never started).
+   */
+  pageError: string | null;
   loadMore: () => void;
   retry: () => void;
+  /**
+   * True while a user-started pull-to-refresh is running.
+   *
+   * NOT `isFetching`: that flag is also true while the next PAGE loads
+   * and during a background refetch, so the refresh spinner used to
+   * appear at the top of the list for a fetch the user never asked for.
+   * See `src/screens/_shared/pullToRefresh.ts`.
+   */
   refreshing: boolean;
-  handleRefresh: () => void;
-  /**
-   * Whether the source has another page.
-   *
-   * The hook owns it — it is TanStack's own `hasNextPage`. The screen used
-   * to re-derive it from a SECOND copy of the page size
-   * (`rows.length % PAGE_SIZE === 0`), which says "maybe more" whenever
-   * the loaded count happens to be a multiple of 30 — including when the
-   * server has no more pages. The footer's "tap to retry" button then
-   * rendered and did nothing.
-   */
-  hasMore: boolean;
-  tags: RadioBrowseTags;
-  tagsLoaded: boolean;
-  /**
-   * Which tag groups have arrived.
-   *
-   * One group used to gate all three: a single failing tag query emptied
-   * every group in the sheet, with no error and no retry.
-   */
-  tagsReady: {genres: boolean; countries: boolean; languages: boolean};
-  // favorites
-  isFavoriteId: (id: string) => boolean;
-  toggleFavorite: (station: RadioStationResult) => void;
+  /** Run the pull-to-refresh gesture. */
+  refresh: () => Promise<void>;
 }
 
-const EMPTY_FILTERS: RadioFilters = {
-  genre: null,
-  country: null,
-  language: null,
-};
+export function useRadioBrowser(scope: RadioScope): RadioBrowseState {
+  const queryKey = useMemo(
+    () =>
+      [
+        'radioBrowser',
+        'browse',
+        scope.genre,
+        scope.country,
+        scope.language,
+        scope.searchTerm.trim(),
+      ] as const,
+    [scope.genre, scope.country, scope.language, scope.searchTerm],
+  );
 
-function errorMessage(err: unknown): string | null {
-  if (!err) return null;
-  if (err instanceof Error) return err.message;
-  return String(err);
-}
-
-// ─── Hook ──────────────────────────────────────────────────────────────
-
-export function useRadioBrowser(initialTag?: string): UseRadioBrowserReturn {
-  const {isOnline} = useNetworkStatus();
-
-  // ── Filter + search state (UI-level concerns) ──
-  const [filters, setFilters] = useState<RadioFilters>({
-    genre: initialTag ?? null,
-    country: null,
-    language: null,
-  });
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
-  const isSearchActive = searchTerm.trim().length > 0;
-  const activeFilterCount =
-    (filters.genre ? 1 : 0) +
-    (filters.country ? 1 : 0) +
-    (filters.language ? 1 : 0);
-
-  // ── Tag sheet (genres / countries / languages) — 3 parallel
-  //    queries, no per-scope state machine ──
-  const genresQ = useApiQuery<RadioBrowseTag[]>({
-    queryKey: ['radioBrowser', 'tags', 'genres', TAGS_LIMIT],
-    queryFn: () => getGenres(TAGS_LIMIT),
-    staleTime: 5 * 60_000,
-    retry: RADIO_BROWSER_RETRIES,
-  });
-  const countriesQ = useApiQuery<RadioBrowseTag[]>({
-    queryKey: ['radioBrowser', 'tags', 'countries', TAGS_LIMIT],
-    queryFn: () => getCountries(TAGS_LIMIT),
-    staleTime: 5 * 60_000,
-    retry: RADIO_BROWSER_RETRIES,
-  });
-  const languagesQ = useApiQuery<RadioBrowseTag[]>({
-    queryKey: ['radioBrowser', 'tags', 'languages', TAGS_LIMIT],
-    queryFn: () => getLanguages(TAGS_LIMIT),
-    staleTime: 5 * 60_000,
-    retry: RADIO_BROWSER_RETRIES,
-  });
-
-  // ── The big one: server-paginated stations per
-  //    (filters, searchTerm) tuple. Radio-Browser supports
-  //    `offset`/`limit` natively, so useInfiniteApiQuery is
-  //    the right primitive (per-page network request; TanStack
-  //    dedups and cancels overlapping pages). Every tuple
-  //    is its own cache entry. ──
-  const stationsQ = useInfiniteApiQuery<RadioStationResult[]>({
-    queryKey: [
-      'radioBrowser',
-      'browse',
-      filters,
-      searchTerm.trim(),
-    ],
-    initialPageParam: 1,
+  const query = useInfiniteApiQuery<RadioStationResult[]>({
+    queryKey,
     queryFn: ({pageParam, signal}) => {
       const page = pageParam as number;
-      const term = searchTerm.trim();
-      if (term) {
-        return searchStations(term, {limit: PAGE_SIZE, page}, signal);
-      }
-      const filterSet: RadioFilterSet = {};
-      if (filters.genre) filterSet.genre = filters.genre;
-      if (filters.country) filterSet.country = filters.country;
-      if (filters.language) filterSet.language = filters.language;
-      if (Object.keys(filterSet).length > 0) {
-        return getStationsByFilters(filterSet, {limit: PAGE_SIZE, page}, signal);
+      const term = scope.searchTerm.trim();
+      const filters: RadioFilterSet = {};
+      if (scope.genre) filters.genre = scope.genre;
+      if (scope.country) filters.country = scope.country;
+      if (scope.language) filters.language = scope.language;
+      // A term AND the filters travel in ONE request. An empty term is
+      // safe to send — the endpoint answers `name=` exactly like no
+      // name at all (measured) — so the filter-only path is the same
+      // call.
+      if (term || Object.keys(filters).length > 0) {
+        return searchStationsWithFilters(
+          term,
+          filters,
+          {limit: PAGE_SIZE, page},
+          signal,
+        );
       }
       return getTopStations({limit: PAGE_SIZE, page}, signal);
     },
-    getNextPageParam: (lastPage, _pages, lastPageParam) => {
-      // If the page is short, there are no more — stop here.
-      if (lastPage.length < PAGE_SIZE) return undefined;
-      return (lastPageParam as number) + 1;
-    },
+    initialPageParam: 1,
+    // A page that came back SHORT is the last page — the source has
+    // nothing more to give.
+    getNextPageParam: (lastPage, _pages, lastPageParam) =>
+      lastPage.length < PAGE_SIZE ? undefined : (lastPageParam as number) + 1,
     staleTime: 60_000,
     retry: RADIO_BROWSER_RETRIES,
   });
 
-  // ── Filter actions ──
-  const setFilter = useCallback(
-    (id: RadioFilterId, key: string) => {
-      const next = key || null;
-      setFilters(prev => {
-        if (prev[id] === next) return prev;
-        return {...prev, [id]: next};
-      });
-    },
-    [],
-  );
-  const resetFilters = useCallback(() => {
-    setFilters(EMPTY_FILTERS);
-  }, []);
+  const items = useMemo(() => (query.data?.pages ?? []).flat(), [query.data]);
 
-  // ── Data assembly (the only "per-scope" thing the hook tracks) ──
-  const allPages = stationsQ.data?.pages ?? [];
-  const items = useMemo(() => allPages.flat(), [allPages]);
-  const hasMore = stationsQ.hasNextPage ?? false;
-
-  // The consumer's surface. We expose `getScope()` (no args)
-  // for API compat with the legacy hook — the screen consumer
-  // can be updated to use `data` directly in a follow-up.
-  const getScope = useCallback((): RadioScopeState => ({
-    items,
-    // "The query has settled WITH DATA" — not "the query settled".
-    //
-    // It used to be `!!data || !!error`, which is true when the FIRST
-    // page failed, and both of the screen's failure branches tested
-    // `!hasLoaded`. So a page-1 failure fell through every branch and
-    // rendered an EMPTY LIST: no message, no spinner, no button, and
-    // the "Could not load stations." toast never fired either.
-    hasLoaded: !!stationsQ.data,
-    isLoading: stationsQ.isFetching,
-    isLoadingMore: stationsQ.isFetchingNextPage,
-    error: errorMessage(stationsQ.error),
-  }), [items, stationsQ.data, stationsQ.error, stationsQ.isFetching, stationsQ.isFetchingNextPage]);
-
-  const loadMore = useCallback(() => {
-    if (stationsQ.hasNextPage && !stationsQ.isFetchingNextPage) {
-      void stationsQ.fetchNextPage();
-    }
-  }, [stationsQ]);
-
-  const retry = useCallback(() => {
-    void stationsQ.refetch();
-  }, [stationsQ]);
-
-  // The GESTURE owns the spinner, not the query. `isFetching` is also
-  // true for a background refetch (the query is stale, the app comes
-  // back to the foreground) and for the next PAGE — so binding the
-  // refresh control to it puts a spinner for work the user never asked
-  // for in the one place that says "refreshing". See
+  // The GESTURE owns the spinner, not the query — see
   // `src/screens/_shared/pullToRefresh.ts`.
-  const {refreshing, refresh} = usePullToRefresh(stationsQ.refetch);
-  const tags: RadioBrowseTags = useMemo(
-    () => ({
-      genres: genresQ.data ?? [],
-      countries: countriesQ.data ?? [],
-      languages: languagesQ.data ?? [],
-    }),
-    [genresQ.data, countriesQ.data, languagesQ.data],
-  );
-  const tagsLoaded =
-    !!genresQ.data && !!countriesQ.data && !!languagesQ.data;
-
-  // ── Favorites ──
-  // V23 W24 (2026-11-05) — select the stable array, derive outside the
-  // selector. Filtering inside the selector built a NEW array on every call,
-  // so zustand's `Object.is` comparison never matched and the store drove an
-  // unbounded re-render loop ("Maximum update depth exceeded").
-  const allFavorites = useLiveFavoritesStore(s => s.items);
-  const favorites = useMemo(
-    () => allFavorites.filter(f => f.kind === 'radio'),
-    [allFavorites],
-  );
-  const isFavoriteId = useCallback(
-    (id: string) => favorites.some(f => f.id === id),
-    [favorites],
-  );
-  const toggleFavorite = useCallback(
-    (station: RadioStationResult) => {
-      const existing = favorites.find(f => f.id === station.id);
-      if (existing) {
-        useLiveFavoritesStore.getState().removeLiveFavorite({
-          kind: 'radio',
-          id: station.id,
-        });
-        return;
-      }
-      useLiveFavoritesStore.getState().addLiveFavorite({
-        kind: 'radio',
-        id: station.id,
-        name: station.name,
-        url: station.url,
-        image: station.image,
-        // ONE rule for the subtitle — the same one the browse row uses.
-        // It used to be built twice with two different rules, so the same
-        // station read "Germany · pop,rock,news" in browse and
-        // "Germany · pop" in favourites.
-        subtitle: stationSubtitle(station),
-        // The codec and the bitrate were DROPPED on the way in, so the
-        // favourites row showed no "MP3 · 128 kbps" for a station whose
-        // browse row showed it — even though the store type carries both
-        // and the card renders them.
-        codec: station.codec,
-        bitrate: station.bitrate,
-        addedAt: new Date().toISOString(),
-      });
-    },
-    [favorites],
-  );
+  const {refreshing, refresh} = usePullToRefresh(query.refetch);
 
   return {
-    // filters + search
-    filters,
-    setFilter,
-    resetFilters,
-    activeFilterCount,
-    searchQuery,
-    setSearchQuery,
-    setSearchTerm,
-    isSearchActive,
-    isOnline,
-    // data
-    getScope,
-    loadMore,
-    retry,
-    refreshing,
-    handleRefresh: refresh,
-    hasMore,
-    tags,
-    tagsLoaded,
-    tagsReady: {
-      genres: !!genresQ.data,
-      countries: !!countriesQ.data,
-      languages: !!languagesQ.data,
+    items,
+    hasLoaded: !!query.data,
+    isLoading: query.isFetching,
+    isLoadingMore: query.isFetchingNextPage,
+    hasMore: query.hasNextPage ?? false,
+    error: query.error?.message ?? null,
+    pageError: query.isFetchNextPageError ? (query.error?.message ?? null) : null,
+    loadMore: () => {
+      if (query.hasNextPage && !query.isFetchingNextPage) {
+        void query.fetchNextPage();
+      }
     },
-    // favorites
-    isFavoriteId,
-    toggleFavorite,
+    retry: () => {
+      void query.refetch();
+    },
+    refreshing,
+    refresh,
   };
 }

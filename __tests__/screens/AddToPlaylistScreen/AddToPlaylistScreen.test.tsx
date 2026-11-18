@@ -21,7 +21,6 @@
  *  4. The ticked items land in the chosen playlist.
  */
 
-import React from 'react';
 import {screen, fireEvent, waitFor} from '@testing-library/react-native';
 
 import {renderWithProviders} from '../../helpers/renderWithProviders';
@@ -73,7 +72,6 @@ const TRACK = {
   duration: 201,
   audioUrl: 'https://cdn.jamendo.test/track.mp3',
   imageUrl: 'https://cdn.jamendo.test/cover.jpg',
-  genreName: 'Electronic',
 };
 
 const MOVIE = {

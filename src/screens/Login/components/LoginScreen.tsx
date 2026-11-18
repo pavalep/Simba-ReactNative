@@ -34,7 +34,7 @@ const ERROR_COPY: Record<AuthErrorKind, string> = {
   unknown: '', // falls back to the raw error message
 };
 
-export const LoginScreen: React.FC<Props> = ({navigation}) => {
+export const LoginScreen: React.FC<Props> = () => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
   const {pulseAnim, fadeAnim, isLoading, error, errorKind, handleSignIn, isAuthenticated} =

@@ -26,24 +26,27 @@ import {showsFromSearchRaw as tvmazeShowsFromSearch} from '../src/infrastructure
 
 describe('audiusAdapter', () => {
   it('trackResultFromRaw maps a full track', () => {
-    expect(
-      audiusTrackFromRaw({
-        id: '1',
-        title: 'A',
-        duration: 100,
-        genre: 'rock',
-        description: 'd',
-        user: {id: 'u1', name: 'Alice', handle: 'alice'},
-      }),
-    ).toMatchObject({
+    const mapped = audiusTrackFromRaw({
+      id: '1',
+      title: 'A',
+      duration: 100,
+      description: 'd',
+      user: {id: 'u1', name: 'Alice', handle: 'alice'},
+    });
+    expect(mapped).toMatchObject({
       id: '1',
       title: 'A',
       artistName: 'Alice',
       artistId: 'u1',
       duration: 100,
-      genre: 'rock',
       streamUrl: expect.stringContaining('/v1/tracks/1/stream'),
     });
+    // The wire's `genre` is NOT carried into the result. The Music
+    // detail screen's genre badge was the only reader, and it could never
+    // draw for a Jamendo track (the v3.0 track row has no `genre_name` —
+    // measured 2026-11-18), so the badge and the field went together. A
+    // mapped field with no reader is dead weight in the result type.
+    expect(mapped).not.toHaveProperty('genre');
   });
 
   it('trackResultFromRaw throws AdapterParseError for undefined', () => {
@@ -69,7 +72,6 @@ describe('jamendoAdapter', () => {
     duration: 100,
     audio: 'http://x/audio',
     image: 'http://x/img',
-    genre_name: 'rock',
   };
 
   it('trackResultFromRaw maps a track (id is coerced to number)', () => {
@@ -114,14 +116,14 @@ describe('librivoxAdapter', () => {
     url_iarchive: 'i',
     totaltime: '01:02:03',
     language: 'en',
-    authors: {name: 'Author'},
+    authors: [{id: '1', first_name: 'Author', last_name: 'One'}],
   };
 
   it('audiobookResultFromRaw parses totaltime and author', () => {
     expect(libroBookFromRaw(baseBook)).toEqual({
       id: 1,
       title: 'B',
-      author: 'Author',
+      author: 'Author One',
       description: 'd',
       urlZipFile: 'z',
       urlLibrivox: 'l',

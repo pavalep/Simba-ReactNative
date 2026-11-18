@@ -52,7 +52,6 @@ import type {MediaKind, MediaLane} from '../../types/media';
 import {
   err,
   launchError,
-  networkError,
   ok,
   type Result,
   type StreamError,

@@ -20,7 +20,6 @@
  * §6).
  */
 
-import React from 'react';
 import {StyleSheet, type ViewStyle} from 'react-native';
 import {renderWithProviders} from '../../helpers/renderWithProviders';
 import {AboutScreen} from '../../../src/screens/About/components/AboutScreen';

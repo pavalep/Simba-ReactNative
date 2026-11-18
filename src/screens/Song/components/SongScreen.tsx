@@ -9,7 +9,6 @@ import LinearGradient from 'react-native-linear-gradient';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useTheme} from '../../../theme';
 import {AppText} from '../../../components/core/AppText/AppText';
-import {SvgIcon} from '../../../components/utility/SvgIcon';
 import {BackButton} from '../../../components/utility/BackButton/BackButton';
 import {SimbaStatusBar} from '../../../components/StatusBar';
 import {useAnimatedEntrance} from '../../../hooks/useAnimatedEntrance';

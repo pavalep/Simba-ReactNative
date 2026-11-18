@@ -1,17 +1,14 @@
-export type {LiveTVFilters} from '../hooks/useLiveTVBrowser';
-export type {ChannelRow} from '../components/ChannelCard';
+// ─── Live TV Screen — section shell types ─────────────────────────────
+//
+// The section types live in `src/screens/_shared/` — one copy for the
+// whole app. This file re-exports the TWO the Live TV screen imports, so
+// its own modules can keep importing from `../types`.
+//
+// The screen's OWN types: the row it draws and the navigation props its
+// two routes take.
 
-export interface ActiveFilterChipsProps {
-  filters: import('../hooks/useLiveTVBrowser').LiveTVFilters;
-  /**
-   * The category's NAME — what the chip reads.
-   *
-   * The filter itself holds the category's ID (the source's own slug);
-   * the name is what the user sees, and it comes from the catalogue's
-   * category map.
-   */
-  label: string;
-  onClear: (id: 'category') => void;
-}
+export type {SectionRenderContext} from '../../_shared/sectionRenderContext';
+export type {SectionBrowseConfig} from '../../_shared/sectionBrowseConfig';
 
+export type {ChannelRow} from '../related/channelRow';
 export type {RootStackScreenProps} from '../../../navigation/types';

@@ -32,7 +32,6 @@
  * would pass even if the artwork was dropped on the way to the launch.
  */
 
-import React from 'react';
 import {fireEvent, screen} from '@testing-library/react-native';
 import {renderWithProviders} from '../../helpers/renderWithProviders';
 import {MusicDetailScreen} from '../../../src/screens/MusicDetailScreen/components/MusicDetailScreen';
@@ -66,7 +65,6 @@ const mockTrack: JamendoTrackResult = {
   duration: 240,
   audioUrl: 'https://cdn.example.test/nightdrive.mp3',
   imageUrl: ARTWORK,
-  genreName: 'Electronic',
   mediaType: 'audio',
   type: 'music',
   source: 'api',

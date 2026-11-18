@@ -36,6 +36,7 @@ import {spacing} from '../../theme/tokens';
 import {useNetworkStatus} from '../../hooks/useNetworkStatus';
 import {SimbaStatusBar} from '../../components/StatusBar';
 import {InternalHeader} from '../../components/layout/InternalHeader/InternalHeader';
+import type {IconName} from '../../components/utility/SvgIcon';
 import {SearchBar} from '../../components/core/SearchBar/SearchBar';
 import {FilterChips, type FilterChipItem} from '../../components/utility/FilterChips';
 import {Fab} from '../../components/core/Fab/Fab';
@@ -44,7 +45,7 @@ import {useSectionSearch} from '../../hooks/useSectionSearch';
 import type {SectionOptionsApi} from '../../hooks/useSectionOptions';
 import type {SectionBrowseConfig} from './sectionBrowseConfig';
 import type {SectionRenderContext} from './sectionRenderContext';
-import type {SectionRouteKey, SectionRouteParams} from './sectionRoute';
+import type {SectionRouteParams} from './sectionRoute';
 
 /**
  * The handle a filter chip's key is written with.
@@ -58,7 +59,7 @@ const FILTER_CHIP_PREFIX = 'f:';
 interface Props {
   config: SectionBrowseConfig;
   optionsApi: SectionOptionsApi;
-  routeParams: SectionRouteParams<SectionRouteKey>;
+  routeParams: SectionRouteParams;
   /**
    * Some sources cannot answer a search term AND a filter at the same
    * time. The Podcast Index's `/search/byterm` takes `q` but no `cat`,
@@ -88,6 +89,21 @@ interface Props {
    * that applies.
    */
   autoClearSearchOnFilter?: boolean;
+  /**
+   * An action in the header's TRAILING slot.
+   *
+   * `InternalHeader` has carried a right-action slot all along; the
+   * shell simply did not pass one through, so the Radio screen — the
+   * only catalogue with a second route (the saved stations) — had to
+   * draw its own heart ON TOP of the header. The slot is the header's
+   * own, so the action belongs inside it.
+   */
+  headerRightAction?: {
+    icon: IconName;
+    onPress: () => void;
+    /** A button that carries only an icon has no name. */
+    accessibilityLabel: string;
+  };
 }
 
 export const BrowseLayout: React.FC<Props> = ({
@@ -96,6 +112,7 @@ export const BrowseLayout: React.FC<Props> = ({
   routeParams,
   autoClearFilterOnSearch = false,
   autoClearSearchOnFilter = false,
+  headerRightAction,
 }) => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
@@ -248,7 +265,7 @@ export const BrowseLayout: React.FC<Props> = ({
         {backgroundColor: colors.background.primary, paddingTop: insets.top},
       ]}>
       <SimbaStatusBar variant="home" />
-      <InternalHeader title={config.title} />
+      <InternalHeader title={config.title} rightAction={headerRightAction} />
 
       <View style={styles.searchSection}>
         <SearchBar

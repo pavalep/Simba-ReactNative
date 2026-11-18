@@ -16,7 +16,7 @@ import {SvgIcon} from '../../../../components/utility/SvgIcon';
 import {BackButton} from '../../../../components/utility/BackButton/BackButton';
 import {SimbaStatusBar} from '../../../../components/StatusBar';
 import {MediaImage} from '../../../../components/utility/MediaImage';
-import {radius, spacing} from '../../../../theme/tokens';
+import {radius} from '../../../../theme/tokens';
 import {FONT_FAMILY} from '../../../../constants/fontFamily';
 import {useCachedArt} from '../../../../hooks/useCachedArt';
 import {useMoreFromArtist} from '../../../../hooks/useMoreFromArtist';

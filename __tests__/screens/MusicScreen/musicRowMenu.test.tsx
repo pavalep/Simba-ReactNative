@@ -48,7 +48,6 @@ const TRACK: JamendoTrackResult = {
   duration: 180,
   audioUrl: 'https://example.test/a.mp3',
   imageUrl: 'https://example.test/cover.jpg',
-  genreName: 'rock',
 };
 
 async function renderRow(

@@ -441,7 +441,6 @@ describe('usePlaybackCheckpointSync', () => {
     });
 
     it('does NOT capture on the periodic cadence', async () => {
-      const view = await mountedAt(90_000);
 
       tick(CHECKPOINT_INTERVAL_MS * 4);
 

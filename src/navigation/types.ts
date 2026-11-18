@@ -153,9 +153,19 @@ export type RootStackParamList = {
   // ── P38: TV shows (TVMaze) ──
   ShowsScreen:
     | {
-        initialTab?: 'search' | 'today' | 'browse';
-        /** P53: when set, the Browse tab is preselected with this TVMaze genre. */
-        initialGenre?: string;
+        /**
+         * The screen's SCOPE. 'browse' = the catalogue, 'today' =
+         * the "Airing today" scope. Both are the scope group's option
+         * keys, so the shared seed hook (`useSectionOptions`) carries
+         * them in.
+         *
+         * The legacy 'search' value is NOT a scope — the search scope
+         * is the search FIELD — so it is dropped and the screen falls
+         * back to its default scope.
+         */
+        initialTab?: 'browse' | 'today';
+        /** The term the screen starts with (seeds the shared search field). */
+        query?: string;
       }
     | undefined;
   ShowDetail: {showId: number; showName?: string};

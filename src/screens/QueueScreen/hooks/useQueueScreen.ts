@@ -7,7 +7,7 @@
 // ────────────────────────────────────────────────────────
 
 import {useCallback, useMemo} from 'react';
-import {useNavigation, useRoute} from '@react-navigation/native';
+import {useRoute} from '@react-navigation/native';
 import {playlistActions, playlistKindForItems, CROSS_LANE_QUEUE_REASON} from '../../../features/playlists';
 import {getMpvPlayerModule} from '../../../infrastructure/player';
 import {useHaptics} from '../../../hooks/useHaptics';
@@ -20,7 +20,6 @@ import type {MediaKind, MediaLane, MediaSource} from '../../../types/media';
 import type {RootStackScreenProps} from '../../../navigation/types';
 import {usePlayerStore, toPlaylistEntry, useRecentHistoryStore} from '../../../state';
 import {
-  resolveStreamType,
   usePlayer,
   usePlay,
   isNetworkError,
@@ -77,8 +76,6 @@ export interface UseQueueScreenResult {
 }
 
 export function useQueueScreen(): UseQueueScreenResult {
-  const navigation =
-    useNavigation<RootStackScreenProps<'Queue'>['navigation']>();
   const route = useRoute<RootStackScreenProps<'Queue'>['route']>();
   const haptics = useHaptics();
   // W7 P28: typed `play()` for jumping to a history entry from a

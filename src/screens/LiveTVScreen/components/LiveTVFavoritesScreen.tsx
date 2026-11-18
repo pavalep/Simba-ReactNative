@@ -1,43 +1,49 @@
 // ─── Live TV Favorites Screen ────────────────────────────────────────
-// Wave 8: dedicated favorites page reached from the Live TV header heart.
-// Same ChannelCard visual contract; long-press menu mirrors the main
-// screen, but 'favorite' → force-remove.
+//
+// The channels the user saved, on their own route.
+//
+// It draws the SAME row as the browse list (`ChannelCard`), so the two
+// surfaces cannot drift: the same artwork plate, the same name and
+// caption, and — since the row owns its menu — the same long-press menu.
+//
+// The menu it opens used to be a `OptionSheetDialog` of its own, offering
+// "Remove Favorite / Add to Playlist / Bookmark / Share". "Add to Playlist"
+// is GONE: the app's playlist rule refuses live TV
+// (`PLAYLIST_ALLOWED_MEDIA_KINDS`), so the action opened a
+// `PlaylistSheet` that could only refuse the channel. What replaced it is
+// the two actions the row could not do before — Play Next and Add to
+// Queue — plus the same favourite, bookmark and share actions the browse
+// row offers.
+//
+// Its SHARE link used to point at `LiveTVScreen` with `fileUri`/`fileTitle`
+// — a path (`tv/:categoryId?`) that parses NEITHER, so the recipient
+// landed on the Live TV browser with no channel at all. The share target
+// is now the app's ONE target for a channel (`related/channelRow.ts`).
 
-import React, {useCallback, useMemo, useState} from 'react';
-import {
-  Alert,
-  View,
-  FlatList,
-  TouchableOpacity,
-  StyleSheet,
-} from 'react-native';
+import React, {useCallback, useMemo} from 'react';
+import {FlatList, StyleSheet, View} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../../theme';
 import {spacing} from '../../../theme/tokens';
-import type {RootStackScreenProps} from '../types';
+import {useResumeAwareLaunch} from '../../../infrastructure/player';
 import {SimbaStatusBar} from '../../../components/StatusBar';
 import {InternalHeader} from '../../../components/layout/InternalHeader/InternalHeader';
-import {AppText} from '../../../components/core/AppText/AppText';
 import {Placeholder} from '../../../components/feedback/Placeholder';
-import {shareContent} from '../../../services/shareService';
-import {useBookmarks} from '../../../features/bookmarks';
-import {useToast} from '../../../components/feedback/Toast';
-import {useHaptics} from '../../../hooks/useHaptics';
-import {PlaylistSheet} from '../../../components/sheets/PlaylistSheet/PlaylistSheet';
-import {OptionSheetDialog} from '../../../components/core/OptionSheetDialog/OptionSheetDialog';
-import { resolveStreamType, useResumeAwareLaunch } from '../../../infrastructure/player';
-import {useLiveFavoritesStore} from '../../../state';
+import {useLiveTVFavorites} from '../hooks/useLiveTVFavorites';
+import {ChannelCard} from './ChannelCard';
 import {
-  ChannelCard,
+  channelLaunchOptions,
   favToRow,
   type ChannelRow,
-} from '../components/ChannelCard';
+} from '../related/channelRow';
+import text from '../related/textContent.json';
+import type {RootStackScreenProps} from '../types';
 
 type Props = RootStackScreenProps<'LiveTVFavoritesScreen'>;
 
-// A MODULE-level separator. It used to be an inline arrow, which is a
-// new component type on every render — so the FlatList re-created every
-// separator on every render.
+/** A MODULE-level separator. It used to be an inline arrow, which is a
+ *  new component type on every render — so the FlatList re-created every
+ *  separator on every render. */
 const ItemSeparator: React.FC = () => {
   const {colors} = useTheme();
   return (
@@ -53,124 +59,26 @@ const ItemSeparator: React.FC = () => {
 export const LiveTVFavoritesScreen: React.FC<Props> = () => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
-  const toast = useToast();
-  const haptics = useHaptics();
-  const {add: addBookmark} = useBookmarks();
+  const {favorites} = useLiveTVFavorites();
   const {openPlayer} = useResumeAwareLaunch();
 
-  // V23 W24 (2026-11-05) — select the stable array, derive outside the
-  // selector. Filtering inside the selector built a NEW array on every call,
-  // so zustand's `Object.is` comparison never matched and the store drove an
-  // unbounded re-render loop ("Maximum update depth exceeded").
-  const allFavorites = useLiveFavoritesStore(s => s.items);
-  const favorites = useMemo(
-    () => allFavorites.filter(f => f.kind === 'tv'),
-    [allFavorites],
-  );
   const rows = useMemo<ChannelRow[]>(
     () => favorites.map(favToRow),
     [favorites],
   );
 
-  const [menuRow, setMenuRow] = useState<ChannelRow | null>(null);
-  const [menuVisible, setMenuVisible] = useState(false);
-  const [sheetItem, setSheetItem] = useState<
-    React.ComponentProps<typeof PlaylistSheet>['currentItem'] | null
-  >(null);
-
+  /**
+   * A row tap plays the channel — with the SAME payload the browse list
+   * uses (`related/channelRow.ts`). The favourites screen used to launch
+   * without the channel's KIND, so the seam defaulted it to the lane and
+   * the channel was recorded in Recently Played as a plain video instead
+   * of 'live-tv' — and the app HAS a label for it.
+   */
   const handleChannelPress = useCallback(
     (row: ChannelRow) => {
-      openPlayer({
-        uri: row.url,
-        title: row.name,
-        type: resolveStreamType('live-tv'),
-      });
+      openPlayer(channelLaunchOptions(row));
     },
     [openPlayer],
-  );
-
-  const handleLongPress = useCallback((row: ChannelRow) => {
-    setMenuRow(row);
-    setMenuVisible(true);
-  }, []);
-
-  const handleMenuSelect = useCallback(
-    (value: string | number) => {
-      const row = menuRow;
-      if (!row) return;
-      switch (value) {
-        case 'favorite':
-          useLiveFavoritesStore.getState().removeLiveFavorite({kind: 'tv', id: row.id});
-          toast.show('Removed from favorites');
-          haptics.light();
-          break;
-        case 'playlist':
-          setSheetItem({
-            fileUri: row.url,
-            title: row.name,
-            duration: 0,
-            thumbnailPath: row.image || undefined,
-            source: 'api',
-            type: 'live-tv',
-            provider: 'iptv',
-            mediaType: 'video',
-          });
-          break;
-        case 'bookmark': {
-          const input = {
-            fileUri: row.url,
-            title: row.name,
-            position: 0,
-            duration: 0,
-            label: '',
-            thumbnailPath: row.image || undefined,
-            mediaType: 'video' as const,
-            type: 'live-tv' as const,
-            source: 'api' as const,
-            provider: 'iptv',
-          };
-          const result = addBookmark(input);
-          if (result.status === 'requires-confirmation') {
-            Alert.alert(
-              'Bookmark limit reached',
-              `Adding “${row.name}” will remove the oldest bookmark “${result.candidate.title}”. Continue?`,
-              [
-                {text: 'Cancel', style: 'cancel'},
-                {
-                  text: 'Remove & Add',
-                  style: 'destructive',
-                  onPress: () => addBookmark(result.requested, {evictId: result.candidate.id}),
-                },
-              ],
-            );
-          } else {
-            toast.show('Channel bookmarked');
-          }
-          break;
-        }
-        case 'share':
-          shareContent({
-            route: 'LiveTVScreen',
-            params: {
-              fileUri: row.url,
-              fileTitle: row.name,
-              source: 'api',
-              type: 'live-tv',
-              provider: 'iptv',
-            },
-            title: row.name,
-            subtitle: row.subtitle,
-          });
-          break;
-      }
-      setMenuRow(null);
-    },
-    [
-      menuRow,
-      addBookmark,
-      toast,
-      haptics,
-    ],
   );
 
   return (
@@ -183,15 +91,15 @@ export const LiveTVFavoritesScreen: React.FC<Props> = () => {
         },
       ]}>
       <SimbaStatusBar variant="home" />
-      <InternalHeader title="Favorite Channels" />
+      <InternalHeader title={text.favorites.title} />
 
       {rows.length === 0 ? (
         <Placeholder
           variant="empty"
           anchor="top-third"
           icon="bookmark"
-          title="No favorite channels yet."
-          message="Long-press any channel on Live TV to save it here."
+          title={text.favorites.emptyTitle}
+          message={text.favorites.emptyMessage}
         />
       ) : (
         <FlatList
@@ -202,7 +110,6 @@ export const LiveTVFavoritesScreen: React.FC<Props> = () => {
               row={item}
               isFavorite
               onPress={handleChannelPress}
-              onLongPress={handleLongPress}
             />
           )}
           contentContainerStyle={styles.listContent}
@@ -212,28 +119,6 @@ export const LiveTVFavoritesScreen: React.FC<Props> = () => {
           maxToRenderPerBatch={10}
         />
       )}
-
-      <OptionSheetDialog
-        visible={menuVisible}
-        title={menuRow?.name ?? 'Channel Options'}
-        options={[
-          {label: 'Remove Favorite', value: 'favorite'},
-          {label: 'Add to Playlist', value: 'playlist'},
-          {label: 'Bookmark', value: 'bookmark'},
-          {label: 'Share', value: 'share'},
-        ]}
-        selectedValue={null}
-        onSelect={handleMenuSelect}
-        onClose={() => setMenuVisible(false)}
-        colors={colors}
-      />
-      <PlaylistSheet
-        visible={sheetItem !== null}
-        onClose={() => setSheetItem(null)}
-        currentItem={
-          sheetItem ?? {fileUri: '', title: '', duration: 0}
-        }
-      />
     </View>
   );
 };

@@ -10,7 +10,6 @@ import {
   resolveStreamType,
   useOpenPlaylist,
   usePlayer,
-  useResumeAwareLaunch,
 } from '../../../infrastructure/player';
 import {useMediaStore} from '../../../state';
 import {usePlayerStore} from '../../../state';
@@ -21,7 +20,6 @@ type Route = RouteProp<RootStackParamList, 'AlbumScreen'>;
 export function useAlbumScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
-  const {openPlayer} = useResumeAwareLaunch();
   // V15 Phase 64: `useOpenPlaylist` absorbs the "play all" two-step
   // pattern (entries extraction + start-track dispatch + openPlayer).
   const {openPlaylist} = useOpenPlaylist();

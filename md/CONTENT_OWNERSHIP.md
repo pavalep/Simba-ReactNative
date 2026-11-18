@@ -299,6 +299,15 @@ Every page reachable from the Profile's rails, read from source. The question as
 | Content | Shown by | Cited |
 |---|---|---|
 | **The playlist list and the same 3 kind-filter chips** | All Playlists **and** the Library's "Playlists" content mode — both read `usePlaylists()` and both use `LOCAL_PLAYLIST_FILTERS` | `useAllPlaylistsScreen.ts:56-60`, `useLibraryScreen.ts:119,142-145`, `localFilesConfig.ts:58-65` |
+
+> **CLOSED 2026-11-18 (Wave B16).** The row above described a repetition
+> that no longer exists. The Library's "Playlists" **content mode** was
+> removed — §6.4's own change list below did it: the title dropdown's
+> "Playlists" entry now **navigates to All Playlists** instead of
+> swapping what the Library renders (`useLibraryScreen.ts:246-248`), and
+> the Library's segments are Folders / Audio / Artists / Albums. All
+> Playlists is the one owner of the playlist list and of the kind chips.
+> The row is kept so the history of the decision is not lost.
 | **Creating a playlist** | All Playlists' header button **and** the Library's "+" FAB | `AllPlaylistsScreen.tsx:145-150`, `LibraryScreenContent.tsx:429-433` |
 | **The bookmark count** | Bookmarks' "N saved" **and** the Profile's row trailing count | `BookmarksScreen.tsx:84`, `ProfileScreen.tsx:238-240` |
 | **The bookmark list** | Bookmarks **and** Home's rail | `useBookmarksScreen.ts:41`, `useHomeScreen.ts:359` |

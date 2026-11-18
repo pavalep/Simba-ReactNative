@@ -196,7 +196,6 @@ export interface AudiusTrackResult extends ApiMediaClassification {
   artistName: string;
   artistId: string;
   duration: number;
-  genre: string;
   streamUrl: string;
   artworkUrl: string;
   description: string;
@@ -241,7 +240,6 @@ export interface JamendoTrackResult extends ApiMediaClassification {
   duration: number;
   audioUrl: string;
   imageUrl: string;
-  genreName: string;
 }
 
 // ─── Internet Archive Audio ──────────────────────────────────────────────

@@ -2,7 +2,6 @@ import {useCallback, useImperativeHandle, type ForwardedRef} from 'react';
 import {useSessionStore} from '../../state';
 import {
   useRecentHistoryStore,
-  MAX_RECENT_HISTORY_ENTRIES,
   type RecentHistoryEntryInput,
   type RecentHistoryEntry,
 } from '../../state';

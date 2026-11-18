@@ -17,7 +17,7 @@
 // into Jamendo's own `offset` — Jamendo has no `page` parameter. See
 // `jamendoPaging` in the adapter for the measurement that proved it.
 
-import {useCallback, useMemo, useState} from 'react';
+import {useMemo, useState} from 'react';
 import {
   searchJamendoTracks,
   getJamendoTracksByGenre,

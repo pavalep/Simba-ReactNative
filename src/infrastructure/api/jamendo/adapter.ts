@@ -24,7 +24,7 @@
  * stays in the service function (not the convertor) because it's
  * HTTP-fan-out, not data shape.
  */
-import {apiFetch, ApiError} from '../apiClient';
+import {apiFetch} from '../apiClient';
 import {ENV} from '../../../constants/env';
 import {AdapterParseError} from '../adapterErrors';
 import type {JamendoTrackResult, ApiSearchOptions} from '../../../types/api';
@@ -73,7 +73,7 @@ export function decodeJamendoText(value: string): string {
         if (!Number.isFinite(code)) return match;
         try {
           return String.fromCodePoint(code);
-        } catch (e) {
+    } catch {
           return match;
         }
       }
@@ -91,7 +91,6 @@ interface JamendoTrackRaw {
   duration: number;
   audio: string;
   image: string;
-  genre_name: string;
 }
 
 interface JamendoResponseRaw<T> {
@@ -200,7 +199,6 @@ function parseRawJamendoTrack(
     duration: t.duration,
     audioUrl: t.audio,
     imageUrl: t.image ?? '',
-    genreName: decodeJamendoText(t.genre_name ?? ''),
   };
 }
 
@@ -326,8 +324,48 @@ export async function getJamendoTracksByGenre(
  *
  * So the request is repeated, UNCHANGED, while it answers with nothing.
  * The parameters are never varied — see the note on `order` below.
+ *
+ * ## WAVE B16 — the retry is now BOUNDED, and the envelope says when
+ *
+ * The retry used to be UNCONDITIONAL: every empty page cost four
+ * requests. That is right for a page the API declined to answer and
+ * wrong for a page that legitimately has nothing — and the search path
+ * measured exactly that: "four retried requests for a page that does not
+ * exist" (see the paging note above).
+ *
+ * The envelope already carries the answer. `headers.results_count` is
+ * the number of rows the query HAS, so:
+ *
+ *   • `results_count === 0` → the query has no rows at all. That is an
+ *     ANSWER, not a refusal: one request, no retry.
+ *   • the page's `offset` is at or past `results_count` → the page is
+ *     past the end of the catalogue. Also an answer: one request, no
+ *     retry.
+ *   • otherwise the page is INSIDE the catalogue and came back empty →
+ *     the API declined to answer it. Retry, unchanged, as before.
+ *
+ * The coverage the retry buys is unchanged — a flaky page inside the
+ * catalogue still gets four attempts, and the measurement above is why
+ * four is the number. What is gone is the four requests spent on a page
+ * that was never going to have rows.
  */
 const EMPTY_RETRY_ATTEMPTS = 4;
+
+/**
+ * Is this empty page a real answer rather than a refusal?
+ *
+ * `offset` is the page's offset into the catalogue and `resultsCount` is
+ * what the envelope says the catalogue holds. A page at or past the end
+ * of it has nothing to return, and asking again cannot change that.
+ */
+function emptyIsAnAnswer(
+  offset: number,
+  resultsCount: number | undefined,
+): boolean {
+  if (resultsCount === undefined) return false;
+  if (resultsCount === 0) return true;
+  return offset >= resultsCount;
+}
 
 /**
  * `order` selects a POOL, not a sort.
@@ -344,6 +382,12 @@ async function fetchTracksWithRetry(
 ): Promise<JamendoTrackResult[]> {
   let lastEmpty: JamendoTrackResult[] = [];
 
+  // The page's offset into the catalogue — the envelope's count is
+  // compared against it to tell a page that is past the end from a page
+  // the API declined to answer.
+  const offset =
+    typeof params.offset === 'number' ? params.offset : 0;
+
   for (let attempt = 0; attempt < EMPTY_RETRY_ATTEMPTS; attempt++) {
     const raw = await apiFetch<JamendoResponseRaw<JamendoTrackRaw>>({
       config: JAMENDO_CONFIG,
@@ -358,6 +402,10 @@ async function fetchTracksWithRetry(
     });
     const results = trackResultsFromResponseRaw(raw);
     if (results.length > 0) {
+      return results;
+    }
+    // The envelope's own count says whether this empty is an answer.
+    if (emptyIsAnAnswer(offset, raw?.headers?.results_count)) {
       return results;
     }
     lastEmpty = results;

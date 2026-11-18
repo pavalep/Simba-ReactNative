@@ -13,7 +13,7 @@ import {EmptyState} from '../../../components/feedback/EmptyState/EmptyState';
 import {useConfirmDialog} from '../../../components/core/Dialog/ConfirmDialog';
 import {useAnimatedEntrance} from '../../../hooks/useAnimatedEntrance';
 import {useBookmarksScreen} from '../hooks/useBookmarksScreen';
-import textContent from '../related/textContent';
+import text from '../related/textContent.json';
 
 export const BookmarksScreen: React.FC = () => {
   const {colors} = useTheme();
@@ -45,9 +45,9 @@ export const BookmarksScreen: React.FC = () => {
   const handleDelete = useCallback(
     async (id: string) => {
       const confirmed = await confirmDelete({
-        title: 'Remove Bookmark',
-        message: 'Remove this bookmark?',
-        confirmLabel: 'Remove',
+        title: text.dialogs.removeTitle,
+        message: text.dialogs.removeMessage,
+        confirmLabel: text.dialogs.removeConfirmLabel,
         destructive: true,
       });
       if (confirmed) {
@@ -59,9 +59,9 @@ export const BookmarksScreen: React.FC = () => {
 
   const handleClearAll = useCallback(async () => {
     const confirmed = await confirmClear({
-      title: textContent.clearAllTitle,
-      message: textContent.clearAllMsg,
-      confirmLabel: 'Clear All',
+      title: text.dialogs.clearAllTitle,
+      message: text.dialogs.clearAllMessage,
+      confirmLabel: text.dialogs.clearAllConfirmLabel,
       destructive: true,
     });
     if (confirmed) {
@@ -85,14 +85,18 @@ export const BookmarksScreen: React.FC = () => {
           The destructive control is now a NAMED one: a "Clear All"
           button that says what it does, in the error colour. */}
       <InternalHeader
-        title="Bookmarks"
-        subtitle={allBookmarks.length > 0 ? `${bookmarkCount} saved` : undefined}
+        title={text.header.title}
+        subtitle={
+          allBookmarks.length > 0
+            ? text.header.countSaved.replace('{count}', String(bookmarkCount))
+            : undefined
+        }
         rightAction={
           allBookmarks.length > 0
             ? {
-                label: 'Clear All',
+                label: text.header.clearAllLabel,
                 tone: 'destructive',
-                accessibilityLabel: 'Clear all bookmarks',
+                accessibilityLabel: text.header.clearAllA11y,
                 onPress: handleClearAll,
               }
             : undefined
@@ -109,7 +113,8 @@ export const BookmarksScreen: React.FC = () => {
           <SearchBar
             value={searchQuery}
             onChangeText={setSearchQuery}
-            placeholder="Search bookmarks..."
+            placeholder={text.search.placeholder}
+            accessibilityLabel={text.search.a11y}
           />
         </Animated.View>
       )}
@@ -120,8 +125,8 @@ export const BookmarksScreen: React.FC = () => {
           style={[styles.emptyWrapper, headerStyles[1]]}>
           <EmptyState
             icon="bookmark"
-            title="No Bookmarks Yet"
-            description="Save your position in any video or audio file to create bookmarks. They will appear here."
+            title={text.empty.title}
+            description={text.empty.description}
           />
         </Animated.View>
       ) : (

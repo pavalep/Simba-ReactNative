@@ -56,7 +56,6 @@ const convert = internetArchiveVideoDetailsFromRaw as (
   data: WireResponse | undefined,
 ) => ReturnType<typeof internetArchiveVideoDetailsFromRaw>;
 
-type IAFile = WireFile;
 
 // ── IAccuseMyParents — real response ───────────────────────────────────
 //  derivative h.264     389.2 MB   IAccuseMyParents.mp4

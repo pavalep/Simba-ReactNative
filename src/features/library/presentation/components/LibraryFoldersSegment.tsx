@@ -7,7 +7,6 @@ import {radius, ColorTokens} from '../../../../theme/tokens';
 import {FONT_FAMILY} from '../../../../constants/fontFamily';
 
 import textContent from '../related/textContent';
-import {useMediaStore} from '../../../../state';
 
 interface LibraryFoldersSegmentProps {
   videoFolders: string[];

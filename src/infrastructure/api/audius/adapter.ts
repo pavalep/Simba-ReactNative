@@ -35,7 +35,6 @@ interface AudiusTrackRaw {
   id: string;
   title: string;
   duration: number;
-  genre: string;
   description: string;
   user: {id: string; name: string; handle: string};
   artwork?: {_480x480: string; _1000x1000: string};
@@ -126,7 +125,6 @@ function parseRawAudiusTrack(
     artistName: t.user.name || 'Unknown Artist',
     artistId: t.user.id || '',
     duration: t.duration,
-    genre: t.genre || '',
     streamUrl: buildStreamUrl(t.id),
     artworkUrl: resolveArtworkUrl(t as AudiusTrackRaw),
     description: t.description || '',

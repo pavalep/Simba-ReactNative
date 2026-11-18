@@ -2,7 +2,7 @@
 // Simba Player — useSongScreen Hook (Phase 18)
 // ────────────────────────────────────────────────────────
 
-import {useState, useEffect, useCallback, useMemo} from 'react';
+import {useState, useCallback, useMemo} from 'react';
 import {Alert, Share} from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import {useNavigation, useRoute, type RouteProp} from '@react-navigation/native';

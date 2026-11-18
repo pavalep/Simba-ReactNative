@@ -24,7 +24,7 @@
 import * as React from 'react';
 import type {ComponentProps} from 'react';
 import {Animated, type StyleProp, type ViewStyle} from 'react-native';
-import {fireEvent, render} from '@testing-library/react-native';
+import {fireEvent} from '@testing-library/react-native';
 import {renderChrome} from '../../../../helpers/renderChrome';
 import {
   makeTransportState,

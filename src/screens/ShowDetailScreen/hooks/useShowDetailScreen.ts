@@ -19,7 +19,7 @@ import {
   fileNameMatchesEpisode,
 } from '../../../services/episodeMatcher';
 import type {TVMazeShow, TVMazeEpisode} from '../../../types/api';
-import {useMediaStore, useMediaVideoTracks} from '../../../state';
+import {useMediaVideoTracks} from '../../../state';
 
 export interface MatchedEpisode {
   episode: TVMazeEpisode;

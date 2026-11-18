@@ -14,7 +14,6 @@ import {SimbaStatusBar} from '../../../components/StatusBar';
 import {InternalHeader} from '../../../components/layout/InternalHeader/InternalHeader';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
-import {ActivityOrb} from '../../../components/feedback/ActivityOrb/ActivityOrb';
 import {Placeholder} from '../../../components/feedback/Placeholder';
 import {MediaImage} from '../../../components/utility/MediaImage';
 import {PlaylistSheet} from '../../../components/sheets/PlaylistSheet/PlaylistSheet';
@@ -85,12 +84,7 @@ export const ArchiveItemDetailScreen: React.FC<Props> = ({route}) => {
   }, [sessionRecent]);
 
   const handleTrackPress = useCallback(
-    (track: ArchiveTrack, index: number) => {
-      const list = tracks.map(t => ({
-        uri: t.url,
-        title: t.title,
-        duration: t.lengthSeconds || undefined,
-      }));
+    (track: ArchiveTrack, _index: number) => {
       openPlayer({
         uri: track.url,
         title: track.title,

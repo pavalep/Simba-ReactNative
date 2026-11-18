@@ -111,7 +111,7 @@ interface NowPlayingState {
 
 let sessionCounter = 0;
 
-export const useNowPlayingStore = create<NowPlayingState>()((set, get) => ({
+export const useNowPlayingStore = create<NowPlayingState>()((set, _get) => ({
   current: null,
 
   begin: (input) => {

@@ -15,7 +15,7 @@
 
 import {
   searchShows,
-  getPopularShows,
+  getShowsPage,
   getShowById,
   getEpisodeList,
   getSchedule,
@@ -76,10 +76,10 @@ describe('tvmaze adapter — V21 W6 P21c', () => {
     );
   });
 
-  it('getPopularShows threads the AbortSignal', async () => {
+  it('getShowsPage threads the AbortSignal', async () => {
     mockedApiFetch.mockResolvedValueOnce([validShow(1)]);
     const controller = new AbortController();
-    await getPopularShows(1, undefined, controller.signal);
+    await getShowsPage(1, controller.signal);
     expect(mockedApiFetch).toHaveBeenCalledWith(
       expect.objectContaining({signal: controller.signal}),
     );

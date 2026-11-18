@@ -14,7 +14,6 @@ import AudioWaveform from '../../../components/player/AudioWaveform/AudioWavefor
 
 import {MediaActionsSheet} from '../../../components/sheets/MediaActionsSheet/MediaActionsSheet';
 import {useQueueActions} from '../../../hooks/useQueueActions';
-import {usePlayerStore} from '../../../state';
 
 interface TrackRowItem {
   uri: string;

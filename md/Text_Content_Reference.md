@@ -158,37 +158,48 @@ Source files: [`src/screens/Library/`](file:///x:/Development/SIMBA/MOBILE_APP_R
 
 These are exported constants used as segment/filter/sort labels:
 
+> **Corrected 2026-11-18 (Wave B16).** The Library feature moved out of
+> `src/screens/Library/` into `src/features/library/presentation/`, the
+> constants moved with it into `related/localFilesConfig.ts`, and two of
+> the rows below documented constants that NO LONGER EXIST. The rows now
+> name the real owners and the real labels.
+
 | Label | Constant | Source |
 |---|---|---|
-| `Videos` | `SEGMENTS` | [useLibraryScreen.ts:25](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/src/screens/Library/hooks/useLibraryScreen.ts#L25) |
-| `Audio` | `SEGMENTS` | [useLibraryScreen.ts:26](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/src/screens/Library/hooks/useLibraryScreen.ts#L26) |
-| `Artists` | `SEGMENTS` | [useLibraryScreen.ts:27](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/src/screens/Library/hooks/useLibraryScreen.ts#L27) |
-| `Albums` | `SEGMENTS` | [useLibraryScreen.ts:28](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/src/screens/Library/hooks/useLibraryScreen.ts#L28) |
-| `All` | `FILTER_CHIPS` | [useLibraryScreen.ts:32](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/src/screens/Library/hooks/useLibraryScreen.ts#L32) |
-| `Video` | `FILTER_CHIPS` | [useLibraryScreen.ts:33](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/src/screens/Library/hooks/useLibraryScreen.ts#L33) |
-| `Audio` | `FILTER_CHIPS` | [useLibraryScreen.ts:34](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/src/screens/Library/hooks/useLibraryScreen.ts#L34) |
-| `Name` | `SORT_OPTIONS` | [useLibraryScreen.ts:38](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/src/screens/Library/hooks/useLibraryScreen.ts#L38) |
-| `Date Added` | `SORT_OPTIONS` | [useLibraryScreen.ts:39](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/src/screens/Library/hooks/useLibraryScreen.ts#L39) |
-| `Duration` | `SORT_OPTIONS` | [useLibraryScreen.ts:40](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/src/screens/Library/hooks/useLibraryScreen.ts#L40) |
-| `Artist` | `SORT_OPTIONS` | [useLibraryScreen.ts:41](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/src/screens/Library/hooks/useLibraryScreen.ts#L41) |
-| `Album` | `SORT_OPTIONS` | [useLibraryScreen.ts:42](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/src/screens/Library/hooks/useLibraryScreen.ts#L42) |
-| `Library` | `CONTENT_MODE_OPTIONS` | [useLibraryScreen.ts:46](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/src/screens/Library/hooks/useLibraryScreen.ts#L46) |
-| `Playlists` | `CONTENT_MODE_OPTIONS` | [useLibraryScreen.ts:47](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/src/screens/Library/hooks/useLibraryScreen.ts#L47) |
-| `Mixed` | `PLAYLIST_FILTER_TYPES` | [useLibraryScreen.ts:54](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/src/screens/Library/hooks/useLibraryScreen.ts#L54) |
-| `{n} file(s) could not be scanned` | [useLibraryScreen.ts:131](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/src/screens/Library/hooks/useLibraryScreen.ts#L131) | Toast message |
+| `Folders` | `LOCAL_FILE_SEGMENTS` | [localFilesConfig.ts:16](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/src/features/library/presentation/related/localFilesConfig.ts#L16) |
+| `Audio` | `LOCAL_FILE_SEGMENTS` | [localFilesConfig.ts:17](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/src/features/library/presentation/related/localFilesConfig.ts#L17) |
+| `Artists` | `LOCAL_FILE_SEGMENTS` | [localFilesConfig.ts:18](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/src/features/library/presentation/related/localFilesConfig.ts#L18) |
+| `Albums` | `LOCAL_FILE_SEGMENTS` | [localFilesConfig.ts:19](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/src/features/library/presentation/related/localFilesConfig.ts#L19) |
+| `All` | `LOCAL_MEDIA_FILTERS` | [localFilesConfig.ts:26](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/src/features/library/presentation/related/localFilesConfig.ts#L26) |
+| `Video` | `LOCAL_MEDIA_FILTERS` | [localFilesConfig.ts:27](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/src/features/library/presentation/related/localFilesConfig.ts#L27) |
+| `Audio` | `LOCAL_MEDIA_FILTERS` | [localFilesConfig.ts:28](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/src/features/library/presentation/related/localFilesConfig.ts#L28) |
+| `Name` | `LOCAL_SORT_OPTIONS` | [localFilesConfig.ts:35](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/src/features/library/presentation/related/localFilesConfig.ts#L35) |
+| `Newest` | `LOCAL_SORT_OPTIONS` | [localFilesConfig.ts:36](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/src/features/library/presentation/related/localFilesConfig.ts#L36) |
+| `Size` | `LOCAL_SORT_OPTIONS` | [localFilesConfig.ts:37](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/src/features/library/presentation/related/localFilesConfig.ts#L37) |
+| `Duration` | `LOCAL_SORT_OPTIONS` | [localFilesConfig.ts:38](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/src/features/library/presentation/related/localFilesConfig.ts#L38) |
+| `Artist` | `LOCAL_SORT_OPTIONS` | [localFilesConfig.ts:39](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/src/features/library/presentation/related/localFilesConfig.ts#L39) |
+| `Album` | `LOCAL_SORT_OPTIONS` | [localFilesConfig.ts:40](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/src/features/library/presentation/related/localFilesConfig.ts#L40) |
+| `Library` | `LOCAL_LIBRARY_MENU_ENTRIES` | [localFilesConfig.ts:55](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/src/features/library/presentation/related/localFilesConfig.ts#L55) |
+| `Playlists` | `LOCAL_LIBRARY_MENU_ENTRIES` | [localFilesConfig.ts:56](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/src/features/library/presentation/related/localFilesConfig.ts#L56) |
+| `All` / `Audio` / `Video` | `LOCAL_PLAYLIST_FILTERS` | [localFilesConfig.ts:69-76](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/src/features/library/presentation/related/localFilesConfig.ts#L69-L76) — the playlist kind labels come from `PLAYLIST_KIND_LABELS`, the ONE owner |
+
+> The `Mixed` playlist kind was **removed on 2026-11-05** — a list that
+> spans two lanes is a QUEUE, not a playlist — so the `Mixed` chip this
+> table used to list does not exist and must not come back.
 
 #### Dummy data strings in `useLibraryScreen.ts`
 
-| String | Source | Notes |
-|---|---|---|
-| Dummy file paths | [useLibraryScreen.ts:68-87](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/src/screens/Library/hooks/useLibraryScreen.ts#L68-L87) | Test/dev data |
+> **Removed 2026-11-18 (Wave B16).** This table documented dummy file
+> paths in `useLibraryScreen.ts`. There are none: the file holds no dummy
+> data and no `MOCK_`/`dummy` literal of any kind. The Library reads the
+> device's own folders.
 
 #### ViewToggle accessibility labels
 
 | String | Source File | Notes |
 |---|---|---|
-| `Grid view` | [ViewToggle.tsx:45](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/src/screens/Library/components/ViewToggle.tsx#L45) | Accessibility label |
-| `List view` | [ViewToggle.tsx:52](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/src/screens/Library/components/ViewToggle.tsx#L52) | Accessibility label |
+| `Grid view` | [ViewToggle.tsx:45](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/src/features/library/presentation/components/ViewToggle.tsx#L45) | Accessibility label |
+| `List view` | [ViewToggle.tsx:52](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/src/features/library/presentation/components/ViewToggle.tsx#L52) | Accessibility label |
 
 ---
 

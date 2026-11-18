@@ -160,7 +160,7 @@ describe('fileService.scanFoldersIncremental — V21 W5 P18 (D-027 partly)', () 
     // subfolder failure is counted in errorsCount, NOT surfaced as
     // permissionRevokedFolders.
     let callCount = 0;
-    mockedReadDir.mockImplementation(async (dir: string) => {
+    mockedReadDir.mockImplementation(async (_dir: string) => {
       callCount++;
       if (callCount === 1) {
         // Top-level — returns one subdirectory.

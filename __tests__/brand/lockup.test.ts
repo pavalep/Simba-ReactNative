@@ -244,7 +244,6 @@ describe('the lockup tagline', () => {
 
     for (const file of lockupScreens) {
       const text = readFileSync(file, 'utf8');
-      const rel = file.slice(APP_ROOT.length + 1);
       // The type comes from the shared owner …
       expect(text).toContain('LOCKUP_TAGLINE');
       // … and the screen declares no tagline type of its own.

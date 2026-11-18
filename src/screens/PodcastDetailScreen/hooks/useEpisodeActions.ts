@@ -22,7 +22,7 @@ interface Options {
   navigation: Navigation;
 }
 
-export function useEpisodeActions({podcast, navigation}: Options) {
+export function useEpisodeActions({podcast}: Options) {
   const {playNext, addToQueue} = useQueueActions();
   const toast = useToast();
   const {add: addBookmark} = useBookmarks();

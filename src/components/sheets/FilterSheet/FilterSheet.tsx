@@ -530,6 +530,14 @@ const styles = StyleSheet.create({
   },
   toggleLabel: {
     fontSize: 12,
+    // The weight lives in the FAMILY key, not in a `fontWeight` prop —
+    // the same rule the group title above states. Inter Bold is the plain
+    // family 'Inter' plus weight 700 (`constants/fontFamily.ts`), so
+    // naming the family HERE is what makes the weight reach
+    // `fonts/Inter_bold.ttf` instead of leaving it to the variant's
+    // family. It is the zero-visual-change form: the family string is
+    // 'Inter' either way.
+    fontFamily: FONT_FAMILY.inter.bold,
     fontWeight: '700',
     letterSpacing: 1.5,
   },
@@ -554,6 +562,8 @@ const styles = StyleSheet.create({
   },
   resetText: {
     fontSize: 12,
+    // The weight lives in the FAMILY key — see `toggleLabel` above.
+    fontFamily: FONT_FAMILY.inter.bold,
     fontWeight: '700',
     letterSpacing: 1.5,
   },

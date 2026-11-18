@@ -9,7 +9,7 @@ Closes defect **D-024** partly (the credential-handling aspect; the schema-valid
 | Provider | Credentials | Sensitivity | Where stored today |
 |----------|-------------|-------------|--------------------|
 | **Podcast Index** | `PODCAST_INDEX_API_KEY` + `PODCAST_INDEX_API_SECRET` | **HIGH** — HMAC secret. Anyone with these can submit new podcast feeds to the public Podcast Index directory. | `android/.env` (gitignored) via `react-native-config` → `ENV.PODCAST_INDEX_API_KEY` / `SECRET`. Read at adapter call time (`sha1(key + secret + timestamp)`). |
-| **Jamendo** | `JAMENDO_CLIENT_ID` + `JAMENDO_CLIENT_SECRET` | LOW — public OAuth client_id. App-only key; rate-limited per IP. | `android/.env` → `ENV.JAMENDO_CLIENT_ID` / `SECRET`. |
+| **Jamendo** | `JAMENDO_CLIENT_ID` | LOW — public OAuth client_id. App-only key; rate-limited per IP. | `android/.env` → `ENV.JAMENDO_CLIENT_ID`. |
 | **Audius** | `AUDIUS_API_KEY` | LOW — discovery-node read key. App-only. | `android/.env` → `ENV.AUDIUS_API_KEY`. |
 | **Google OAuth** | `GOOGLE_WEB_CLIENT_ID` | MEDIUM — identifies the app to Google; can be revoked per-app. | `android/.env` → `ENV.GOOGLE_WEB_CLIENT_ID`. |
 | **Weather (Open-Meteo)** | — | — | Open-Meteo is a free public API. No auth required. |
@@ -45,10 +45,16 @@ Closes defect **D-024** partly (the credential-handling aspect; the schema-valid
 PODCAST_INDEX_API_KEY=...        # app-only public key
 PODCAST_INDEX_API_SECRET=...     # HMAC secret — DO NOT log
 JAMENDO_CLIENT_ID=...            # public OAuth client_id
-JAMENDO_CLIENT_SECRET=...        # app-only secret
 AUDIUS_API_KEY=...               # discovery-node read key
 GOOGLE_WEB_CLIENT_ID=...         # identifies the app to Google
 ```
+
+> **Removed 2026-11-18 (Wave B16): `JAMENDO_CLIENT_SECRET`.** The Jamendo
+> v3 **read** api needs the client_id alone — the secret belongs to the
+> OAuth token exchange, which this app never performs (it is a read-only
+> client). Nothing in `src/` read it, and it was shipped inside the APK
+> for nothing. It is gone from `ENV`, from both `env.json` files and from
+> `android/.env.example`.
 
 See `md/SIMBA_V21_ENV.md` for the `.env` quickstart + `md/SIMBA_V21_KEYSTORE.md` for the release-build keystore recipe (the 4 KEYSTORE_* vars are unrelated to these 6 service keys).
 
@@ -59,7 +65,6 @@ GitHub Actions secrets (repo Settings → Secrets):
   - PODCAST_INDEX_API_KEY
   - PODCAST_INDEX_API_SECRET
   - JAMENDO_CLIENT_ID
-  - JAMENDO_CLIENT_SECRET
   - AUDIUS_API_KEY
   - GOOGLE_WEB_CLIENT_ID
   - KEYSTORE_BASE64          # W4 P13 keystore (separate concern)
@@ -74,7 +79,6 @@ CI job step:
       echo "PODCAST_INDEX_API_KEY=${{ secrets.PODCAST_INDEX_API_KEY }}"   >> android/.env
       echo "PODCAST_INDEX_API_SECRET=${{ secrets.PODCAST_INDEX_API_SECRET }}" >> android/.env
       echo "JAMENDO_CLIENT_ID=${{ secrets.JAMENDO_CLIENT_ID }}"         >> android/.env
-      echo "JAMENDO_CLIENT_SECRET=${{ secrets.JAMENDO_CLIENT_SECRET }}" >> android/.env
       echo "AUDIUS_API_KEY=${{ secrets.AUDIUS_API_KEY }}"                >> android/.env
       echo "GOOGLE_WEB_CLIENT_ID=${{ secrets.GOOGLE_WEB_CLIENT_ID }}"    >> android/.env
 ```

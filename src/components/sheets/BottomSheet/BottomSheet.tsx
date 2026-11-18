@@ -44,13 +44,8 @@ import {TrueSheet, type DetentChangeEvent} from '@lodev09/react-native-true-shee
 // The ref type exported by true-sheet is `TrueSheet` (the class); the
 // methods we actually call (present / dismiss / resize) live on the
 // `TrueSheetMethods` interface that the class implements, but TS won't
-// accept the narrower interface for a `Ref<TrueSheet>`. We keep the
-// full class ref and use a local alias for the imperative handle.
-type TrueSheetApi = {
-  present: (index?: number, animated?: boolean) => Promise<void>;
-  dismiss: (animated?: boolean) => Promise<void>;
-  resize: (index: number) => Promise<void>;
-};
+// accept the narrower interface for a `Ref<TrueSheet>`. The ref is
+// therefore typed as the class itself.
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../../theme';
 import {radius, spacing} from '../../../theme/tokens';

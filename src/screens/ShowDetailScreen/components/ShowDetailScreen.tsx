@@ -14,7 +14,6 @@ import {SimbaStatusBar} from '../../../components/StatusBar';
 import {InternalHeader} from '../../../components/layout/InternalHeader/InternalHeader';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
-import {ActivityOrb} from '../../../components/feedback/ActivityOrb/ActivityOrb';
 import {Placeholder} from '../../../components/feedback/Placeholder';
 import {MediaImage} from '../../../components/utility/MediaImage';
 import {useBookmarks} from '../../../features/bookmarks';
@@ -29,7 +28,7 @@ function stripHtml(input: string): string {
   return input.replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').trim();
 }
 
-export const ShowDetailScreen: React.FC<Props> = ({navigation, route}) => {
+export const ShowDetailScreen: React.FC<Props> = ({route}) => {
   const {showId, showName} = route.params;
   const {show, seasons, matchedCount, isLoading, error, retry} =
     useShowDetailScreen(showId);

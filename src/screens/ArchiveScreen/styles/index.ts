@@ -1,48 +1,11 @@
-import {StyleSheet} from 'react-native';
-import {radius, spacing} from '../../../theme/tokens';
-import {FONT_FAMILY} from '../../../constants/fontFamily';
+// ─── Archive — styles barrel ───────────────────────────────────────────
+// Each component's style group lives in its own file and is re-exported
+// here, so every consumer imports from this single entry point.
+//
+// The FOOTER's styles are NOT here: the in-flow footer is the shared one
+// (`screens/_shared/BrowseListFooter.tsx`), and so is the loading pill
+// (`screens/_shared/BrowseLoadingState.tsx`). A surface that needs its
+// own footer words passes them as labels.
 
-export const styles = StyleSheet.create({
-  root: {flex: 1},
-  searchSection: {
-    paddingTop: spacing.sm,
-    gap: spacing.sm,
-  },
-  listContent: {
-    padding: spacing.md,
-    paddingBottom: spacing.xxl + 80,
-  },
-  separator: {height: spacing.sm},
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: radius.md,
-    padding: spacing.sm,
-    gap: spacing.md,
-  },
-  thumb: {
-    width: 64,
-    height: 64,
-    borderRadius: radius.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  info: {flex: 1, gap: 2},
-  name: {
-    // 600 lives in the family key ('Inter' + 600 opens the 400 Regular).
-    fontFamily: FONT_FAMILY.inter.semibold,
-  },
-  footer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.lg,
-    minHeight: 56,
-  },
-  loadMoreRetry: {
-    borderWidth: 1,
-    borderRadius: radius.pill,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-  },
-});
+export {createArchiveScreenStyles} from './ArchiveScreen.styles';
+export {createArchiveRowStyles} from './ArchiveRow.styles';

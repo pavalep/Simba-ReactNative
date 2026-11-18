@@ -28,7 +28,6 @@ interface Props {
 }
 
 export const ListStates: React.FC<Props> = ({
-  isLoading,
   error,
   offline,
   isSearchActive,

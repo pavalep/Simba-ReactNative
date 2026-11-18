@@ -44,7 +44,6 @@ export {};
 const SRC = path.join(__dirname, '../../../src');
 const APP_ROOT = path.join(__dirname, '../../..');
 
-const PIP_CHROME_MODULE = path.join(SRC, 'infrastructure/player/pipChrome.ts');
 const VIDEO_PLAYER = path.join(
   SRC,
   'components/player/video/VideoPlayer/VideoPlayer.tsx',
