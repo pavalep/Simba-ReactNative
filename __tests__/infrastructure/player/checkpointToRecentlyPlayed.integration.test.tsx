@@ -100,6 +100,10 @@ const mockOpenWithResume = jest.fn(
 );
 
 jest.mock('@simba-dev/react-native-media-player', () => ({
+  // The REAL module surface, with only the hooks this suite observes
+  // replaced — see `useTransport.test.ts` for why a partial stub is a
+  // test that cannot fail.
+  ...jest.requireActual('@simba-dev/react-native-media-player'),
   captureFrame: (
     _uri: string,
     _positionMs: number,

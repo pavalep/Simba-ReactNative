@@ -105,6 +105,14 @@ const mockOpenWithResume = jest.fn(
 );
 
 jest.mock('@simba-dev/react-native-media-player', () => ({
+  // The REAL module surface, with only the hooks this suite observes
+  // replaced. A hand-written stub that lists four functions is a test
+  // that stops being able to fail the moment the code under it imports
+  // a fifth — which is exactly what WAVE B15 did: the transport began
+  // reading the explicit queue, and a partial stub answered
+  // "useQueueItemsAs is not a function" instead of failing the
+  // assertion.
+  ...jest.requireActual('@simba-dev/react-native-media-player'),
   usePlayerProgress: () => mockProgress,
   usePlayer: () => ({commands: mockCommands, state: mockPlayerState}),
   useOpenWithResume: () => mockOpenWithResume,
