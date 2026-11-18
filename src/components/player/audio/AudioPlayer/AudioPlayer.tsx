@@ -69,6 +69,31 @@
  *   • EXPAND — the dock's leading square and title. Tapping them opens
  *     this player again.
  *
+ * ## WAVE B15 — the audio lane got the video lane's OPTIONS
+ *
+ * The top bar used to carry MUTE, QUEUE and CLOSE. It now carries
+ * BOOKMARK, QUEUE, MORE and CLOSE:
+ *
+ *   - **MORE** opens `AudioMoreSheet`, the audio lane's own settings
+ *     panel: Speed, Sleep timer, Equalizer, Add to queue, Add to
+ *     playlist, Download, Share and Track info. The sheet's chrome and
+ *     its row grammar are SHARED with the video lane
+ *     (`components/player/shared/MoreSheet/`); the ROWS are this lane's.
+ *     Until WAVE B15 the audio lane had no panel at all, which is the
+ *     whole of the answer to "the audio player is missing options the
+ *     video player has".
+ *   - **BOOKMARK** is the video lane's own control, moved to
+ *     `components/player/shared/BookmarkControl/`. It reads the session
+ *     and the transport, so it was never video-specific — and a podcast
+ *     or an audiobook is exactly what a person bookmarks a moment in.
+ *
+ * The top bar's MUTE is GONE, and that is a removal rather than a
+ * move: the volume row at the bottom of this page already carries a
+ * mute button next to the slider, which is where the video lane puts
+ * its one too (`TransportBar/VolumeControl`). Two visible controls for
+ * one value is two owners of one fact, and SPEC §3.4 is explicit —
+ * "no two paths to the same secondary action".
+ *
  * ## Layout provenance
  *
  * Spotify, YouTube Music, Apple Music, Plex and Jellyfin all put
@@ -81,7 +106,7 @@
  * theme-invariant.
  */
 
-import React, {useCallback} from 'react';
+import React, {useCallback, useState} from 'react';
 import {
   BackHandler,
   Image,
@@ -104,7 +129,15 @@ import {useClosePlaybackWithToast} from '../../useClosePlaybackWithToast';
 import {useNowPlayingStore} from '../../../../state/nowPlayingStore';
 import {useAudioPresentationStore} from '../../../../state/useAudioPresentationStore';
 import {useToast} from '../../../feedback/Toast';
-import {PlayerControl, CONTROL_PRIMARY_TARGET} from '../../video/PlayerControl/PlayerControl';
+import {PlayerControl, CONTROL_PRIMARY_TARGET} from '../../shared/PlayerControl/PlayerControl';
+import {BookmarkControl} from '../../shared/BookmarkControl/BookmarkControl';
+import {MoreButton} from '../../shared/MoreSheet/MoreButton';
+import {
+  AudioMoreSheet,
+  type AudioMoreAction,
+} from '../AudioMoreSheet/AudioMoreSheet';
+import {PlaylistSheet} from '../../../sheets/PlaylistSheet/PlaylistSheet';
+import {useCurrentPlaylistItem} from '../../shared/useCurrentPlaylistItem';
 import {AudioSeekBar} from '../AudioSeekBar/AudioSeekBar';
 import {
   MINI_PLAYER_ART_SIZE,
@@ -139,6 +172,36 @@ export const AudioPlayer: React.FC = () => {
   const nowPlaying = useNowPlayingStore(s => s.current);
   const {state, commands} = useTransport();
   const closePlayback = useClosePlaybackWithToast();
+
+  // WAVE B15 — the audio lane's own "more" panel, and the playlist
+  // picker its "Add to playlist" row opens.
+  //
+  // Both are owned HERE, in the lane's chrome, and not inside the
+  // sheet: the picker is a MODAL, and a modal opened from inside
+  // another modal stacks two panels. The sheet reports the action and
+  // this component closes the sheet and opens the picker — one panel at
+  // a time.
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [playlistOpen, setPlaylistOpen] = useState(false);
+  const playlistItem = useCurrentPlaylistItem();
+
+  const handleMoreAction = useCallback((action: AudioMoreAction) => {
+    if (action === 'addToPlaylist') {
+      setMoreOpen(false);
+      setPlaylistOpen(true);
+      return;
+    }
+    if (action === 'openEqualizer') {
+      // The Equalizer is a SCREEN inside the navigator, and this player
+      // is painted ON TOP of the navigator. Navigating without leaving
+      // the player would stack the route behind an opaque full-screen
+      // view — the tap would appear to do nothing. (The queue button
+      // does the same thing for the same reason.)
+      setMoreOpen(false);
+      minimize();
+      navigate('Equalizer');
+    }
+  }, [minimize]);
 
   // The one derivation, read once: 'expanded' is the full page, 'mini'
   // is the dock. Both are rendered at all times; only their visibility
@@ -265,16 +328,13 @@ export const AudioPlayer: React.FC = () => {
               four corners instead of holding the three secondary controls
               together on the right. */}
           <View style={styles.topBarRight}>
-            <PlayerControl
-              icon={state.isMuted ? 'volumeMute' : 'volume'}
-              accessibilityRole="switch"
-              accessibilityChecked={state.isMuted}
-              accessibilityLabel={state.isMuted ? 'Unmute' : 'Mute'}
-              accessibilityHint="Mutes playback without changing the volume level"
-              active={state.isMuted}
-              onPress={onToggleMute}
-              testID="audio-mute"
-            />
+            {/* The bookmark. A MOMENT, not a title — the same
+                position-scoped bookmark the video lane's header carries,
+                and the same control: `BookmarkControl` reads the session
+                and the transport, so it is not a video-only thing.
+                A podcast or an audiobook is exactly what people bookmark
+                a moment in. */}
+            <BookmarkControl />
             {/* The queue. `HelpScreen.tsx:79` has been telling users to "tap
                 the queue/list icon" since before the control existed — this
                 is that icon, not a new invention. */}
@@ -284,6 +344,13 @@ export const AudioPlayer: React.FC = () => {
               accessibilityHint="Shows what plays next"
               onPress={onOpenQueue}
               testID="audio-queue"
+            />
+            {/* The more panel — the same `sliders` affordance the video
+                lane has, opening the same kind of settings sheet. */}
+            <MoreButton
+              onPress={() => setMoreOpen(true)}
+              accessibilityHint="Opens playback settings, sleep timer, and more"
+              testID="audio-more"
             />
             <PlayerControl
               icon="close"
@@ -541,6 +608,25 @@ export const AudioPlayer: React.FC = () => {
           </View>
         </View>
       </View>
+
+      {/* ── The lane's own panels ───────────────────────────────────
+          Both are MODALS, so they paint above the navigator and above
+          this player. They live here rather than inside the sheet
+          because a modal opened from inside another modal stacks two
+          panels. */}
+      <AudioMoreSheet
+        visible={moreOpen}
+        onAction={handleMoreAction}
+        onClose={() => setMoreOpen(false)}
+      />
+
+      {playlistItem ? (
+        <PlaylistSheet
+          visible={playlistOpen}
+          onClose={() => setPlaylistOpen(false)}
+          currentItem={playlistItem}
+        />
+      ) : null}
     </View>
   );
 };

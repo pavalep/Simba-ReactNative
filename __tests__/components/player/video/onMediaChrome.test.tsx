@@ -114,6 +114,7 @@ const mockPlayback = {
 };
 
 jest.mock('../../../../src/infrastructure/player', () => {
+  const lib = jest.requireActual('@simba-dev/react-native-media-player');
   const actual = {
     ...jest.requireActual(
       '../../../../src/infrastructure/player/useTransport',
@@ -161,6 +162,11 @@ jest.mock('../../../../src/infrastructure/player', () => {
   return {
     ...actual,
     useTransport: () => mockTransport,
+    // WAVE B15: the queue surface — the lib's real hooks, because the
+    // lib's queue is a plain zustand store with no native bridge, and
+    // an empty queue is exactly what this suite means.
+    useQueue: () => lib.useQueue(),
+    useQueueItemsAs: () => lib.useQueueItemsAs(),
     usePlaybackState: () => mockPlayback,
     // No native keyframe sampler under jest.
     useKeyframes: () => ({samples: []}),

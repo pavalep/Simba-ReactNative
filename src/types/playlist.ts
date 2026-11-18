@@ -18,6 +18,17 @@ export interface PlaylistItem {
   id: string;
   fileUri: string;
   title: string;
+  /**
+   * DURATION IN SECONDS.
+   *
+   * The one unit for a playlist item's length, shared with the queue
+   * (`PlayerQueueItem.duration`), the recent-history store and the
+   * playlist picker. It was undeclared, and two producers and one
+   * formatter disagreed about it: the M3U importer stored
+   * milliseconds and the playlist's own row formatter read
+   * milliseconds, while everything else — the media store, the scanner,
+   * the JSON import, `useAddToPlaylistScreen` — stored seconds.
+   */
   duration: number;
   /** Last native-confirmed playback position for optional playlist resume. */
   position?: number;

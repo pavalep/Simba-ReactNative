@@ -52,13 +52,16 @@ import {useWindowDimensions} from 'react-native';
 import {
   usePlayer,
   usePlayerProgress,
+  useQueueItemsAs,
   type PlayerProgress,
   type PlayerCommands,
+  type PlayerQueueItem,
 } from '@simba-dev/react-native-media-player';
 import {getSkipPrevThresholdMs} from '../../state/useSkipPrevThresholdStore';
 import {useOrientationLockStore} from '../../state/useOrientationLockStore';
 import {runNeighbours, usePlayerStore} from '../../state/playerStore';
 import {useNowPlayingStore} from '../../state/nowPlayingStore';
+import type {MediaKind, MediaLane, MediaSource} from '../../types/media';
 import {logger} from '../../lib/logger';
 import {useLaneHandover} from './useResumeAwareLaunch';
 
@@ -789,6 +792,40 @@ export function useTransport(): TransportHook {
     [runPlaylist, runIndex],
   );
 
+  // ── The EXPLICIT queue, which the run's tail does not cover ────────
+  //
+  // There are two lists, and until WAVE B15 only one of them played:
+  //
+  //   - the RUN (`usePlayerStore.playlist`) — what the lane handover
+  //     advances and what the transport's next / previous read. It is
+  //     the album or playlist the user launched.
+  //   - the EXPLICIT queue (the lib's `usePlayerQueueStore`) — what
+  //     EVERY "Play Next" and "Add to Queue" in the app writes to.
+  //
+  // The explicit queue was written by twelve call sites and read by one
+  // (the Queue screen's display). Nothing handed it to the engine, so
+  // "Add to queue" put a track where the user could SEE it and press
+  // next, and the track never played.
+  //
+  // The rule is now ONE rule, in ONE place:
+  //
+  //   **What plays next = the explicit queue's head, then the run's
+  //   tail.**
+  //
+  // The explicit queue comes FIRST because it is what the user asked
+  // for ("play THIS next"), and because it survives a launch from
+  // outside the run — the run is deliberately replaced when the user
+  // starts something else (`useQueueSync`), and the queue the user
+  // built must not be wiped by that.
+  //
+  // The Queue screen already displayed them in exactly this order
+  // (`[...queuedRows, ...playlistRows]`), so the display and the
+  // playback now agree.
+  const explicitQueue = useQueueItemsAs<
+    PlayerQueueItem<MediaSource, MediaKind, MediaLane>
+  >();
+  const explicitHead = explicitQueue[0] ?? null;
+
   // What is PLAYING is the SESSION's URI, not the run's entry.
   //
   // Two different facts, two different owners. The session is written by
@@ -801,7 +838,10 @@ export function useTransport(): TransportHook {
 
   const canGoPrev = neighbours.previous !== null;
 
-  const canGoNext = neighbours.next !== null;
+  // The explicit queue's head counts as a "next" — it is the item the
+  // user asked to play next, and it is the item the next button will
+  // play.
+  const canGoNext = explicitHead !== null || neighbours.next !== null;
 
   // The real current URI + next entry, derived structurally from the
   // run rather than from any app-side "current item" bookkeeping (which
@@ -813,12 +853,12 @@ export function useTransport(): TransportHook {
   // 24-field transport state on every position tick, which is the exact
   // churn the field-based dependency list below exists to avoid.
   const {currentUri, nextTrack} = useMemo(() => {
-    const upcoming = neighbours.next;
+    const upcoming = explicitHead ?? neighbours.next;
     return {
       currentUri: sessionUri,
       nextTrack: upcoming ? {uri: upcoming.uri, title: upcoming.title} : null,
     };
-  }, [neighbours.next, sessionUri]);
+  }, [explicitHead, neighbours.next, sessionUri]);
 
   const state = useMemo<TransportState>(() => {
     const {positionMs, durationMs, isBuffering, isSeeking, seekable} = progress;

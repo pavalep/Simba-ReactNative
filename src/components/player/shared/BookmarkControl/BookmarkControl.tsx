@@ -24,6 +24,15 @@ import {BookmarkOverflowDialog} from '../../../bookmark/BookmarkOverflowDialog/B
  * cluster (play/pause, skip) and is read first; parking a low-frequency
  * save there dilutes the thing users reach for mid-playback.
  *
+ * ## It is NOT the video lane's
+ *
+ * WAVE B15 moved this component out of `player/video/` and into
+ * `player/shared/`, because the control reads the SESSION
+ * (`useNowPlayingStore`) and the TRANSPORT — neither of which knows
+ * about lanes — and because the audio lane needs it: a podcast or an
+ * audiobook is exactly what a person bookmarks a moment in. The file's
+ * old name said one lane and its behaviour was never lane-specific.
+ *
  * ## On / off, and why the glyph changes
  *
  * `bookmark` (outline) → `bookmarkFilled`. Colour alone would not be
@@ -101,7 +110,7 @@ export const BookmarkControl: React.FC = () => {
   return (
     <>
       <PlayerControl
-        testID="video-header-bookmark"
+        testID="player-bookmark"
         icon={isBookmarkedHere ? 'bookmarkFilled' : 'bookmark'}
         iconSize={CONTROL_ICON_SIZE_COMPACT}
         onPress={handlePress}

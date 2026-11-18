@@ -38,7 +38,18 @@ import {BackHandler} from 'react-native';
 
 const mockToastShow = jest.fn();
 
-jest.mock('../../../src/components/feedback/Toast', () => ({
+/**
+ * The toast is mocked at its DEFINING module, not at the folder barrel.
+ *
+ * `feedback/Toast/index.ts` re-exports `useToast` from
+ * `feedback/Toast/Toast.tsx`, and `useQueueActions` (the one owner of the
+ * app's "Play Next / Add to Queue" wrapper) imports the inner path while
+ * the rest of the tree imports the barrel. Mocking the inner module
+ * covers BOTH paths with one mock, so this test does not have to know
+ * which spelling each caller uses.
+ */
+jest.mock('../../../src/components/feedback/Toast/Toast', () => ({
+  ToastProvider: ({children}: {children: React.ReactNode}) => children,
   useToast: () => ({show: mockToastShow, hide: jest.fn()}),
 }));
 
@@ -141,27 +152,60 @@ jest.mock('../../../src/infrastructure/player/useTransport', () => ({
   },
 }));
 
-jest.mock('../../../src/theme', () => ({
-  useTheme: () => ({
-    colors: {
-      accent: {gold: '#C9A84C'},
-      background: {
-        primary: '#0A0A0C',
-        elevated: '#141416',
-        onMediaSheet: '#121216',
-        seekTrack: {empty: 'rgba(255,255,255,0.28)'},
-        onMediaPill: 'rgba(0,0,0,0.42)',
-      },
-      text: {
-        bright: '#FFFFFF',
-        primary: '#EDEDED',
-        onMediaSoft: 'rgba(255,255,255,0.80)',
-        onMediaMuted: 'rgba(255,255,255,0.70)',
-      },
-      border: {subtle: 'rgba(255,255,255,0.16)'},
-    },
+/**
+ * WAVE B15 — the audio lane now reaches the player's barrel.
+ *
+ * `AudioMoreSheet` (the audio lane's own settings panel) and
+ * `useQueueActions` import from `src/infrastructure/player`, so the
+ * barrel is now in the audio lane's import graph. The barrel re-exports
+ * `VideoPlayer`, which imports the barrel back — the cycle this file's
+ * docstring warns about. Mocking the barrel at its boundary keeps the
+ * test off that cycle entirely and keeps the audio lane's dependencies
+ * explicit: the queue, the transport, the haptic and the clock format.
+ */
+const mockQueueAdd = jest.fn();
+const mockQueuePrepend = jest.fn();
+
+jest.mock('../../../src/infrastructure/player', () => ({
+  useTransport: () => ({state: mockTransportState, commands: mockCommands}),
+  useQueue: () => ({
+    addToQueue: mockQueueAdd,
+    prependToQueue: mockQueuePrepend,
   }),
+  useHaptic: () => ({haptic: jest.fn(), isSupported: true}),
+  useSkipSilence: () => ({enabled: false, toggle: jest.fn()}),
+  formatMsAsClock: (ms: number) => {
+    const s = Math.max(0, Math.floor(ms / 1000));
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  },
 }));
+
+/**
+ * WAVE B15 — the theme mock is now the REAL dark palette.
+ *
+ * It used to be a hand-written handful of colours, which was enough while
+ * the audio lane's tree was three components. The lane now carries the
+ * video lane's `BookmarkControl` (and with it the bookmark overflow
+ * dialog), and a hand-written theme had to be extended by one missing
+ * token at a time — `radius.lg` was the failure this wave surfaced, and
+ * a test that fails on a missing colour rather than on a behaviour is a
+ * test measuring the mock.
+ */
+jest.mock('../../../src/theme', () => {
+  const actual = jest.requireActual('../../../src/theme/tokens');
+  const tokens = actual.darkTokens;
+  return {
+    useTheme: () => ({
+      theme: 'dark',
+      tokens,
+      colors: tokens.colors,
+      spacing: tokens.spacing,
+      typography: tokens.typography,
+      radius: tokens.radius,
+      legacy: actual.legacyFromTokens(tokens),
+    }),
+  };
+});
 
 import {PlayerChrome} from '../../../src/components/player/PlayerChrome';
 import {useNowPlayingStore} from '../../../src/state/nowPlayingStore';
@@ -300,7 +344,7 @@ describe('PlayerChrome — visibility', () => {
     await seedSession('video');
     const {queryByTestId} = await render(<PlayerChrome />);
 
-    expect(queryByTestId('audio-mute')).toBeNull();
+    expect(queryByTestId('audio-volume-mute')).toBeNull();
     expect(queryByTestId('audio-queue')).toBeNull();
     expect(queryByTestId('audio-mini-toggle')).toBeNull();
     expect(queryByTestId('audio-dock')).toBeNull();
@@ -545,13 +589,31 @@ describe('PlayerChrome — volume, mute and queue', () => {
     mockTransportState.volume = 100;
   });
 
-  it('renders all three controls on the expanded audio player', async () => {
+  it('renders the volume, its mute, and the queue on the expanded audio player', async () => {
     await seedSession('audio');
     const {getByTestId} = await render(<PlayerChrome />);
 
-    expect(getByTestId('audio-mute')).toBeTruthy();
+    expect(getByTestId('audio-volume-mute')).toBeTruthy();
     expect(getByTestId('audio-queue')).toBeTruthy();
     expect(getByTestId('audio-volume')).toBeTruthy();
+  });
+
+  /**
+   * WAVE B15 — the top bar's mute is GONE, not moved.
+   *
+   * It used to be `audio-mute`, sitting next to the queue in the top bar,
+   * while the volume row at the bottom of the same page carried a second
+   * mute (`audio-volume-mute`). Two visible controls for one value is two
+   * owners of one fact — and SPEC §3.4 is explicit that there must be no
+   * two paths to the same secondary action. The video lane already had
+   * exactly one mute, in its transport bar's volume control.
+   */
+  it('has ONE mute, in the volume row — the top bar carries none', async () => {
+    await seedSession('audio');
+    const {getByTestId, queryByTestId} = await render(<PlayerChrome />);
+
+    expect(queryByTestId('audio-mute')).toBeNull();
+    expect(getByTestId('audio-volume-mute')).toBeTruthy();
   });
 
   it('mute mutes — it does not stop', async () => {
@@ -559,7 +621,7 @@ describe('PlayerChrome — volume, mute and queue', () => {
     const {getByTestId} = await render(<PlayerChrome />);
 
     await act(async () => {
-      fireEvent.press(getByTestId('audio-mute'));
+      fireEvent.press(getByTestId('audio-volume-mute'));
     });
 
     expect(mockSetMuted).toHaveBeenCalledWith(true);
@@ -574,7 +636,7 @@ describe('PlayerChrome — volume, mute and queue', () => {
     const {getByTestId} = await render(<PlayerChrome />);
 
     await act(async () => {
-      fireEvent.press(getByTestId('audio-mute'));
+      fireEvent.press(getByTestId('audio-volume-mute'));
     });
 
     expect(mockSetMuted).toHaveBeenCalledWith(false);

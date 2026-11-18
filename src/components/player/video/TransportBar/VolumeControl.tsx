@@ -60,7 +60,7 @@ import {StyleSheet, View} from 'react-native';
 import Slider from '@react-native-community/slider';
 import {useTheme} from '../../../../theme';
 import {useTransport} from '../../../../infrastructure/player';
-import {PlayerControl, CONTROL_ICON_SIZE} from '../PlayerControl/PlayerControl';
+import {PlayerControl, CONTROL_ICON_SIZE} from '../../shared/PlayerControl/PlayerControl';
 
 /**
  * Width of the slider track, in dp.

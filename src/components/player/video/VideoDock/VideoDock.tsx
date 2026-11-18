@@ -72,7 +72,7 @@ import {spacing} from '../../../../theme/tokens';
 import {usePresentation, useTransport} from '../../../../infrastructure/player';
 import {useClosePlaybackWithToast} from '../../useClosePlaybackWithToast';
 import {useNowPlayingStore} from '../../../../state/nowPlayingStore';
-import {PlayerControl} from '../PlayerControl/PlayerControl';
+import {PlayerControl} from '../../shared/PlayerControl/PlayerControl';
 import {
   MINI_PLAYER_ART_SIZE,
   MINI_PLAYER_HEIGHT,

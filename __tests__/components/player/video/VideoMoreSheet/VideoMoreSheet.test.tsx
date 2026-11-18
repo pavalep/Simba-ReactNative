@@ -15,6 +15,27 @@
  *      90% of the screen tall, i.e. off-screen.
  *
  * Both are asserted structurally here, not by "a close button exists".
+ *
+ * ## WAVE B15 — the rows are now HONEST
+ *
+ * Two rows used to say one thing and do another:
+ *
+ *   - **"Save"** called `startDownload`. It downloaded the file. The app
+ *     calls that action "Download" everywhere else, and "Save" in a
+ *     media player means "keep this title" (Netflix's My List, YouTube's
+ *     Watch later) — which is a DIFFERENT action, and the sheet now has
+ *     it under its own name.
+ *   - **"Add to playlist"** called `usePlayerStore.addToPlaylist`, which
+ *     appends to the PLAYER'S RUN. It said "playlist" and meant "queue".
+ *
+ * The sheet now offers an honest "Add to queue" (the app's one queue
+ * action) AND a real "Add to playlist" (the parent opens the app's one
+ * playlist picker). The suite pins that, so neither row can drift back
+ * into saying one thing and doing another.
+ *
+ * "Download" is drawn ONLY for a remote URI: `startDownload` returns
+ * immediately for a local file, so the row used to toast "Download
+ * started" for a download that never happened.
  */
 
 import * as React from 'react';
@@ -32,6 +53,9 @@ const mockPause = jest.fn();
 const mockSkipSilenceToggle = jest.fn();
 const mockShareContent = jest.fn(() => Promise.resolve());
 const mockToastShow = jest.fn();
+const mockQueueAdd = jest.fn();
+const mockQueuePrepend = jest.fn();
+const mockStartDownload = jest.fn(() => Promise.resolve());
 
 const mockTransport = {
   state: {
@@ -40,7 +64,7 @@ const mockTransport = {
     isMuted: false,
     title: 'Nazar Ke Samne',
     artist: 'Akshay Kumar',
-    currentUri: 'file:///nazar.mkv',
+    currentUri: 'https://example.test/nazar.mkv',
     durationMs: 7_200_000,
     captionTracks: [],
     activeCaptionTrackId: null,
@@ -65,25 +89,33 @@ const mockTransport = {
   },
 };
 
-jest.mock('../../../../../src/infrastructure/player', () => {
-  const actual = {
-    ...jest.requireActual(
-      '../../../../../src/infrastructure/player/useTransport',
-    ),
-    ...jest.requireActual(
-      '../../../../../src/infrastructure/player/useHaptic',
-    ),
-  };
-  return {
-    ...actual,
-    useTransport: () => mockTransport,
-    useHaptic: () => ({haptic: jest.fn(), isSupported: true}),
-    useSkipSilence: () => ({
-      enabled: false,
-      toggle: mockSkipSilenceToggle,
-    }),
-  };
-});
+/**
+ * The transport is mocked at its DEFINING module as well as at the
+ * barrel: `useCurrentPlaylistItem` imports `useTransport` from
+ * `infrastructure/player/useTransport` directly, so mocking only the
+ * barrel would leave the sheet and the item it derives disagreeing
+ * about what is playing.
+ */
+jest.mock('../../../../../src/infrastructure/player/useTransport', () => ({
+  useTransport: () => mockTransport,
+}));
+
+jest.mock('../../../../../src/infrastructure/player', () => ({
+  useTransport: () => mockTransport,
+  useQueue: () => ({
+    addToQueue: mockQueueAdd,
+    prependToQueue: mockQueuePrepend,
+  }),
+  useSkipSilence: () => ({
+    enabled: false,
+    toggle: mockSkipSilenceToggle,
+  }),
+  useHaptic: () => ({haptic: jest.fn(), isSupported: true}),
+  formatMsAsClock: (ms: number) => {
+    const s = Math.max(0, Math.floor(ms / 1000));
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  },
+}));
 
 jest.mock('../../../../../src/state/useQualityStore', () => ({
   VIDEO_QUALITY_PRESETS: [
@@ -111,20 +143,23 @@ jest.mock('../../../../../src/state/useAutoPlayNextStore', () => ({
     sel({enabled: false, setEnabled: jest.fn()}),
 }));
 
-jest.mock('../../../../../src/state/playerStore', () => ({
-  usePlayerStore: {getState: () => ({addToPlaylist: jest.fn()})},
-}));
-
 jest.mock('../../../../../src/services/downloadService', () => ({
-  startDownload: jest.fn(() => Promise.resolve()),
+  startDownload: (...args: unknown[]) => mockStartDownload(...(args as [])),
 }));
 
 jest.mock('../../../../../src/services/shareService', () => ({
   shareContent: jest.fn((..._args: unknown[]) => mockShareContent()),
 }));
 
-jest.mock('../../../../../src/components/feedback/Toast', () => ({
-  useToast: () => ({show: mockToastShow}),
+/**
+ * Mocked at the DEFINING module. `feedback/Toast/index.ts` re-exports
+ * `useToast` from `feedback/Toast/Toast.tsx`, and `useQueueActions`
+ * imports the inner path while the rest of the tree imports the barrel.
+ * Mocking the inner module covers BOTH spellings with one mock.
+ */
+jest.mock('../../../../../src/components/feedback/Toast/Toast', () => ({
+  ToastProvider: ({children}: {children: React.ReactNode}) => children,
+  useToast: () => ({show: mockToastShow, hide: jest.fn()}),
 }));
 
 jest.mock('../../../../../src/theme', () => {
@@ -143,6 +178,8 @@ jest.mock('../../../../../src/theme', () => {
   };
 });
 
+import {useNowPlayingStore} from '../../../../../src/state/nowPlayingStore';
+
 const renderSheet = async () =>
   render(
     <VideoMoreSheet
@@ -152,9 +189,23 @@ const renderSheet = async () =>
     />,
   );
 
-describe('VideoMoreSheet — it can always be closed', () => {
-  beforeEach(() => jest.clearAllMocks());
+beforeEach(async () => {
+  jest.clearAllMocks();
+  mockTransport.state.currentUri = 'https://example.test/nazar.mkv';
+  await act(async () => {
+    useNowPlayingStore.getState().reset();
+    useNowPlayingStore.getState().begin({
+      uri: 'https://example.test/nazar.mkv',
+      title: 'Nazar Ke Samne',
+      startPositionMs: 0,
+      streamType: 'video',
+      mediaLane: 'video',
+      type: 'video',
+    });
+  });
+});
 
+describe('VideoMoreSheet — it can always be closed', () => {
   // ── Exit 1: the backdrop ────────────────────────────────────────────
   //
   // It was a plain `View`. This is the assertion that would have caught
@@ -396,15 +447,81 @@ describe('VideoMoreSheet — it can always be closed', () => {
     );
   });
 
-  it('keeps the four library actions reachable', async () => {
+  // ── WAVE B15: the library rows say what they do ─────────────────────
+
+  it('offers an honest "Add to queue" and a real "Add to playlist"', async () => {
     const {getByTestId} = await renderSheet();
-    for (const id of [
-      'legacy-save',
-      'legacy-add-to-playlist',
-      'legacy-share',
-      'legacy-track-info',
-    ]) {
-      expect(getByTestId(id)).toBeTruthy();
-    }
+
+    // "Add to queue" is the app's ONE queue action. It used to be
+    // labelled "Add to playlist" while appending to the player's run.
+    expect(getByTestId('add-to-queue')).toBeTruthy();
+    expect(getByTestId('add-to-queue').props.accessibilityLabel).toBe(
+      'Add to queue',
+    );
+
+    // "Add to playlist" is now the real thing: the sheet REPORTS the
+    // action and the parent opens the app's one playlist picker. A
+    // Modal cannot open inside another Modal, so the sheet must not
+    // try to open the picker itself.
+    expect(getByTestId('add-to-playlist')).toBeTruthy();
+    expect(getByTestId('add-to-playlist').props.accessibilityLabel).toBe(
+      'Add to playlist',
+    );
+  });
+
+  it('"Add to queue" reaches the queue with the playing item', async () => {
+    const {getByTestId} = await renderSheet();
+    await act(async () => {
+      fireEvent.press(getByTestId('add-to-queue'));
+    });
+
+    expect(mockQueueAdd).toHaveBeenCalledTimes(1);
+    const entry = mockQueueAdd.mock.calls[0][0];
+    expect(entry.uri).toBe('https://example.test/nazar.mkv');
+    expect(entry.title).toBe('Nazar Ke Samne');
+    // The playlist's unit is SECONDS, and the queue item's is too.
+    expect(entry.duration).toBe(7200);
+    expect(entry.mediaType).toBe('video');
+  });
+
+  it('"Add to playlist" asks the parent to open the picker', async () => {
+    const onAction = jest.fn();
+    const {getByTestId} = await render(
+      <VideoMoreSheet visible onAction={onAction} onClose={jest.fn()} />,
+    );
+    await act(async () => {
+      fireEvent.press(getByTestId('add-to-playlist'));
+    });
+    expect(onAction).toHaveBeenCalledWith('addToPlaylist');
+    // The picker is the parent's job — the sheet must not open a second
+    // modal on top of itself.
+    expect(mockQueueAdd).not.toHaveBeenCalled();
+  });
+
+  it('no row is called "Save" any more — it was a download', async () => {
+    const {queryByText} = await renderSheet();
+    expect(queryByText('Save')).toBeNull();
+    expect(queryByText('Save to device')).toBeNull();
+  });
+
+  it('"Download" is offered for a remote item', async () => {
+    const {getByTestId} = await renderSheet();
+    expect(getByTestId('download')).toBeTruthy();
+    expect(getByTestId('download').props.accessibilityLabel).toBe('Download');
+  });
+
+  it('"Download" is NOT offered for a file that is already on the device', async () => {
+    // `startDownload` returns immediately for a local URI, so the row
+    // used to toast "Download started" for a download that never
+    // happened. A control that cannot act must not occupy space.
+    mockTransport.state.currentUri = 'file:///nazar.mkv';
+    const {queryByTestId} = await renderSheet();
+    expect(queryByTestId('download')).toBeNull();
+  });
+
+  it('keeps share and track info reachable', async () => {
+    const {getByTestId} = await renderSheet();
+    expect(getByTestId('share')).toBeTruthy();
+    expect(getByTestId('track-info')).toBeTruthy();
   });
 });

@@ -15,7 +15,7 @@
  *
  * The old component is gone (W7.6) and its four direct-render tests
  * went with it. What survives here is the part that is still real: the
- * `More` button, and the four library actions it reaches.
+ * `More` button, and the library actions it reaches.
  *
  * ## The share test is the one that changed meaning
  *
@@ -25,6 +25,15 @@
  * deep link into the receiver's song screen with no file identity at
  * all. The test pinned the defect. W7.4 corrected it to the
  * lane-agnostic `NowPlaying` route with the real `fileUri`.
+ *
+ * ## WAVE B15 — the rows are honest now
+ *
+ * The old row ids were `legacy-save` / `legacy-share` /
+ * `legacy-add-to-playlist`, and the last of them was a lie: it said
+ * "Add to playlist" and appended to the PLAYER'S RUN. The sheet now
+ * has an honest "Add to queue" and a real "Add to playlist" that opens
+ * the app's ONE playlist picker — and this suite pins that the picker
+ * is what opens, and that the run is NOT what is appended to.
  */
 
 import * as React from 'react';
@@ -63,7 +72,7 @@ jest.mock('../../../../../src/services/shareService', () => ({
 
 const shareService = require('../../../../../src/services/shareService');
 
-// Save performs a REAL download, so the service is mocked and asserted
+// Download performs a REAL download, so the service is mocked and asserted
 // on rather than letting a filesystem write happen in a unit test.
 jest.mock('../../../../../src/services/downloadService', () => ({
   startDownload: jest.fn().mockResolvedValue(undefined),
@@ -74,14 +83,13 @@ const downloadService = require('../../../../../src/services/downloadService');
 // rejects any other out-of-scope reference inside a `jest.mock` factory.
 //
 // The store is a zustand hook, so it is CALLED as one — the transport
-// reads the app's RUN through it — and it also carries `getState`, which
-// is how the sheet appends to the run.
+// reads the app's RUN through it — and it also carries `getState`.
 jest.mock('../../../../../src/state/playerStore', () => {
   const actual = jest.requireActual('../../../../../src/state/playerStore');
   const mockUsePlayerStore = Object.assign(
     (selector: (state: unknown) => unknown) =>
       selector({playlist: [], currentIndex: -1}),
-    {getState: () => ({addToPlaylist: mockAddToPlaylist})},
+    {getState: () => ({addToPlaylist: mockAddToPlaylist, playlist: []})},
   );
   // Everything else stays REAL — `runNeighbours` is the ONE rule for
   // "what plays next", and a mock of it would be a mock of the rule
@@ -89,7 +97,6 @@ jest.mock('../../../../../src/state/playerStore', () => {
   return {...actual, usePlayerStore: mockUsePlayerStore};
 });
 const mockAddToPlaylist = jest.fn();
-const playerStore = {addToPlaylist: mockAddToPlaylist};
 
 // The lib's own playlist is EMPTY in this app — `loadfile` replaces
 // mpv's playlist with exactly one entry, and the app never calls
@@ -98,6 +105,12 @@ const playerStore = {addToPlaylist: mockAddToPlaylist};
 // the SESSION instead (B-046), and why the mocked lib state below has
 // no playlist at all.
 jest.mock('@simba-dev/react-native-media-player', () => ({
+  // The REAL module surface, with only the hooks this suite observes
+  // replaced. A partial stub that lists four functions is a test that
+  // stops being able to fail the moment the code under it imports a
+  // fifth — which is what WAVE B15 did: the transport began reading
+  // the explicit queue.
+  ...jest.requireActual('@simba-dev/react-native-media-player'),
   usePlayer: () => ({
     state: {
       title: 'Stairway to Heaven',
@@ -122,7 +135,7 @@ describe('More (button + sheet integration)', () => {
     jest.clearAllMocks();
     shareService.shareContent.mockClear();
     // What is PLAYING is the SESSION's URI — the launch seam records it
-    // on every launch, for both lanes. Save / Share / Add-to-playlist
+    // on every launch, for both lanes. Download / Share / Add-to-playlist
     // act on that value, so the session has to carry it. (It used to
     // come from the lib's playlist, which is empty in this app, so
     // every one of those rows answered "Nothing to …" — B-046.)
@@ -142,8 +155,8 @@ describe('More (button + sheet integration)', () => {
     await act(async () => {
       fireEvent.press(getByLabelText('More options'));
     });
-    expect(getByTestId('legacy-save')).toBeTruthy();
-    expect(getByTestId('legacy-share')).toBeTruthy();
+    expect(getByTestId('download')).toBeTruthy();
+    expect(getByTestId('share')).toBeTruthy();
   });
 
   // Without `fileUri` in the params the receiver opens a player with
@@ -153,7 +166,7 @@ describe('More (button + sheet integration)', () => {
     await act(async () => {
       fireEvent.press(getByLabelText('More options'));
     });
-    fireEvent.press(getByTestId('legacy-share'));
+    fireEvent.press(getByTestId('share'));
     expect(shareService.shareContent).toHaveBeenCalledWith({
       route: 'NowPlaying',
       params: {
@@ -170,30 +183,45 @@ describe('More (button + sheet integration)', () => {
     await act(async () => {
       fireEvent.press(getByLabelText('More options'));
     });
-    fireEvent.press(getByTestId('legacy-share'));
+    fireEvent.press(getByTestId('share'));
     const call = (shareService.shareContent as jest.Mock).mock.calls[0][0];
     expect(call.route).not.toBe('SongScreen');
   });
 
-  it('Save starts a real download for the current track URI', async () => {
+  it('Download starts a real download for the current track URI', async () => {
     const {getByTestId, getByLabelText} = await renderChrome(<More />);
     await act(async () => {
       fireEvent.press(getByLabelText('More options'));
     });
-    fireEvent.press(getByTestId('legacy-save'));
+    fireEvent.press(getByTestId('download'));
     expect(downloadService.startDownload).toHaveBeenCalledWith(
       expect.objectContaining({uri: 'https://cdn.test/stairway.mp4'}),
     );
   });
 
-  it('Add to playlist really appends to the player queue', async () => {
-    const {getByTestId, getByLabelText} = await renderChrome(<More />);
+  /**
+   * WAVE B15 — "Add to playlist" is now the REAL thing.
+   *
+   * It used to append to the player's RUN and say "Added to playlist".
+   * Now it opens the app's ONE playlist picker, and this component —
+   * not the sheet — owns that, because a Modal opened from inside
+   * another Modal stacks two panels.
+   */
+  it('"Add to playlist" opens the playlist picker, and does NOT append to the run', async () => {
+    const {getByTestId, getByLabelText, getByText, queryByTestId} =
+      await renderChrome(<More />);
     await act(async () => {
       fireEvent.press(getByLabelText('More options'));
     });
-    fireEvent.press(getByTestId('legacy-add-to-playlist'));
-    expect(playerStore.addToPlaylist).toHaveBeenCalledWith(
-      expect.objectContaining({uri: 'https://cdn.test/stairway.mp4'}),
-    );
+    await act(async () => {
+      fireEvent.press(getByTestId('add-to-playlist'));
+    });
+
+    // The picker is up. (Its empty state is the app's own text.)
+    expect(getByText('No playlists yet. Create one to get started.')).toBeTruthy();
+    // The sheet is gone: one panel at a time.
+    expect(queryByTestId('more-sheet')).toBeNull();
+    // And the run was NOT touched — the old lie.
+    expect(mockAddToPlaylist).not.toHaveBeenCalled();
   });
 });

@@ -144,7 +144,7 @@ jest.mock('../../../../../src/components/utility/SvgIcon', () => ({
 // Children that would otherwise require a presentation/toast provider tree.
 // None of them participates in the scrub contract.
 jest.mock(
-  '../../../../../src/components/player/video/PlayerControl/PlayerControl',
+  '../../../../../src/components/player/shared/PlayerControl/PlayerControl',
   () => ({PlayerControl: () => null}),
 );
 jest.mock('../../../../../src/components/player/video/TransportBar/ModeControl', () => ({

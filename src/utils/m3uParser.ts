@@ -64,8 +64,15 @@ export function parseM3u(content: string): M3uParseResult {
             sepIdx > 0
               ? rawTitle.substring(sepIdx + 3).trim()
               : rawTitle || 'Unknown';
+          // The artist was split off and then THROWN AWAY: the
+          // separator index was computed and only the title half was
+          // kept, so every M3U export→import round trip lost the
+          // artist. `M3uEntry.artist` existed and was always
+          // `undefined`.
+          const artist =
+            sepIdx > 0 ? rawTitle.substring(0, sepIdx).trim() : undefined;
 
-          currentExtinf = {duration, title};
+          currentExtinf = {duration, title, ...(artist ? {artist} : {})};
         } else {
           errors.push(`Line ${i + 1}: malformed #EXTINF directive`);
         }
@@ -123,7 +130,15 @@ export function generateM3u(items: PlaylistItem[]): string {
   for (const item of items) {
     const artistPart = item.artist ? `${item.artist} - ` : '';
     const titleLine = `${artistPart}${item.title}`;
-    lines.push(`#EXTINF:${Math.floor(item.duration / 1000)},${titleLine}`);
+    // `#EXTINF`'s duration is in SECONDS — that is the M3U format's own
+    // unit, and it is what `parseM3u` reads back.
+    //
+    // This wrote `item.duration / 1000`, which assumed the item's
+    // duration was MILLISECONDS. It is not: `PlaylistItem.duration` is
+    // seconds everywhere else in the app (the media store, the scanner,
+    // the queue, the playlist picker), so a five-minute track exported
+    // as `#EXTINF:0` — and re-imported as a zero-length item.
+    lines.push(`#EXTINF:${Math.floor(item.duration)},${titleLine}`);
     lines.push(item.fileUri);
   }
 

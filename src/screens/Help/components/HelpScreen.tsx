@@ -77,11 +77,19 @@ const FAQ_SECTIONS: FaqSection[] = [
     items: [
       {
         q: 'How do I create a playlist?',
-        a: 'Open any song or video, tap the queue/list icon, then "Add to playlist". Playlists are managed from the Library — you can rename, reorder, pin and delete them there.',
+        // The step used to name the queue/list icon and then an "Add to
+        // playlist" row that the queue screen does not have. The player's
+        // own "More options" menu is where "Add to playlist" lives, and
+        // WAVE B15 gave the AUDIO lane that menu too.
+        a: 'Open any song or video, tap "More options" in the player, then "Add to playlist". Playlists are managed from the Library — you can rename, reorder, pin and delete them there.',
       },
       {
         q: 'What is the difference between queue and playlist?',
-        a: 'The queue is a temporary, session-wide list of what plays next — it is cleared when you stop. Playlists are saved collections that persist and can be played anytime.',
+        // "it is cleared when you stop" was never true: the queue store's
+        // `clearQueue` has never been called by anything. It says what
+        // the queue IS, and it no longer promises a behaviour the app
+        // does not have.
+        a: 'The queue is the list of what plays next — you build it with "Play Next" and "Add to Queue", and it stays until you remove the items from it. Playlists are saved collections that persist and can be played anytime.',
       },
       {
         q: 'How do bookmarks work?',

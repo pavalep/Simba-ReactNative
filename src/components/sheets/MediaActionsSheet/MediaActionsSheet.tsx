@@ -34,9 +34,13 @@ const {height: SCREEN_HEIGHT} = Dimensions.get('window');
 
 /**
  * 58.4/58.5: the ONE bottom-sheet menu used by every media row/tile.
- * Standard rows start with Play Next + Add to Queue (buildQueueActions),
- * then surface-specific actions (Save to Playlist, Download, Remove…).
- * Replaces the per-screen platform-split ActionSheetIOS/Modal menus.
+ *
+ * The queue rows are built with `useQueueActions` — the ONE wrapper that
+ * calls the queue store AND shows the toast — so "Play Next" and
+ * "Add to Queue" behave identically everywhere they are offered.
+ *
+ * Replaces the per-screen platform-split ActionSheetIOS/Modal menus. The
+ * Library's `MediaContextMenu` was the last of those copies; it is gone.
  */
 export const MediaActionsSheet: React.FC<MediaActionsSheetProps> = ({
   visible,

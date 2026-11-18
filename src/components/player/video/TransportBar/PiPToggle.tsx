@@ -64,7 +64,7 @@
 
 import * as React from 'react';
 import {usePresentation, useTransport} from '../../../../infrastructure/player';
-import {PlayerControl} from '../PlayerControl/PlayerControl';
+import {PlayerControl} from '../../shared/PlayerControl/PlayerControl';
 
 export const PiPToggle: React.FC = () => {
   const {state} = useTransport();

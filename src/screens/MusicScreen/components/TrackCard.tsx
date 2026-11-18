@@ -1,13 +1,24 @@
 // ─── Music — TrackCard ───────────────────────────────────────────────
 // Horizontal row card: 52px thumb + title/artist/album + duration.
 // The row OPENS THE TRACK'S OWN PAGE — the whole card is one
-// TouchableOpacity — so there is no play button inside it.
+// TouchableOpacity — so there is no play button inside it. A LONG
+// PRESS on that same row opens the app's one media menu (Play Next /
+// Add to Queue), which is the gesture every other catalogue row in the
+// app already uses.
 //
 // The row used to BE the play action (one tap played the track from
 // the list). The track's own page is a real screen now (B13-9), and
 // the play action lives there: the page carries the cover, the meta
 // and the play button, which is the grammar the Movie detail and the
 // Podcast detail use.
+//
+// The row could not be QUEUED at all before this change: the Music
+// screen was the only catalogue in the app without a long-press menu,
+// so a Jamendo track could be played from its own page but never
+// added to the queue or played next from the list. The menu is the
+// app's ONE menu (`MediaActionsSheet`) and the queue action goes
+// through the app's ONE queue wrapper (`useQueueActions`), so the
+// toast fires here exactly as it does everywhere else.
 //
 // The artwork follows the house artwork contract: the thumb shows the
 // surface's OWN tile (a goldDim plate with the music glyph on it) until
@@ -16,12 +27,15 @@
 // out at about 6 % gold — the same invisible hole the Podcasts wave
 // closed on the podcast row.
 
-import React, {useMemo} from 'react';
+import React, {useCallback, useMemo, useState} from 'react';
 import {TouchableOpacity, View} from 'react-native';
 import {MediaImage} from '../../../components/utility/MediaImage';
 import {useTheme} from '../../../theme';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
+import {MediaActionsSheet} from '../../../components/sheets/MediaActionsSheet/MediaActionsSheet';
+import {useQueueActions} from '../../../components/sheets/MediaActionsSheet/useQueueActions';
+import {jamendoQueueItem} from './jamendoQueueItem';
 import {createTrackCardStyles} from '../styles';
 import type {JamendoTrackResult} from '../../../types/api';
 
@@ -49,6 +63,18 @@ export const TrackCard: React.FC<TrackCardProps> = React.memo(
   ({item, onPress}) => {
     const {colors} = useTheme();
     const styles = useMemo(() => createTrackCardStyles(colors), [colors]);
+    // The app's ONE queue wrapper: it owns the queue-store call AND
+    // the toast, so this screen never calls the queue store directly.
+    const {playNext, addToQueue} = useQueueActions();
+    const [menuVisible, setMenuVisible] = useState(false);
+
+    const handleMenuPress = useCallback(() => {
+      setMenuVisible(true);
+    }, []);
+
+    const handleMenuClose = useCallback(() => {
+      setMenuVisible(false);
+    }, []);
 
     // The thumb's tile — what the user sees while the artwork is on the
     // wire, and what stays if it never arrives. The same tile is the
@@ -61,56 +87,82 @@ export const TrackCard: React.FC<TrackCardProps> = React.memo(
     );
 
     return (
-      <TouchableOpacity
-        activeOpacity={0.85}
-        onPress={() => onPress(item)}
-        accessibilityRole="button"
-        accessibilityLabel={`${item.name}${item.artistName ? `, ${item.artistName}` : ''}`}
-        style={[
-          styles.trackCard,
-          {backgroundColor: colors.background.elevated},
-        ]}>
-        <View
+      <>
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() => onPress(item)}
+          onLongPress={handleMenuPress}
+          delayLongPress={400}
+          accessibilityRole="button"
+          accessibilityLabel={`${item.name}${item.artistName ? `, ${item.artistName}` : ''}`}
+          accessibilityHint="Long press for more actions"
           style={[
-            styles.thumbWrap,
-            {backgroundColor: colors.background.primary},
+            styles.trackCard,
+            {backgroundColor: colors.background.elevated},
           ]}>
-          {item.imageUrl ? (
-            <MediaImage
-              source={item.imageUrl}
-              style={styles.thumbImage}
-              resizeMode="cover"
-              placeholder={thumbTile}
-              accessibilityIgnoresInvertColors
-              testID="music-artwork-image"
-            />
-          ) : (
-            thumbTile
-          )}
-        </View>
+          <View
+            style={[
+              styles.thumbWrap,
+              {backgroundColor: colors.background.primary},
+            ]}>
+            {item.imageUrl ? (
+              <MediaImage
+                source={item.imageUrl}
+                style={styles.thumbImage}
+                resizeMode="cover"
+                placeholder={thumbTile}
+                accessibilityIgnoresInvertColors
+                testID="music-artwork-image"
+              />
+            ) : (
+              thumbTile
+            )}
+          </View>
 
-        <View style={styles.trackInfo}>
-          <AppText variant="bodySmall" numberOfLines={1} style={styles.trackName}>
-            {item.name}
-          </AppText>
-          {item.artistName ? (
-            <AppText variant="caption" color="secondary" numberOfLines={1}>
-              {item.artistName}
+          <View style={styles.trackInfo}>
+            <AppText variant="bodySmall" numberOfLines={1} style={styles.trackName}>
+              {item.name}
             </AppText>
-          ) : null}
-          {item.albumName ? (
-            <AppText variant="caption" color="tertiary" numberOfLines={1}>
-              {item.albumName}
-            </AppText>
-          ) : null}
-        </View>
+            {item.artistName ? (
+              <AppText variant="caption" color="secondary" numberOfLines={1}>
+                {item.artistName}
+              </AppText>
+            ) : null}
+            {item.albumName ? (
+              <AppText variant="caption" color="tertiary" numberOfLines={1}>
+                {item.albumName}
+              </AppText>
+            ) : null}
+          </View>
 
-        <View style={styles.trackRight}>
-          <AppText variant="caption" color="tertiary">
-            {formatDuration(item.duration)}
-          </AppText>
-        </View>
-      </TouchableOpacity>
+          <View style={styles.trackRight}>
+            <AppText variant="caption" color="tertiary">
+              {formatDuration(item.duration)}
+            </AppText>
+          </View>
+        </TouchableOpacity>
+
+        {/* The app's ONE media menu — the same sheet every other
+            catalogue row opens on a long press. */}
+        <MediaActionsSheet
+          visible={menuVisible}
+          onClose={handleMenuClose}
+          title={item.name}
+          subtitle={item.artistName}
+          actions={[
+            {
+              label: 'Play Next',
+              icon: 'skipForward',
+              onPress: () => playNext(jamendoQueueItem(item)),
+            },
+            {
+              label: 'Add to Queue',
+              icon: 'list',
+              onPress: () => addToQueue(jamendoQueueItem(item)),
+            },
+          ]}
+        />
+      </>
     );
   },
 );

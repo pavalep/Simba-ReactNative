@@ -1,28 +1,48 @@
-import React, {useCallback, useState} from 'react';
+import React, {useCallback, useMemo, useState} from 'react';
 import {View, StyleSheet} from 'react-native';
 import {useTheme} from '../../../../theme';
 import {spacing} from '../../../../theme/tokens';
 import {AppText} from '../../../../components/core/AppText/AppText';
 import {AppCard} from '../../../../components/core/AppCard/AppCard';
-import {MediaContextMenu} from './MediaContextMenu';
-import {SvgIconName} from '../../../../components/utility/SvgIcon';
+import {
+  MediaActionsSheet,
+  type MediaAction,
+} from '../../../../components/sheets/MediaActionsSheet/MediaActionsSheet';
+import {useQueueActions} from '../../../../components/sheets/MediaActionsSheet/useQueueActions';
+import type {MediaKind, MediaLane, MediaSource} from '../../../../types/media';
 
 interface MediaListItemProps {
+  /**
+   * The row's identity. In the Library this IS the media file's URI
+   * (`ScannedTrack.uri`) — the queue and the playlist both need it, so the
+   * row never re-derives it.
+   */
   id: string;
   title: string;
+  /**
+   * DURATION IN MILLISECONDS — the unit this row DISPLAYS in.
+   * (`LibraryAudioSegment` passes the scanner's seconds × 1000.)
+   */
   duration: number;
   artist?: string;
-  thumbnailPath?: string;
+  /**
+   * The scanner's classification, passed down unchanged. The queue and the
+   * playlist must carry the real kind, not a re-derived guess.
+   */
+  source: MediaSource;
+  type: MediaKind;
+  mediaType: MediaLane;
+  provider?: string;
+  folderId?: string;
   isSelected?: boolean;
   selectionMode?: boolean;
   onPress: (id: string) => void;
   onLongPress?: (id: string) => void;
-  /** Optional custom context menu actions — defaults to Play + Add to Playlist + Add to Queue + Info */
-  contextMenuActions?: Array<{
-    label: string;
-    icon: SvgIconName;
-    onPress: () => void;
-  }>;
+  /**
+   * Opens the app's ONE playlist picker (`PlaylistSheet`) for this row.
+   * Required on purpose: a menu action that cannot act must not be offered.
+   */
+  onAddToPlaylist: () => void;
 }
 
 const formatDuration = (ms: number): string => {
@@ -36,19 +56,30 @@ const formatDuration = (ms: number): string => {
 const THUMBNAIL_SIZE = 48;
 
 const MediaListItem: React.FC<MediaListItemProps> = React.memo(
-  ({
-    id,
-    title,
-    duration,
-    artist,
-    isSelected,
-    selectionMode,
-    onPress,
-    onLongPress,
-    contextMenuActions,
-  }) => {
+  (
+    {
+      id,
+      title,
+      duration,
+      artist,
+      source,
+      type,
+      mediaType,
+      provider,
+      folderId,
+      isSelected,
+      selectionMode,
+      onPress,
+      onLongPress,
+      onAddToPlaylist,
+    },
+  ) => {
     const {colors} = useTheme();
     const [menuVisible, setMenuVisible] = useState(false);
+    // The ONE wrapper for "put this in the queue": it calls the queue store
+    // AND shows the toast. A row must never call the queue store directly —
+    // the toast is part of the action.
+    const {playNext, addToQueue} = useQueueActions();
 
     const showSelectionIndicator = selectionMode && isSelected;
 
@@ -60,28 +91,59 @@ const MediaListItem: React.FC<MediaListItemProps> = React.memo(
       }
     }, [id, onLongPress]);
 
-    const defaultActions = contextMenuActions ?? [
-      {
-        label: 'Play',
-        icon: 'play' as const,
-        onPress: () => onPress(id),
-      },
-      {
-        label: 'Add to Playlist',
-        icon: 'listMusic' as const,
-        onPress: () => {},
-      },
-      {
-        label: 'Add to Queue',
-        icon: 'list' as const,
-        onPress: () => {},
-      },
-      {
-        label: 'Info',
-        icon: 'headphones' as const,
-        onPress: () => {},
-      },
-    ];
+    /**
+     * THE UNIT BOUNDARY.
+     *
+     * `duration` (the prop above) is MILLISECONDS — it is the row's display
+     * unit. The queue's duration is SECONDS (`PlayerQueueItem.duration`; the
+     * Queue screen formats it as seconds), and so is `PlaylistItem.duration`.
+     * This is the ONE conversion from milliseconds to seconds, and it happens
+     * here, at the seam between the row and the queue.
+     */
+    const durationSeconds = duration / 1000;
+
+    const queueItem = useMemo(
+      () => ({
+        uri: id,
+        title,
+        duration: durationSeconds,
+        source,
+        type,
+        mediaType,
+        ...(provider ? {provider} : {}),
+        ...(folderId ? {folderId} : {}),
+      }),
+      [id, title, durationSeconds, source, type, mediaType, provider, folderId],
+    );
+
+    // Every row of this menu DOES something. There is no "Info" entry:
+    // the app has no media-info surface for a local file, and a row that
+    // leads nowhere is worse than no row.
+    const actions = useMemo<MediaAction[]>(
+      () => [
+        {
+          label: 'Play',
+          icon: 'play',
+          onPress: () => onPress(id),
+        },
+        {
+          label: 'Play Next',
+          icon: 'skipForward',
+          onPress: () => playNext(queueItem),
+        },
+        {
+          label: 'Add to Queue',
+          icon: 'list',
+          onPress: () => addToQueue(queueItem),
+        },
+        {
+          label: 'Add to Playlist',
+          icon: 'listMusic',
+          onPress: () => onAddToPlaylist(),
+        },
+      ],
+      [addToQueue, id, onAddToPlaylist, onPress, playNext, queueItem],
+    );
 
     return (
       <>
@@ -138,12 +200,13 @@ const MediaListItem: React.FC<MediaListItemProps> = React.memo(
           </View>
         </AppCard>
 
-        <MediaContextMenu
+        {/* The app's ONE media menu — not a second copy of it. */}
+        <MediaActionsSheet
           visible={menuVisible}
           onClose={() => setMenuVisible(false)}
           title={title}
           subtitle={artist}
-          actions={defaultActions}
+          actions={actions}
         />
       </>
     );

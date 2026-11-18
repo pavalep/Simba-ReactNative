@@ -264,7 +264,14 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
           fileUri: e.fileUri,
           title:
             e.title || getFileName(e.fileUri).replace(/\.[^.]+$/, ''),
-          duration: e.duration > 0 ? e.duration * 1000 : 0,
+          // SECONDS, unconverted. `parseM3u` reads `#EXTINF`, whose
+          // duration is in seconds by the M3U format's own definition,
+          // and `PlaylistItem.duration` is seconds everywhere else in
+          // the app — the media store, the scanner, the queue, the
+          // playlist picker. This multiplied by 1000, which stored a
+          // five-minute track as 300000 and made every playlist row
+          // read "0:00" on screen.
+          duration: e.duration > 0 ? e.duration : 0,
           artist: e.artist,
           addedAt: new Date().toISOString(),
           source: isRemoteUri(e.fileUri) ? 'api' : 'local',
@@ -522,9 +529,18 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
   }, []);
 
   // ── Duration formatter ──
-  const formatDuration = useCallback((ms: number): string => {
-    if (ms <= 0) return '--:--';
-    const totalSec = Math.floor(ms / 1000);
+  //
+  // SECONDS. `PlaylistItem.duration` is seconds in every producer (the
+  // media store, the scanner, the queue, the playlist picker) and every
+  // other `formatDuration` in the app reads seconds — `utils/timeAgo`,
+  // the Queue screen, the Movie detail screen, the Album track list.
+  //
+  // This one took MILLISECONDS, so a 96-minute film divided by 1000
+  // and every playlist row in the app read "0:00". The unit was the
+  // defect; the formatter was never the thing to fix.
+  const formatDuration = useCallback((seconds: number): string => {
+    if (seconds <= 0) return '--:--';
+    const totalSec = Math.floor(seconds);
     const min = Math.floor(totalSec / 60);
     const sec = totalSec % 60;
     return `${min}:${sec.toString().padStart(2, '0')}`;

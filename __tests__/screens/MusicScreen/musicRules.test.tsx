@@ -22,6 +22,7 @@ import React from 'react';
 import {screen, act, render} from '@testing-library/react-native';
 
 import {ThemeProvider} from '../../../src/theme';
+import {ToastProvider} from '../../../src/components/feedback/Toast';
 import {TrackCard, formatDuration} from '../../../src/screens/MusicScreen/components/TrackCard';
 import {nextMusicPage} from '../../../src/screens/MusicScreen/hooks/useMusicScreen';
 import type {JamendoTrackResult} from '../../../src/types/api';
@@ -75,7 +76,12 @@ describe('Music — the row', () => {
   async function renderRow(item: JamendoTrackResult = TRACK) {
     await render(
       <ThemeProvider>
-        <TrackCard item={item} onPress={jest.fn()} />
+        {/* The row owns the long-press menu, and the menu's queue
+            actions go through `useQueueActions`, which needs the
+            toast provider. */}
+        <ToastProvider>
+          <TrackCard item={item} onPress={jest.fn()} />
+        </ToastProvider>
       </ThemeProvider>,
     );
   }

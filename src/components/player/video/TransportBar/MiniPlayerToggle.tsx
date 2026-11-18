@@ -43,7 +43,7 @@
 
 import * as React from 'react';
 import {usePresentation} from '../../../../infrastructure/player';
-import {PlayerControl} from '../PlayerControl/PlayerControl';
+import {PlayerControl} from '../../shared/PlayerControl/PlayerControl';
 
 export const MiniPlayerToggle: React.FC = () => {
   const {setVideoPresentation} = usePresentation();

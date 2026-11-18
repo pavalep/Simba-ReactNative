@@ -23,7 +23,7 @@
  */
 import * as React from 'react';
 import {useTransport, type RepeatMode} from '../../../../infrastructure/player';
-import {PlayerControl} from '../PlayerControl/PlayerControl';
+import {PlayerControl} from '../../shared/PlayerControl/PlayerControl';
 
 /**
  * The cycle, in order. This array is the single source of truth for

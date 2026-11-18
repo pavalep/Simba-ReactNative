@@ -123,8 +123,8 @@ import {spacing} from '../../../../theme/tokens';
 import {AppText} from '../../../../components/core/AppText/AppText';
 import {useReduceMotion, useTransport} from '../../../../infrastructure/player';
 import {useClosePlaybackWithToast} from '../../useClosePlaybackWithToast';
-import {PlayerControl, CONTROL_ICON_SIZE_COMPACT} from '../PlayerControl/PlayerControl';
-import {BookmarkControl} from '../BookmarkControl/BookmarkControl';
+import {PlayerControl, CONTROL_ICON_SIZE_COMPACT} from '../../shared/PlayerControl/PlayerControl';
+import {BookmarkControl} from '../../shared/BookmarkControl/BookmarkControl';
 
 /**
  * Entrance fade duration (ms). Collapsed to 0 under reduce-motion.

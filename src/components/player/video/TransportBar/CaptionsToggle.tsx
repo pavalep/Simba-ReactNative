@@ -28,7 +28,7 @@
  */
 import * as React from 'react';
 import {useTransport, type CaptionTrack} from '../../../../infrastructure/player';
-import {PlayerControl} from '../PlayerControl/PlayerControl';
+import {PlayerControl} from '../../shared/PlayerControl/PlayerControl';
 
 /**
  * The next track to select, given what is playing now.

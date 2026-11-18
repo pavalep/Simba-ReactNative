@@ -105,6 +105,25 @@ export const AudiobookDetailScreen: React.FC<Props> = ({route}) => {
         uri: chapter.url,
         title: chapter.title,
         type: 'audio',
+        // The KIND, not just the stream type.
+        //
+        // `type` is the bridge's `'video' | 'audio'` stream type; the
+        // catalogue kind travels as `mediaKind`, and the launch seam
+        // records `mediaKind ?? bridgeOpts.type` on the session
+        // (`src/infrastructure/player/useResumeAwareLaunch.ts`). Without
+        // it the chapter was written to the playback history as a
+        // generic AUDIO item — while THIS SAME file already writes the
+        // chapter's BOOKMARK with `type: 'audiobook'` (and its playlist
+        // entry likewise), so the history row and the bookmark row
+        // disagreed about what a chapter is, and nothing in the app
+        // could tell an audiobook chapter from a music track.
+        mediaKind: 'audiobook',
+        // The BOOK's cover as the launch artwork: the chapter IS the
+        // book, so the history row shows the book's cover instead of
+        // nothing. The seam forwards it to the bridge as the media
+        // notification's artwork and stores it on the session, which
+        // is what the checkpoint writer copies into the history row.
+        thumbnailPath: coverImage || undefined,
       });
     },
     [openPlayer, book, chapters, coverImage],

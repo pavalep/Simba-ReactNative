@@ -20,14 +20,14 @@
 
 import * as React from 'react';
 import {fireEvent, render} from '@testing-library/react-native';
-import {PlayerControl} from '../../../../../src/components/player/video/PlayerControl/PlayerControl';
+import {PlayerControl} from '../../../../../src/components/player/shared/PlayerControl/PlayerControl';
 import {
   CONTROL_ICON_SIZE,
   CONTROL_ICON_SIZE_COMPACT,
   CONTROL_ICON_SIZE_TRANSPORT,
   CONTROL_PRIMARY_TARGET,
   CONTROL_TARGET,
-} from '../../../../../src/components/player/video/PlayerControl/PlayerControl';
+} from '../../../../../src/components/player/shared/PlayerControl/PlayerControl';
 import {useHaptic} from '../../../../../src/infrastructure/player';
 
 const mockHaptic = jest.fn();

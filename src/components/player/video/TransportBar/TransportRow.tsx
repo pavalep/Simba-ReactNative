@@ -68,7 +68,7 @@ import {
   PlayerControl,
   CONTROL_ICON_SIZE_TRANSPORT,
   CONTROL_PRIMARY_TARGET,
-} from '../PlayerControl/PlayerControl';
+} from '../../shared/PlayerControl/PlayerControl';
 
 /** Gap between adjacent transport controls. */
 const CONTROL_GAP = 6;

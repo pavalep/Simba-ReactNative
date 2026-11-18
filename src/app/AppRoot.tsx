@@ -65,6 +65,11 @@ import {
   useVideoOwnsWindow,
   type PromptResume,
 } from '../infrastructure/player';
+// Imported from its MODULE, not from the facade barrel, and deliberately:
+// the barrel is mocked wholesale by many suites, and this hook is a
+// player-lifetime owner (the sleep timer) that must be mounted in
+// exactly one place — the app root.
+import {useSleepTimerOwner} from '../infrastructure/player/useSleepTimerOwner';
 import {formatDuration} from '../utils/timeAgo';
 import {resolveMediaArtwork} from '../utils/mediaArtwork';
 
@@ -141,6 +146,15 @@ export const AppRoot: React.FC = () => {
   // in this tree, so React Native sizes it, reveals it and answers the
   // question structurally. There is nothing left for a hook to report.
   useInWindowVideoLaunch();
+
+  // WAVE B15 — the sleep timer's countdown owner.
+  //
+  // It lives HERE, and only here, because it has to outlive every
+  // panel: the timer is armed in a sheet, and the countdown runs while
+  // the user closes the sheet and goes back to browsing. A sheet-owned
+  // timer would stop the moment the sheet closed — and with two lanes
+  // each owning one, there would be two countdowns for one timer.
+  useSleepTimerOwner();
 
   // Whether the BROWSING STACK may paint.
   //

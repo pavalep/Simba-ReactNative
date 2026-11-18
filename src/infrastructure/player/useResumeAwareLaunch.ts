@@ -9,14 +9,17 @@
  * `PlaybackId` type, so the reverse edge would be a runtime cycle).
  */
 
-import React, {useMemo} from 'react';
+import React, {useMemo, useRef} from 'react';
 import {
   resolveStreamType,
   useOpenWithResume,
+  useQueue,
+  useQueueItemsAs,
 } from '@simba-dev/react-native-media-player';
 import type {
   OpenPlayerOptions,
   UsePlayerActivityResult,
+  PlayerQueueItem,
 } from '@simba-dev/react-native-media-player';
 import {useNowPlayingStore} from '../../state/nowPlayingStore';
 import {useAudioPresentationStore} from '../../state/useAudioPresentationStore';
@@ -37,10 +40,11 @@ import {useRecentHistoryStore} from '../../state/recentHistoryStore';
 import {
   activeLane,
   runNeighbours,
+  toPlaylistEntry,
   usePlayerStore,
 } from '../../state/playerStore';
 import type {PlaylistEntry} from '../../state/playerStore';
-import type {MediaLane} from '../../types/media';
+import type {MediaKind, MediaLane, MediaSource} from '../../types/media';
 import {
   planResume,
   resolvePlanStartMs,
@@ -421,6 +425,33 @@ export function useLaneHandover(): AppLaneHandover {
     return runNeighbours(playlist, currentIndex);
   }, []);
 
+  // ── The EXPLICIT queue ─────────────────────────────────────────────
+  //
+  // The list every "Play Next" and "Add to Queue" in the app writes to.
+  //
+  // Until WAVE B15 it was written by twelve call sites and read by one
+  // (the Queue screen's display) — nothing handed it to the engine, so
+  // a queued track appeared in the queue and never played.
+  //
+  // The rule is now ONE rule, in ONE place, and the transport reads the
+  // same one for its next button and its NextUp overlay:
+  //
+  //   **What plays next = the explicit queue's head, then the run's
+  //   tail.**
+  //
+  // The explicit queue comes first because it is what the user asked
+  // for, and because it survives a launch from outside the run — the
+  // run is deliberately replaced when the user starts something else
+  // (`useQueueSync`), and a queue the user built must not be wiped by
+  // that.
+  const explicitQueue = useQueueItemsAs<
+    PlayerQueueItem<MediaSource, MediaKind, MediaLane>
+  >();
+  const {removeFromQueueByIndex} = useQueue();
+  // Read at CALL time, for the same reason `neighbours()` is.
+  const explicitQueueRef = React.useRef(explicitQueue);
+  explicitQueueRef.current = explicitQueue;
+
   const next = React.useCallback(
     (): PlaylistEntry | null => neighbours().next,
     [neighbours],
@@ -485,14 +516,66 @@ export function useLaneHandover(): AppLaneHandover {
     [handoverAt, openEntry],
   );
 
+  /**
+   * Play an item the user explicitly queued.
+   *
+   * It is REMOVED from the explicit queue — it is playing now, so it is
+   * not "up next" any more — and PROMOTED into the run, so that:
+   *
+   *   - the run stays the one list the engine advances through, and the
+   *     transport's next / previous keep pointing at the right
+   *     neighbours;
+   *   - the session's URI is INSIDE the run, so `useQueueSync`'s "a
+   *     launch from outside the run starts a new queue" rule does not
+   *     wipe the run the moment the item starts playing.
+   */
+  const promoteQueuedItem = React.useCallback(
+    async (
+      item: PlayerQueueItem<MediaSource, MediaKind, MediaLane>,
+    ): Promise<boolean> => {
+      // Removed by IDENTITY, not by "whatever is at index 0": the index
+      // is found by the item's URI, so a queue whose ORDER changed (a
+      // "Play Next" prepended something) does not have the wrong track
+      // removed.
+      //
+      // The lib's only removal API is index-based
+      // (`removeFromQueueByIndex`), so the index is resolved against the
+      // freshest snapshot this hook has — the one written on the last
+      // render. A change to the queue re-renders this hook, so that
+      // snapshot is the current one for any change made before the tap;
+      // the window is a single tick. A URI-keyed removal would close
+      // that window exactly, and it needs a lib release.
+      const index = explicitQueueRef.current.findIndex(
+        queued => queued.uri === item.uri,
+      );
+      if (index >= 0) {
+        removeFromQueueByIndex(index);
+      }
+
+      const entry = toPlaylistEntry(item);
+      const {playlist} = usePlayerStore.getState();
+      usePlayerStore.getState().addToPlaylist(entry);
+      usePlayerStore.getState().playFromPlaylist(playlist.length);
+      await openEntry(entry);
+      return true;
+    },
+    [openEntry, removeFromQueueByIndex],
+  );
+
   const advance = React.useCallback(async (): Promise<boolean> => {
+    // The explicit queue's head is what plays next — the rule the
+    // transport's next button and its NextUp overlay already read.
+    const head = explicitQueueRef.current[0];
+    if (head) {
+      return promoteQueuedItem(head);
+    }
     const {playlist, currentIndex} = usePlayerStore.getState();
     const index = currentIndex + 1;
     if (currentIndex < 0 || index >= playlist.length) {
       return false;
     }
     return handoverAt(index);
-  }, [handoverAt]);
+  }, [handoverAt, promoteQueuedItem]);
 
   const retreat = React.useCallback(async (): Promise<boolean> => {
     const {playlist, currentIndex} = usePlayerStore.getState();
