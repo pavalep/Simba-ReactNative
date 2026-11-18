@@ -55,7 +55,7 @@ import {
 import {startDownload} from '../../../../services/downloadService';
 import {shareContent} from '../../../../services/shareService';
 import {useToast} from '../../../feedback/Toast';
-import {useQueueActions} from '../../../sheets/MediaActionsSheet/useQueueActions';
+import {useQueueActions} from '../../../../hooks/useQueueActions';
 import {isRemoteUri} from '../../../../utils/mediaUri';
 import {
   MoreSheet,

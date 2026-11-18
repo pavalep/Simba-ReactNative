@@ -10,7 +10,8 @@ import {useBookmarks} from '../../../features/bookmarks';
 import {useToast} from '../../../components/feedback/Toast';
 import {shareContent} from '../../../services/shareService';
 import {PlaylistSheet} from '../../../components/sheets/PlaylistSheet/PlaylistSheet';
-import { resolveStreamType, useResumeAwareLaunch, useQueue } from '../../../infrastructure/player';
+import { resolveStreamType, useResumeAwareLaunch } from '../../../infrastructure/player';
+import { useQueueActions } from '../../../hooks/useQueueActions';
 import text from '../related/textContent.json';
 
 type Navigation = PodcastDetailScreenProps['navigation'];
@@ -22,7 +23,7 @@ interface Options {
 }
 
 export function useEpisodeActions({podcast, navigation}: Options) {
-  const {addToQueue, prependToQueue} = useQueue();
+  const {playNext, addToQueue} = useQueueActions();
   const toast = useToast();
   const {add: addBookmark} = useBookmarks();
   const {openPlayer} = useResumeAwareLaunch();
@@ -76,16 +77,14 @@ export function useEpisodeActions({podcast, navigation}: Options) {
       const provider = 'podcastIndex' as const;
       switch (value) {
         case 'play-next':
-          prependToQueue({
+          playNext({
             uri: ep.enclosureUrl,
             title: ep.title,
             duration: ep.duration,
             source,
             provider,
-            type: 'audio',
-            mediaType: 'audio',
+            type: 'podcast',
           });
-          toast.show(text.actions.playingNext);
           break;
         case 'add-queue':
           addToQueue({
@@ -94,10 +93,8 @@ export function useEpisodeActions({podcast, navigation}: Options) {
             duration: ep.duration,
             source,
             provider,
-            type: 'audio',
-            mediaType: 'audio',
+            type: 'podcast',
           });
-          toast.show(text.actions.addedToQueue);
           break;
         case 'add-playlist':
           setSheetItem({
@@ -145,7 +142,7 @@ export function useEpisodeActions({podcast, navigation}: Options) {
       }
       setMenuEpisode(null);
     },
-    [menuEpisode, podcast, toast, addBookmark, addToQueue, prependToQueue],
+    [menuEpisode, podcast, toast, addBookmark, playNext, addToQueue],
   );
 
   return {

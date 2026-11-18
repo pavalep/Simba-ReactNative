@@ -1,253 +1,186 @@
-// ─── Audiobooks Browse Screen ───────────────────────────────────────
-// V18.11.3: converted from the v3-v9 3-tab pattern to the v10+
-// "single content stream + FAB" pattern. The "Recent" tab was
-// dropped (its feed overlaps with the Home rail). The screen now
-// has a SearchBar at the top + a single FilterChips row for genre
-// + one FlatList. The "audiobook/genre" filter acts as a secondary
-// input — if a genre is selected AND a search term is set, the
-// term wins (matches the pre-V18 behavior).
+// ─── Audiobooks — Browse Content ───────────────────────────────────────
+// The list the browse shell hosts.
+//
+// WAVE B16 — rewritten from the screen's own hand-rolled shell.
+//
+// It used to draw its own `InternalHeader`, `SearchBar`, `FilterChips`
+// row, `Placeholder` states and an `ActivityOrb` footer, and its
+// `refreshControl` was a NO-OP `<View>` — pull-to-refresh was advertised
+// and inert. It is now the same content component every other browse
+// screen has:
+//
+//   • the shell owns the header, the search field, the chip strip, the
+//     filter FAB and the filter sheet;
+//   • `ListStates` owns loading / error / empty;
+//   • `BrowseFooter` owns the four footer branches;
+//   • `useListEnd` tells the shell when the list is finished AND the user
+//     is at its end, so the filter button can step aside;
+//   • the drag guard stops a list that fits on one screen from fetching a
+//     page nobody asked for;
+//   • `usePullToRefresh` owns the refresh spinner, so it tracks the
+//     GESTURE and not the query.
 
-import React, {useCallback, useMemo} from 'react';
-import {
-  View,
-  FlatList,
-  TouchableOpacity,
-} from 'react-native';
-import {MediaImage} from '../../../components/utility/MediaImage';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import React, {useEffect, useMemo, useRef, useState} from 'react';
+import {FlatList, RefreshControl, View} from 'react-native';
+import {FAB_SIZE} from '../../../components/core/Fab/Fab';
 import {useBottomChromeInset} from '../../../infrastructure/player/miniPlayerChrome';
+import {useListEnd} from '../../_shared/useListEnd';
 import {useTheme} from '../../../theme';
+import {spacing} from '../../../theme/tokens';
+import {useAudiobooksData} from './AudiobooksDataProvider';
+import {BookCard} from './BookCard';
+import {BrowseFooter} from '../../_shared/BrowseListFooter';
+import {ListStates} from './ListStates';
+import {createAudiobooksScreenStyles} from '../styles';
+import type {SectionRenderContext} from '../types';
 
-import type {AudiobooksScreenProps} from '../../../navigation/types';
-import {useAudiobooksScreen} from '../hooks/useAudiobooksScreen';
-
-import {SimbaStatusBar} from '../../../components/StatusBar';
-import {InternalHeader} from '../../../components/layout/InternalHeader/InternalHeader';
-import {AppText} from '../../../components/core/AppText/AppText';
-import {SearchBar} from '../../../components/core/SearchBar/SearchBar';
-import {SvgIcon, type SvgIconName} from '../../../components/utility/SvgIcon';
-import {FilterChips} from '../../../components/utility/FilterChips';
-import {ActivityOrb} from '../../../components/feedback/ActivityOrb/ActivityOrb';
-import {Placeholder} from '../../../components/feedback/Placeholder';
-import {useToast} from '../../../components/feedback/Toast';
-import {LIBRIVOX_GENRES} from '../../../constants/audiobookCategories';
-import {archiveImageUrl, archiveIdentifierFromUrl} from '../../../infrastructure/api/internetArchive/adapter';
-import type {AudiobookResult} from '../../../types/api';
-import {styles} from '../styles';
-import type {BookRow, BookCardProps} from '../types';
-
-type Props = AudiobooksScreenProps;
-
-const GENRE_CHIP_ITEMS = LIBRIVOX_GENRES.map(genre => ({
-  key: genre,
-  label: genre,
-}));
-
-function toRow(book: AudiobookResult): BookRow {
-  const identifier = archiveIdentifierFromUrl(book.urlIArchive);
-  return {
-    id: book.id,
-    title: book.title,
-    author: book.author,
-    image: identifier ? archiveImageUrl(identifier) : '',
-    subtitle: [book.language].filter(Boolean).join(' · '),
-    totalTime: book.totalTime,
-    language: book.language,
-  };
-}
-
-function formatTime(totalSeconds: number): string {
-  if (!totalSeconds || totalSeconds <= 0) return '';
-  const h = Math.floor(totalSeconds / 3600);
-  const m = Math.round((totalSeconds % 3600) / 60);
-  if (h > 0) return `${h}h ${m}m`;
-  return `${m}m`;
-}
-
-const BookCard: React.FC<BookCardProps> = React.memo(({row, onPress}) => {
+export const AudiobooksContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => {
   const {colors} = useTheme();
-  return (
-    <TouchableOpacity
-      activeOpacity={0.85}
-      onPress={() => onPress(row)}
-      style={[styles.card, {backgroundColor: colors.background.elevated}]}
-      accessibilityRole="button"
-      accessibilityLabel={`Open audiobook ${row.title}`}>
-      <View style={[styles.thumb, {backgroundColor: colors.border.subtle}]}>
-        {row.image ? (
-          <MediaImage
-            source={row.image}
-            style={styles.thumb}
-            resizeMode="cover"
-          />
-        ) : (
-          <SvgIcon name="headphones" size={22} color={colors.accent.gold} />
-        )}
-      </View>
-      <View style={[styles.info, {paddingHorizontal: 12}]}>
-        <AppText variant="bodySmall" numberOfLines={1} style={styles.name}>
-          {row.title}
-        </AppText>
-        {row.author ? (
-          <AppText variant="caption" color="secondary" numberOfLines={1}>
-            {row.author}
-          </AppText>
-        ) : null}
-        {row.subtitle ? (
-          <AppText variant="caption" color="tertiary" numberOfLines={1}>
-            {`${row.subtitle}${formatTime(row.totalTime) ? ` · ${formatTime(row.totalTime)}` : ''}`}
-          </AppText>
-        ) : null}
-      </View>
-      <SvgIcon
-        name="chevronRight"
-        size={18}
-        color={colors.text.tertiary ?? colors.text.secondary}
-      />
-    </TouchableOpacity>
-  );
-});
-
-export const AudiobooksScreen: React.FC<Props> = ({navigation, route}) => {
-  const {colors} = useTheme();
-  const insets = useSafeAreaInsets();
-  // The app's ONE bottom-chrome rule: the safe area, or the
-  // mini-player dock if one is up, plus a spacing step.
+  const styles = useMemo(() => createAudiobooksScreenStyles(), []);
+  // The app's ONE bottom-chrome rule: the safe area, or the mini-player
+  // dock if one is up, plus a spacing step. The FAB's own height goes
+  // on top so the last row clears the BUTTON.
   const bottomChromeInset = useBottomChromeInset();
-  const {initialGenre: genre} = route.params ?? {};
-
   const {
-    searchTerm,
-    setSearchTerm,
-    isSearchActive,
-    selectedGenre,
-    setSelectedGenre,
     items,
     hasLoaded,
     isLoading,
     isLoadingMore,
     hasNextPage,
     error,
+    pageError,
+    scopeLabel,
+    setActiveGenre,
+    setSearchTerm,
     fetchNextPage,
     refetch,
-    isOnline,
     refreshing,
-    handleRefresh,
-  } = useAudiobooksScreen(genre);
+    refresh,
+    isSearchActive,
+    handleBookPress,
+  } = useAudiobooksData();
+  const {offline} = ctx;
 
-  const toast = useToast();
+  // The shell owns the selected genre; the content hands it down.
+  // The genre group is SINGLE-select (LibriVox takes one genre per
+  // request), so the first key is the only key there can be.
+  const rawFilter = ctx.options.filter;
+  const genre = Array.isArray(rawFilter)
+    ? rawFilter[0] ?? ''
+    : rawFilter ?? '';
 
-  React.useEffect(() => {
-    if (!hasLoaded && !isLoading && !!error) {
-      toast.show(
-        isOnline ? 'Could not load audiobooks.' : 'You are offline.',
-        'error',
-        {
-          duration: 8000,
-          action: {label: 'Retry', onPress: () => refetch()},
-        },
-      );
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasLoaded, isLoading, error, isOnline]);
+  // Keep the fetch scope keyed by the shell's debounced search term.
+  useEffect(() => {
+    setSearchTerm(ctx.query);
+  }, [ctx.query, setSearchTerm]);
 
-  const handleBookPress = useCallback(
-    (row: BookRow) => {
-      navigation.navigate('AudiobookDetail', {
-        bookId: row.id,
-        bookTitle: row.title,
-      });
-    },
-    [navigation],
+  // Sync the FAB filter → the hook's active scope.
+  useEffect(() => {
+    setActiveGenre(genre);
+  }, [genre, setActiveGenre]);
+
+  const userDraggedRef = useRef(false);
+  const listState: 'loading' | 'error' | 'empty' | undefined =
+    !hasLoaded && isLoading
+      ? 'loading'
+      : !!error && items.length === 0
+      ? 'error'
+      : !error && items.length === 0
+      ? 'empty'
+      : undefined;
+
+  const [hasMounted, setHasMounted] = useState(false);
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
+  const showLoadingEarly = !hasMounted || (!hasLoaded && isLoading);
+
+  // The source has nothing further to give.
+  const reachedEnd = hasLoaded && !error && !hasNextPage;
+
+  // The list tells the shell when it is finished AND the user is at its
+  // end, so the shell can get the floating filter button out of the way
+  // (see `_shared/useListEnd.ts`).
+  const {onScroll, onContentSizeChange} = useListEnd(
+    ctx.setAtListEnd,
+    reachedEnd,
   );
 
-  const rows = useMemo(() => items.map(toRow), [items]);
-
-  const showEmpty =
-    hasLoaded && !error && rows.length === 0;
-  const showError = !hasLoaded && !isLoading && error;
-
-  return (
-    <View
-      style={[
-        styles.root,
-        {backgroundColor: colors.background.primary, paddingTop: insets.top},
-      ]}>
-      <SimbaStatusBar variant="home" />
-      <InternalHeader title="Audiobooks" />
-
-      <View style={styles.searchSection}>
-        <SearchBar
-          value={searchTerm}
-          onChangeText={setSearchTerm}
-          placeholder="Search titles or authors…"
-        />
-        <FilterChips
-          wrap
-          items={GENRE_CHIP_ITEMS}
-          selectedKey={selectedGenre}
-          onSelect={setSelectedGenre}
+  if (showLoadingEarly) {
+    return (
+      <View style={styles.sectionRoot}>
+        <ListStates
+          state="loading"
+          offline={offline}
+          isSearchActive={isSearchActive}
+          onRetry={() => {}}
         />
       </View>
+    );
+  }
 
-      {!hasLoaded && isLoading ? (
-        <Placeholder
-          variant="loading"
-          anchor="top-third"
-          title="Loading audiobooks…"
-        />
-      ) : showError ? (
-        <Placeholder
-          variant="empty"
-          anchor="top-third"
-          icon="alertCircle"
-          title={isOnline ? "Couldn't load audiobooks." : "You're offline."}
-          message="Use Retry at the bottom of the screen to try again."
-        />
-      ) : showEmpty ? (
-        <Placeholder
-          variant="empty"
-          anchor="top-third"
-          icon="search"
-          title={
-            isSearchActive
-              ? 'No audiobooks match your search.'
-              : selectedGenre
-              ? 'No audiobooks in this genre.'
-              : 'Search for audiobooks by title or author.'
-          }
-        />
-      ) : (
-        <FlatList
-          data={rows}
-          keyExtractor={item => String(item.id)}
-          renderItem={({item}) => <BookCard row={item} onPress={handleBookPress} />}
-          contentContainerStyle={[
-            styles.listContent,
-            {paddingBottom: bottomChromeInset},
-          ]}
-          showsVerticalScrollIndicator={false}
-          ItemSeparatorComponent={ItemSeparator}
-          onEndReached={() => {
-            if (hasNextPage && !isLoadingMore) fetchNextPage();
-          }}
-          onEndReachedThreshold={0.4}
-          ListFooterComponent={
-            isLoadingMore ? (
-              <View style={{padding: 16, alignItems: 'center'}}>
-                <ActivityOrb size={22} />
-              </View>
-            ) : null
-          }
-          refreshControl={
-            <View>
-              {/* Refresh control: trigger via header pull-equivalent. */}
-            </View>
-          }
-        />
-      )}
+  return (
+    <View style={styles.sectionRoot}>
+      <FlatList
+        testID="section-AudiobooksScreen-list"
+        style={styles.list}
+        numColumns={1}
+        data={items}
+        keyExtractor={item => String(item.id)}
+        renderItem={({item}) => <BookCard item={item} onPress={handleBookPress} />}
+        contentContainerStyle={[
+          styles.listContent,
+          {paddingBottom: bottomChromeInset + FAB_SIZE + spacing.md},
+          listState ? styles.listSlotGrow : null,
+        ]}
+        ListEmptyComponent={
+          listState ? (
+            <ListStates
+              state={listState}
+              offline={offline}
+              isSearchActive={isSearchActive}
+              genreLabel={scopeLabel}
+              error={error}
+              onRetry={refetch}
+            />
+          ) : null
+        }
+        ListFooterComponent={
+          <BrowseFooter
+            isLoadingMore={isLoadingMore}
+            hasLoaded={hasLoaded}
+            // The LOAD-MORE error, not the list's error: a first-load
+            // failure is the error card's business, and the footer saying
+            // it too announced the same failure twice — and wrongly.
+            error={pageError}
+            reachedEnd={reachedEnd}
+            shown={items.length}
+            onLoadMore={fetchNextPage}
+          />
+        }
+        onScrollBeginDrag={() => {
+          userDraggedRef.current = true;
+        }}
+        onEndReached={() => {
+          if (!userDraggedRef.current) return;
+          if (hasNextPage && !isLoadingMore) fetchNextPage();
+        }}
+        onEndReachedThreshold={0.4}
+        onScroll={onScroll}
+        onContentSizeChange={onContentSizeChange}
+        removeClippedSubviews={false}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            // The GESTURE owns the spinner, not the query. See
+            // `_shared/pullToRefresh.ts`.
+            refreshing={refreshing}
+            onRefresh={refresh}
+            tintColor={colors.accent.gold}
+            colors={[colors.accent.gold]}
+          />
+        }
+      />
     </View>
   );
 };
-
-const ItemSeparator = () => <View style={styles.separator} />;

@@ -2,7 +2,7 @@ import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {FlatList, RefreshControl, View} from 'react-native';
 import {FAB_SIZE} from '../../../components/core/Fab/Fab';
 import {MediaActionsSheet} from '../../../components/sheets/MediaActionsSheet/MediaActionsSheet';
-import {useQueueActions} from '../../../components/sheets/MediaActionsSheet/useQueueActions';
+import {useQueueActions} from '../../../hooks/useQueueActions';
 import {PlaylistSheet, type PlaylistSheetProps} from '../../../components/sheets/PlaylistSheet';
 import {useToast} from '../../../components/feedback/Toast';
 import {resolveInternetArchiveVideoDetails} from '../../../infrastructure/api/internetArchive/adapter';

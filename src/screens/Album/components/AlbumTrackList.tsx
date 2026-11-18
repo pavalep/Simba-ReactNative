@@ -11,7 +11,7 @@ import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
 import AudioWaveform from '../../../components/player/AudioWaveform/AudioWaveform';
 import {MediaActionsSheet} from '../../../components/sheets/MediaActionsSheet/MediaActionsSheet';
-import {useQueueActions} from '../../../components/sheets/MediaActionsSheet/useQueueActions';
+import {useQueueActions} from '../../../hooks/useQueueActions';
 
 interface TrackItem {
   uri: string;

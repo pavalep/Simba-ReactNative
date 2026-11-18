@@ -166,3 +166,28 @@ export function classifyApiMedia(
     ...(provider ? {provider} : {}),
   };
 }
+
+/**
+ * An item that can be queued, playlisted or bookmarked.
+ *
+ * ONE shape for "something the user can add to a list", declared here
+ * beside the classification fields it carries — `source`, `type` and
+ * `mediaType` are the app's canonical media classification
+ * (`normalizeMediaClassification`), and a queue item, a playlist entry
+ * and a bookmark are all the same fact wearing different hats.
+ *
+ * It used to be declared inside
+ * `hooks/useQueueActions.ts`, which made a
+ * TYPE half the app imports live inside one sheet's folder.
+ */
+export interface QueueableItem {
+  uri: string;
+  title: string;
+  /** Duration in SECONDS — the queue's and the playlist's unit. */
+  duration?: number;
+  source?: MediaSource;
+  type?: MediaKind;
+  mediaType?: MediaLane;
+  provider?: string;
+  folderId?: string;
+}

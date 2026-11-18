@@ -43,7 +43,8 @@ import {SvgIcon} from '../../../components/utility/SvgIcon';
 import {BackButton} from '../../../components/utility/BackButton/BackButton';
 import {isRemoteUri} from '../../../utils/mediaUri';
 import {useNetworkStatus} from '../../../hooks/useNetworkStatus';
-import { resolveStreamType, useOpenPlaylist, useResumeAwareLaunch, useQueue } from '../../../infrastructure/player';
+import { resolveStreamType, useOpenPlaylist, useResumeAwareLaunch } from '../../../infrastructure/player';
+import {useQueueActions} from '../../../hooks/useQueueActions';
 import {usePlayerStore, playlistItemsToEntries} from '../../../state';
 
 type Props = PlaylistDetailScreenProps;
@@ -114,7 +115,7 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
   // mini-player dock if one is up, plus a spacing step.
   const bottomChromeInset = useBottomChromeInset();
   const {playlistId, playlistName} = route.params;
-  const {addToQueue: addToQueueStore, prependToQueue: prependToQueueStore} = useQueue();
+  const {playNext, addToQueue} = useQueueActions();
   const {renamePlaylist, deletePlaylist, removeItem, reorderItems, clearPlaylist, importPlaylist, setPinned} = usePlaylists();
   const playlist = usePlaylist(playlistId);
   const toast = useToast();
@@ -444,29 +445,36 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
             toast.show('Offline — stream unavailable');
             break;
           }
-          prependToQueueStore({
+          playNext({
             uri: menuItem.fileUri,
             title: menuItem.title,
             duration: menuItem.duration,
-            // P34.7: keep source + media type so the queue routes correctly
+            // P34.7: keep source + media type so the queue routes correctly.
+            // The KIND and the PROVIDER come along too: the playlist row
+            // already knows them, and a queue row that drops them loses the
+            // badge and can no longer be matched back to its playlist row.
             source: menuItem.source,
+            type: menuItem.type,
             mediaType: menuItem.mediaType,
+            ...(menuItem.provider ? {provider: menuItem.provider} : {}),
+            ...(menuItem.folderId ? {folderId: menuItem.folderId} : {}),
           });
-          toast.show('Playing next');
           break;
         case 'add-queue':
           if (isRemoteUri(menuItem.fileUri) && !isOnline) {
             toast.show('Offline — stream unavailable');
             break;
           }
-          addToQueueStore({
+          addToQueue({
             uri: menuItem.fileUri,
             title: menuItem.title,
             duration: menuItem.duration,
             source: menuItem.source,
+            type: menuItem.type,
             mediaType: menuItem.mediaType,
+            ...(menuItem.provider ? {provider: menuItem.provider} : {}),
+            ...(menuItem.folderId ? {folderId: menuItem.folderId} : {}),
           });
-          toast.show('Added to queue');
           break;
         case 'share-item': {
           // 56.4: share a single playlist item as a deep link
@@ -498,7 +506,7 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
       }
       setMenuItem(null);
     },
-    [menuItem, toast, isOnline, addToQueueStore, prependToQueueStore],
+    [menuItem, toast, isOnline, playNext, addToQueue],
   );
 
   const handleMoveItem = useCallback(

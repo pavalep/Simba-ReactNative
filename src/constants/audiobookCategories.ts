@@ -12,21 +12,6 @@ export const LIBRIVOX_GENRES = [
   'Thriller', 'Travel', 'Western',
 ] as const;
 
-/** Browse modes for the AudiobooksScreen tab bar (NOT the Home rail). */
-export interface AudiobooksBrowseEntry {
-  id: 'search' | 'genres' | 'recent' | 'all';
-  name: string;
-  description: string;
-  icon: string;
-}
-
-export const AUDIOBOOKS_BROWSE: AudiobooksBrowseEntry[] = [
-  {id: 'search', name: 'Search', description: 'Find any public-domain book', icon: 'search'},
-  {id: 'genres', name: 'Genres', description: 'Adventure, Mystery, Sci-Fi…', icon: 'layoutGrid'},
-  {id: 'recent', name: 'New Releases', description: 'Recently recorded works', icon: 'music'},
-  {id: 'all', name: 'All', description: 'Every audiobook in one place', icon: 'layoutGrid'},
-];
-
 // ─── P53: Audiobooks Home rail — uniform "All + content cards" ─────────
 export interface AudiobookCategory {
   id: string;

@@ -29,7 +29,7 @@ import {
   isBlockedError,
 } from '../../../infrastructure/player';
 import {MediaActionsSheet} from '../../../components/sheets/MediaActionsSheet/MediaActionsSheet';
-import {useQueueActions} from '../../../components/sheets/MediaActionsSheet/useQueueActions';
+import {useQueueActions} from '../../../hooks/useQueueActions';
 import {
   formatPositionAccessibility,
   formatPositionLine,

@@ -42,7 +42,7 @@ import {render} from '@testing-library/react-native';
 import {ThemeProvider} from '../../../src/theme';
 import {SearchResultRow} from '../../../src/screens/Search/components/SearchResultRow';
 
-jest.mock('../../../src/components/sheets/MediaActionsSheet/useQueueActions', () => ({
+jest.mock('../../../src/hooks/useQueueActions', () => ({
   useQueueActions: () => ({playNext: jest.fn(), addToQueue: jest.fn()}),
 }));
 

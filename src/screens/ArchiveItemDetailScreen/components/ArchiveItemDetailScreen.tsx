@@ -20,7 +20,8 @@ import {MediaImage} from '../../../components/utility/MediaImage';
 import {PlaylistSheet} from '../../../components/sheets/PlaylistSheet/PlaylistSheet';
 import {MediaActionsSheet} from '../../../components/sheets/MediaActionsSheet/MediaActionsSheet';
 import {useRecentHistory} from '../../../features/recentHistory';
-import { resolveStreamType, useResumeAwareLaunch, useQueue } from '../../../infrastructure/player';
+import { useResumeAwareLaunch } from '../../../infrastructure/player';
+import { useQueueActions } from '../../../hooks/useQueueActions';
 
 import {useBookmarks} from '../../../features/bookmarks';
 import {useToast} from '../../../components/feedback/Toast';
@@ -47,7 +48,7 @@ export const ArchiveItemDetailScreen: React.FC<Props> = ({route}) => {
   const {item, tracks, isLoading, error, retry} =
     useArchiveItemDetailScreen(identifier);
   const {colors} = useTheme();
-  const {addToQueue, prependToQueue} = useQueue();
+  const {playNext, addToQueue} = useQueueActions();
   const toast = useToast();
   const haptics = useHaptics();
     const {add: addBookmark} = useBookmarks();
@@ -117,7 +118,7 @@ export const ArchiveItemDetailScreen: React.FC<Props> = ({route}) => {
       if (!track) return;
       switch (value) {
         case 'play-next':
-          prependToQueue({
+          playNext({
             uri: track.url,
             title: track.title,
             duration: track.lengthSeconds,
@@ -125,7 +126,6 @@ export const ArchiveItemDetailScreen: React.FC<Props> = ({route}) => {
             provider: 'internetArchive',
             mediaType: 'audio',
           });
-          toast.show('Playing next');
           break;
         case 'add-queue':
           addToQueue({
@@ -136,7 +136,6 @@ export const ArchiveItemDetailScreen: React.FC<Props> = ({route}) => {
             provider: 'internetArchive',
             mediaType: 'audio',
           });
-          toast.show('Added to queue');
           break;
         case 'add-playlist':
           setSheetItem({
@@ -197,7 +196,7 @@ export const ArchiveItemDetailScreen: React.FC<Props> = ({route}) => {
       setMenuTrack(null);
       haptics.light();
     },
-    [menuTrack, item, imageUrl, identifier, toast, addBookmark, haptics, addToQueue, prependToQueue],
+    [menuTrack, item, imageUrl, identifier, toast, addBookmark, haptics, playNext, addToQueue],
   );
 
   const handleShare = useCallback(() => {

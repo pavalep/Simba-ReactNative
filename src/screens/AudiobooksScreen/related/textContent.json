@@ -1,0 +1,21 @@
+{
+  "pills": {
+    "loading": "Loading audiobooks…"
+  },
+  "states": {
+    "errorOfflineTitle": "You're offline",
+    "errorOfflineMessage": "Check your connection and try again.",
+    "errorLoadFailed": "Couldn't load audiobooks.",
+    "emptySearchTitle": "No audiobooks match your search.",
+    "emptySearchSuggestion": "Try a different title or author.",
+    "emptyGenreTitle": "No {genre} audiobooks found.",
+    "emptyGenreSuggestion": "Try another genre.",
+    "emptyAllTitle": "No audiobooks found.",
+    "emptyAllSuggestion": "Try a search or pick a genre."
+  },
+  "row": {
+    "openA11y": "Open audiobook {title}",
+    "duration": "{hours}h {minutes}m",
+    "minutes": "{minutes}m"
+  }
+}

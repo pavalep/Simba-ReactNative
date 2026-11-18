@@ -34,8 +34,8 @@ import {useTheme} from '../../../theme';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
 import {MediaActionsSheet} from '../../../components/sheets/MediaActionsSheet/MediaActionsSheet';
-import {useQueueActions} from '../../../components/sheets/MediaActionsSheet/useQueueActions';
-import {jamendoQueueItem} from './jamendoQueueItem';
+import {useQueueActions} from '../../../hooks/useQueueActions';
+import {jamendoQueueItem} from '../../../infrastructure/api/jamendo/jamendoQueueItem';
 import {createTrackCardStyles} from '../styles';
 import type {JamendoTrackResult} from '../../../types/api';
 

@@ -21,7 +21,10 @@ import {MediaImage} from '../../../components/utility/MediaImage';
 import {PlaylistSheet} from '../../../components/sheets/PlaylistSheet/PlaylistSheet';
 import {MediaActionsSheet} from '../../../components/sheets/MediaActionsSheet/MediaActionsSheet';
 import {useRecentHistory} from '../../../features/recentHistory';
-import { resolveStreamType, useResumeAwareLaunch, useQueue } from '../../../infrastructure/player';
+import {useOpenPlaylist} from '../../../infrastructure/player';
+import {useQueueActions} from '../../../hooks/useQueueActions';
+import {usePlayerStore} from '../../../state/playerStore';
+import type {PlaybackEntryInput} from '../../../types/playback';
 
 import {useBookmarks} from '../../../features/bookmarks';
 import {useToast} from '../../../components/feedback/Toast';
@@ -47,16 +50,57 @@ function formatTime(totalSeconds: number): string {
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
+/**
+ * What a chapter of an audiobook IS — ONE answer, in ONE place.
+ *
+ * A chapter is written to four different places: the run (the chapter
+ * list the player advances through), the queue, a playlist, and a
+ * bookmark. They used to disagree about what a chapter is — the run
+ * and the queue wrote `type: 'audio'`, while the playlist and the
+ * bookmark wrote `type: 'audiobook'` — so the history row for a
+ * chapter said "Audio" while the bookmark row for the SAME chapter
+ * said "Audiobook", and nothing in the app could tell an audiobook
+ * chapter from a music track.
+ *
+ * The lane is derived from the kind by `normalizeMediaClassification`,
+ * so declaring the kind is enough.
+ */
+const CHAPTER_CLASSIFICATION = {
+  source: 'api',
+  type: 'audiobook',
+  mediaType: 'audio',
+  provider: 'librivox',
+} as const;
+
+/**
+ * The book's chapters as the app's run entries.
+ *
+ * The run is what the engine advances through, so this list is what
+ * makes "EOF advances to the next chapter" true.
+ */
+function chapterRunEntries(
+  chapters: ArchiveTrack[],
+  author?: string,
+): PlaybackEntryInput[] {
+  return chapters.map(c => ({
+    uri: c.url,
+    title: c.title,
+    duration: c.lengthSeconds || 0,
+    ...(author ? {artist: author} : {}),
+    ...CHAPTER_CLASSIFICATION,
+  }));
+}
+
 export const AudiobookDetailScreen: React.FC<Props> = ({route}) => {
   const {bookId, bookTitle: paramTitle} = route.params;
   const {book, chapters, isLoading, error, retry} =
     useAudiobookDetailScreen(bookId);
   const {colors} = useTheme();
-  const {addToQueue, prependToQueue} = useQueue();
+  const {playNext, addToQueue} = useQueueActions();
   const toast = useToast();
   const haptics = useHaptics();
     const {add: addBookmark} = useBookmarks();
-  const {openPlayer} = useResumeAwareLaunch();
+  const {openPlaylist} = useOpenPlaylist();
 
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [menuChapter, setMenuChapter] = useState<ArchiveTrack | null>(null);
@@ -93,40 +137,76 @@ export const AudiobookDetailScreen: React.FC<Props> = ({route}) => {
     return map;
   }, [sessionRecent]);
 
+  /**
+   * Tap a chapter → play it, with the WHOLE BOOK behind it.
+   *
+   * ## What this used to do
+   *
+   * It built the chapter list (`chapters.map(...)`) and then **never
+   * passed it anywhere**. The list was dead code, and this file's own
+   * header claimed "Tap a chapter → AudioPlayer with the full chapter
+   * list so EOF auto-advances to the next chapter" — which was not
+   * true: the chapter played alone, and at the end of it the player
+   * stopped.
+   *
+   * ## What it does now
+   *
+   * The chapter list IS the run — the same list the engine advances
+   * through, exactly as the Album screen's track list and a user
+   * playlist are (`loadPlaylistToPlayer` + `openPlaylist`). So:
+   *
+   *   - EOF advances to the next chapter, because the next chapter is
+   *     the run's next entry and the lane handover opens it;
+   *   - the "next" control is enabled and points at the next chapter,
+   *     for the same reason;
+   *   - the Queue screen's "Up Next" lists the rest of the book.
+   *
+   * The tapped chapter becomes the run's current entry, so the
+   * transport's position, previous and next all agree with what the
+   * user just tapped.
+   */
   const handleChapterPress = useCallback(
     (chapter: ArchiveTrack, index: number) => {
       if (!book) return;
-      const list = chapters.map(c => ({
-        uri: c.url,
-        title: c.title,
-        duration: c.lengthSeconds || undefined,
-      }));
-      openPlayer({
-        uri: chapter.url,
-        title: chapter.title,
+      const entries = chapterRunEntries(chapters, book.author);
+      if (entries.length === 0) return;
+
+      // The RUN is the book. `loadPlaylistToPlayer` sets the list and
+      // points the run at its first entry; `playFromPlaylist` moves it
+      // to the chapter the user tapped.
+      usePlayerStore.getState().loadPlaylistToPlayer(entries);
+      usePlayerStore.getState().playFromPlaylist(index);
+
+      openPlaylist(entries, {
         type: 'audio',
-        // The KIND, not just the stream type.
-        //
-        // `type` is the bridge's `'video' | 'audio'` stream type; the
-        // catalogue kind travels as `mediaKind`, and the launch seam
-        // records `mediaKind ?? bridgeOpts.type` on the session
-        // (`src/infrastructure/player/useResumeAwareLaunch.ts`). Without
-        // it the chapter was written to the playback history as a
-        // generic AUDIO item — while THIS SAME file already writes the
-        // chapter's BOOKMARK with `type: 'audiobook'` (and its playlist
-        // entry likewise), so the history row and the bookmark row
-        // disagreed about what a chapter is, and nothing in the app
-        // could tell an audiobook chapter from a music track.
-        mediaKind: 'audiobook',
-        // The BOOK's cover as the launch artwork: the chapter IS the
-        // book, so the history row shows the book's cover instead of
-        // nothing. The seam forwards it to the bridge as the media
-        // notification's artwork and stores it on the session, which
-        // is what the checkpoint writer copies into the history row.
-        thumbnailPath: coverImage || undefined,
+        startIndex: index,
+        startExtras: {
+          // The KIND, not just the stream type.
+          //
+          // `type` is the bridge's `'video' | 'audio'` stream type; the
+          // catalogue kind travels as `mediaKind`, and the launch seam
+          // records `mediaKind ?? bridgeOpts.type` on the session
+          // (`src/infrastructure/player/useResumeAwareLaunch.ts`).
+          // Without it the chapter was written to the playback history
+          // as a generic AUDIO item — while THIS SAME file already
+          // writes the chapter's BOOKMARK with `type: 'audiobook'` (and
+          // its playlist entry likewise), so the history row and the
+          // bookmark row disagreed about what a chapter is, and nothing
+          // in the app could tell an audiobook chapter from a music
+          // track.
+          type: 'audiobook',
+          mediaType: 'audio',
+          provider: 'librivox',
+          // The BOOK's cover as the launch artwork: the chapter IS the
+          // book, so the history row shows the book's cover instead of
+          // nothing. The seam forwards it to the bridge as the media
+          // notification's artwork and stores it on the session, which
+          // is what the checkpoint writer copies into the history row.
+          ...(coverImage ? {thumbnailPath: coverImage} : {}),
+        },
       });
     },
-    [openPlayer, book, chapters, coverImage],
+    [openPlaylist, book, chapters, coverImage],
   );
 
   // P37.6: long-press → play next / queue / playlist / bookmark / share
@@ -141,28 +221,23 @@ export const AudiobookDetailScreen: React.FC<Props> = ({route}) => {
       if (!chapter) return;
       switch (value) {
         case 'play-next':
-          prependToQueue({
+          // The app's ONE queue action: the store call AND the toast (with
+          // its Undo) belong to the wrapper, so a queue action here cannot
+          // drift from a queue action anywhere else.
+          playNext({
             uri: chapter.url,
             title: chapter.title,
             duration: chapter.lengthSeconds,
-            source: 'api',
-            provider: 'librivox',
-            type: 'audio',
-            mediaType: 'audio',
+            ...CHAPTER_CLASSIFICATION,
           });
-          toast.show('Playing next');
           break;
         case 'add-queue':
           addToQueue({
             uri: chapter.url,
             title: chapter.title,
             duration: chapter.lengthSeconds,
-            source: 'api',
-            provider: 'librivox',
-            type: 'audio',
-            mediaType: 'audio',
+            ...CHAPTER_CLASSIFICATION,
           });
-          toast.show('Added to queue');
           break;
         case 'add-playlist':
           setSheetItem({
@@ -171,10 +246,7 @@ export const AudiobookDetailScreen: React.FC<Props> = ({route}) => {
             duration: chapter.lengthSeconds,
             artist: book?.author,
             thumbnailPath: coverImage || undefined,
-            source: 'api',
-            provider: 'librivox',
-            type: 'audiobook',
-            mediaType: 'audio',
+            ...CHAPTER_CLASSIFICATION,
           });
           break;
         case 'bookmark': {
@@ -185,10 +257,7 @@ export const AudiobookDetailScreen: React.FC<Props> = ({route}) => {
             duration: chapter.lengthSeconds,
             label: '',
             thumbnailPath: coverImage || undefined,
-            mediaType: 'audio' as const,
-            source: 'api' as const,
-            provider: 'librivox',
-            type: 'audiobook' as const,
+            ...CHAPTER_CLASSIFICATION,
           };
           const result = addBookmark(input);
           if (result.status === 'requires-confirmation') {
@@ -224,7 +293,7 @@ export const AudiobookDetailScreen: React.FC<Props> = ({route}) => {
       setMenuChapter(null);
       haptics.light();
     },
-    [menuChapter, book, bookId, title, coverImage, toast, addBookmark, haptics, addToQueue, prependToQueue],
+    [menuChapter, book, bookId, title, coverImage, toast, addBookmark, haptics, addToQueue, playNext],
   );
 
   const handleShare = useCallback(() => {

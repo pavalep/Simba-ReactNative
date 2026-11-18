@@ -14,7 +14,7 @@
 // written out here so the Music screen's row menu and the rest of the
 // app cannot disagree about what a Jamendo track is.
 
-import type {QueueableItem} from '../../../components/sheets/MediaActionsSheet/useQueueActions';
+import type {QueueableItem} from '../../../types/media';
 import type {JamendoTrackResult} from '../../../types/api';
 
 /** The queueable form of a Jamendo track. */

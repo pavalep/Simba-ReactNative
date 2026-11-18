@@ -18,7 +18,7 @@ import type {PlayerQueueItem} from '../../../infrastructure/player';
 import type {PlaylistItem} from '../../../types/playlist';
 import type {MediaKind, MediaLane, MediaSource} from '../../../types/media';
 import type {RootStackScreenProps} from '../../../navigation/types';
-import {usePlayerStore, toPlaylistEntry} from '../../../state';
+import {usePlayerStore, toPlaylistEntry, useRecentHistoryStore} from '../../../state';
 import {
   resolveStreamType,
   usePlayer,
@@ -29,7 +29,6 @@ import {
   isBlockedError,
   useQueue,
   useQueueItemsAs,
-  usePlaybackHistoryAs,
 } from '../../../infrastructure/player';
 
 interface QueueDisplayRow {
@@ -94,7 +93,25 @@ export function useQueueScreen(): UseQueueScreenResult {
   // `usePlaybackHistory()` and dispatches via the `useQueue()`
   // hook's actions.
   const queue = useQueueItemsAs<PlayerQueueItem<MediaSource, MediaKind, MediaLane>>();
-  const playbackHistory = usePlaybackHistoryAs<PlayerQueueItem<MediaSource, MediaKind, MediaLane>>();
+  /**
+   * "Previously Played" is the APP'S history, not the lib's.
+   *
+   * It used to read the lib's `playbackHistory` — a store whose
+   * `addToPlaybackHistory` is called from NOTHING, in the app or in the
+   * lib (the lib's own tests are its only writer). So the section was
+   * permanently empty: the Queue screen promised "Previously Played"
+   * and never showed a row.
+   *
+   * The app's own `recentHistoryStore` is the real history: the
+   * checkpoint writer (`usePlaybackCheckpointSync`) upserts into it on
+   * every playback checkpoint, newest first, capped at
+   * `MAX_RECENT_HISTORY_ENTRIES` (10).
+   *
+   * The order needs no reversing: the old code reversed the lib's
+   * APPEND-only array, while this store PREPENDS, so both arrive
+   * newest-first.
+   */
+  const recentHistory = useRecentHistoryStore(state => state.entries);
   const currentIndex = usePlayerStore(state => state.currentIndex);
   // V14 Phase 62: source of truth for isPlaying moves to the module.
   const {state: playerState} = usePlayer();
@@ -136,16 +153,25 @@ export function useQueueScreen(): UseQueueScreenResult {
   );
   const queueCount = upNextRows.filter(row => row.origin === 'queue').length;
 
-  // The history is not filtered by lane either — the same reason. The
-  // `.slice()` is load-bearing: without it the `.reverse()` would mutate
-  // the store's own array.
-  const history = useMemo(
+  // The history is not filtered by lane either — the same reason.
+  //
+  // A history entry is a `RecentHistoryEntry`; the screen's rows are
+  // `PlaylistEntry`, so the classification is carried across field by
+  // field. The duration is SECONDS in both — the history store's unit
+  // and the queue's.
+  const history = useMemo<PlaylistEntry[]>(
     () =>
-      playbackHistory
-        .slice()
-        .reverse()
-        .map(entry => toPlaylistEntry(entry)),
-    [playbackHistory],
+      recentHistory.map(entry => ({
+        uri: entry.fileUri,
+        title: entry.title,
+        duration: entry.duration,
+        source: entry.source,
+        type: entry.type,
+        mediaType: entry.mediaType,
+        ...(entry.provider ? {provider: entry.provider} : {}),
+        ...(entry.folderId ? {folderId: entry.folderId} : {}),
+      })),
+    [recentHistory],
   );
 
   const hasContent = !!currentTrack || upNext.length > 0 || history.length > 0;

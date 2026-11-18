@@ -11,9 +11,10 @@ import {AppText} from '../../core/AppText/AppText';
 import {SvgIcon} from '../../utility/SvgIcon';
 import {DownloadButton} from '../../core/DownloadButton/DownloadButton';
 import {MediaActionsSheet} from '../../sheets/MediaActionsSheet/MediaActionsSheet';
-import {useQueueActions} from '../../sheets/MediaActionsSheet/useQueueActions';
+import {useQueueActions} from '../../../hooks/useQueueActions';
 import {startDownload} from '../../../services/downloadService';
 import {useToast} from '../../feedback/Toast/Toast';
+import {jamendoQueueItem} from '../../../infrastructure/api/jamendo/jamendoQueueItem';
 import type {JamendoTrackResult} from '../../../types/api';
 import {useDownloadsStore, useDownloadedUriSet} from '../../../state';
 
@@ -119,30 +120,12 @@ export const StreamingRow: React.FC<StreamingRowProps> = React.memo(
             {
               label: 'Play Next',
               icon: 'skipForward',
-              onPress: () =>
-                playNext({
-                  uri: track.audioUrl,
-                  title: track.name,
-                  duration: track.duration,
-                  source: 'api',
-                  type: 'music',
-                  mediaType: 'audio',
-                  provider: 'jamendo',
-                }),
+              onPress: () => playNext(jamendoQueueItem(track)),
             },
             {
               label: 'Add to Queue',
               icon: 'list',
-              onPress: () =>
-                addToQueue({
-                  uri: track.audioUrl,
-                  title: track.name,
-                  duration: track.duration,
-                  source: 'api',
-                  type: 'music',
-                  mediaType: 'audio',
-                  provider: 'jamendo',
-                }),
+              onPress: () => addToQueue(jamendoQueueItem(track)),
             },
             {
               label: isDownloaded ? 'Downloaded' : 'Download',

@@ -26,7 +26,7 @@ import {SearchBar} from '../../../components/core/SearchBar/SearchBar';
 import {EmptyState} from '../../../components/feedback/EmptyState/EmptyState';
 import {SimbaStatusBar} from '../../../components/StatusBar';
 import {MediaActionsSheet} from '../../../components/sheets/MediaActionsSheet/MediaActionsSheet';
-import {useQueueActions} from '../../../components/sheets/MediaActionsSheet/useQueueActions';
+import {useQueueActions} from '../../../hooks/useQueueActions';
 import {PlaylistSheet, type PlaylistSheetProps} from '../../../components/sheets/PlaylistSheet';
 import {useAllVideosScreen} from '../hooks/useAllVideosScreen';
 import type {ScannedTrack} from '../../../state';

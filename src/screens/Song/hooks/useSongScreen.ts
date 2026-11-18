@@ -14,7 +14,8 @@ import {useApiQuery} from '../../../hooks/useApiQuery';
 import type {RootStackParamList} from '../../../navigation/types';
 import type {LrcLine} from '../../../utils/lrcParser';
 import {isRemoteUri} from '../../../utils/mediaUri';
-import { resolveStreamType, secondsToMs, useResumeAwareLaunch, useQueue } from '../../../infrastructure/player';
+import { resolveStreamType, secondsToMs, useResumeAwareLaunch } from '../../../infrastructure/player';
+import {useQueueActions} from '../../../hooks/useQueueActions';
 import {useMediaStore} from '../../../state';
 
 type SongRoute = RouteProp<RootStackParamList, 'SongScreen'>;
@@ -41,7 +42,7 @@ function formatDuration(sec: number): string {
 export function useSongScreen() {
   const route = useRoute<SongRoute>();
   const navigation = useNavigation<SongNav>();
-  const {addToQueue} = useQueue();
+  const {addToQueue} = useQueueActions();
   const {show: showToast} = useToast();
   const {openPlayer} = useResumeAwareLaunch();
 
@@ -218,8 +219,7 @@ export function useSongScreen() {
 
   const handleAddToQueue = useCallback(() => {
     addToQueue({uri: fileUri, title: displayTitle, duration: displayDuration});
-    showToast('Added to queue', 'success');
-  }, [addToQueue, fileUri, displayTitle, displayDuration, showToast]);
+  }, [addToQueue, fileUri, displayTitle, displayDuration]);
 
   const handleCopyPath = useCallback(() => {
     Clipboard.setString(displayPath);

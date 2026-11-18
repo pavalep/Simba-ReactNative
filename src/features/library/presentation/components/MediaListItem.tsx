@@ -8,7 +8,7 @@ import {
   MediaActionsSheet,
   type MediaAction,
 } from '../../../../components/sheets/MediaActionsSheet/MediaActionsSheet';
-import {useQueueActions} from '../../../../components/sheets/MediaActionsSheet/useQueueActions';
+import {useQueueActions} from '../../../../hooks/useQueueActions';
 import type {MediaKind, MediaLane, MediaSource} from '../../../../types/media';
 
 interface MediaListItemProps {

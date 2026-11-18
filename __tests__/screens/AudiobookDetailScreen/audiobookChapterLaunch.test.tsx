@@ -34,6 +34,8 @@ import {fireEvent, screen, waitFor} from '@testing-library/react-native';
 import {renderWithProviders} from '../../helpers/renderWithProviders';
 import {AudiobookDetailScreen} from '../../../src/screens/AudiobookDetailScreen/components/AudiobookDetailScreen';
 import {useNowPlayingStore} from '../../../src/state/nowPlayingStore';
+import {usePlayerStore} from '../../../src/state/playerStore';
+import {usePlayerQueueStore} from '@simba-dev/react-native-media-player/src/stores/playerQueueStore';
 
 // The player bridge is native.
 interface BridgeLaunchOptions {
@@ -82,6 +84,14 @@ jest.mock(
           format: 'VBR MP3',
           trackNumber: 1,
         },
+        {
+          name: 'chapter_02',
+          title: 'Chapter Two',
+          url: 'https://archive.org/download/the_book_001/chapter_02.mp3',
+          lengthSeconds: 420,
+          format: 'VBR MP3',
+          trackNumber: 2,
+        },
       ],
       isLoading: false,
       error: null,
@@ -93,6 +103,8 @@ jest.mock(
 const COVER_URL = 'https://archive.org/services/img/the_book_001';
 const CHAPTER_URL =
   'https://archive.org/download/the_book_001/chapter_01.mp3';
+const CHAPTER_TWO_URL =
+  'https://archive.org/download/the_book_001/chapter_02.mp3';
 
 async function renderScreen() {
   return renderWithProviders(AudiobookDetailScreen, {
@@ -105,6 +117,8 @@ describe('AudiobookDetailScreen — the chapter launch', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     useNowPlayingStore.getState().reset();
+    usePlayerStore.getState().reset();
+    usePlayerQueueStore.getState().clearQueue();
   });
 
   it('launches the chapter as an AUDIOBOOK, not as a generic audio file', async () => {
@@ -149,5 +163,57 @@ describe('AudiobookDetailScreen — the chapter launch', () => {
       artworkPath?: string;
     };
     expect(opts.artworkPath).toBe(COVER_URL);
+  });
+
+  /**
+   * WAVE B16 — the chapter list is the RUN.
+   *
+   * The screen used to BUILD the chapter list and then never pass it
+   * anywhere, while this file's header promised "EOF auto-advances to
+   * the next chapter". The chapter played alone and the player stopped
+   * at its end.
+   *
+   * The chapter list is now the run — the same list the engine advances
+   * through — so EOF opens the next chapter, the next control points at
+   * it, and the Queue screen's "Up Next" lists the rest of the book.
+   */
+  it('loads the whole chapter list as the run, so EOF advances', async () => {
+    await renderScreen();
+
+    await fireEvent.press(screen.getByText('2. Chapter Two'));
+
+    await waitFor(() => {
+      expect(mockOpenWithResume).toHaveBeenCalledTimes(1);
+    });
+
+    const run = usePlayerStore.getState();
+    expect(run.playlist.map(e => e.title)).toEqual([
+      'Chapter One',
+      'Chapter Two',
+    ]);
+    // The tapped chapter is where the run stands.
+    expect(run.currentIndex).toBe(1);
+    expect(run.currentFile?.uri).toBe(CHAPTER_TWO_URL);
+    // And the chapter carries the book's KIND in the run too, so the
+    // Queue screen's "Up Next" badges it as an audiobook chapter.
+    expect(run.playlist[0]?.type).toBe('audiobook');
+    expect(run.playlist[0]?.mediaType).toBe('audio');
+  });
+
+  it('the queue writes the chapter as an AUDIOBOOK, like the bookmark does', async () => {
+    await renderScreen();
+
+    // Long-press opens the app's one menu; "Add to Queue" is the row.
+    await fireEvent(screen.getByText('1. Chapter One'), 'longPress');
+    await waitFor(() => {
+      expect(screen.getByText('Add to Queue')).toBeTruthy();
+    });
+    await fireEvent.press(screen.getByText('Add to Queue'));
+
+    const queue = usePlayerQueueStore.getState().queue;
+    expect(queue).toHaveLength(1);
+    // The same answer the bookmark gives for the same chapter.
+    expect(queue[0]?.type).toBe('audiobook');
+    expect(queue[0]?.mediaType).toBe('audio');
   });
 });

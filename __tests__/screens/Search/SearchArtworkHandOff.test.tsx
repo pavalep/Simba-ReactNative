@@ -108,7 +108,7 @@ jest.mock('../../../src/screens/Search/hooks/useAggregatedSearch', () => ({
 
 // The tile's long-press sheet and the queue it writes to.
 jest.mock(
-  '../../../src/components/sheets/MediaActionsSheet/useQueueActions',
+  '../../../src/hooks/useQueueActions',
   () => ({
     useQueueActions: () => ({playNext: jest.fn(), addToQueue: jest.fn()}),
   }),
