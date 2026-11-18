@@ -46,6 +46,15 @@ import type {SectionBrowseConfig} from './sectionBrowseConfig';
 import type {SectionRenderContext} from './sectionRenderContext';
 import type {SectionRouteKey, SectionRouteParams} from './sectionRoute';
 
+/**
+ * The handle a filter chip's key is written with.
+ *
+ * A chip's key must say which AXIS it belongs to: the Radio screen's
+ * genre 'Rock' and a country called 'Rock' are the same string, and
+ * removing one must not remove the other.
+ */
+const FILTER_CHIP_PREFIX = 'f:';
+
 interface Props {
   config: SectionBrowseConfig;
   optionsApi: SectionOptionsApi;
@@ -116,15 +125,31 @@ export const BrowseLayout: React.FC<Props> = ({
 
   // `activeChips` is computed here (not in ctx) and fed directly to the
   // <FilterChips> strip — keeping the ctx dep array lean.
+  //
+  // EVERY filter axis is represented. It used to read only the group
+  // whose id was 'filter', so a screen with three axes (Radio: genre,
+  // country, language) could hold three selections and the strip would
+  // show one of them — or none, when none of them was called 'filter'.
+  //
+  // The chip's KEY carries its group, because a key alone cannot say
+  // which axis it belongs to: the Radio screen's 'Rock' (genre) and a
+  // country called 'Rock' would be the same string. The key is an
+  // internal handle — it is read back by `handleChipSelect` and never
+  // shown.
   const activeChips = useMemo<FilterChipItem[]>(() => {
-    const filterGroup = config.options?.groups?.find(g => g.id === 'filter');
-    const labelByKey = new Map(
-      (filterGroup?.options ?? []).map(o => [o.key, o.label]),
-    );
-    const filterChips = Object.values(state.filters)
-      .flatMap(keys => keys)
-      .map(key => ({key, label: labelByKey.get(key) ?? key}));
-    const sortGroup = config.options?.groups?.find(g => g.id === 'sort');
+    const groups = config.options?.groups ?? [];
+    const filterGroups = groups.filter(g => g.id !== 'sort' && g.id !== 'view');
+    const filterChips = filterGroups.flatMap(group => {
+      const selected = state.filters[group.id] ?? [];
+      return selected.map(key => {
+        const option = group.options.find(o => o.key === key);
+        return {
+          key: `${FILTER_CHIP_PREFIX}${group.id}:${key}`,
+          label: option?.label ?? key,
+        };
+      });
+    });
+    const sortGroup = groups.find(g => g.id === 'sort');
     const sortChips =
       state.sort && sortGroup
         ? sortGroup.options
@@ -133,36 +158,53 @@ export const BrowseLayout: React.FC<Props> = ({
         : [];    return [...sortChips, ...filterChips];
   }, [config.options, state.filters, state.sort]);
 
-  const filterGroupId =
-    config.options?.groups?.find(g => g.id === 'filter')?.id ?? 'filter';
   const handleChipSelect = useCallback(
     (key: string) => {
       if (key.startsWith('sort:')) {
         setOption('sort', '');
         return;
       }
-      const current = state.filters[filterGroupId] ?? [];
-      setOption('filter', current.filter(k => k !== key));
+      // The chip carries its group: `f:<groupId>:<optionKey>`.
+      const rest = key.slice(FILTER_CHIP_PREFIX.length);
+      const separator = rest.indexOf(':');
+      if (separator < 0) return;
+      const groupId = rest.slice(0, separator);
+      const optionKey = rest.slice(separator + 1);
+      const current = state.filters[groupId] ?? [];
+      setOption(groupId, current.filter(k => k !== optionKey));
     },
-    [state.filters, filterGroupId, setOption],
+    [state.filters, setOption],
   );
 
   // The clear-once-on-search rule. The previous query is kept in a ref
   // so the effect fires on the TRANSITION (empty → a term) and not on
   // every change of the filter count.
   const previousQueryRef = useRef(search.debouncedQuery);
-  const filterCount = state.filters[filterGroupId]?.length ?? 0;
+  // EVERY filter group's id — the screen may have more than one axis,
+  // and the rule below applies to the scope as a whole.
+  const filterGroupIds = useMemo(
+    () =>
+      (config.options?.groups ?? [])
+        .filter(g => g.id !== 'sort' && g.id !== 'view')
+        .map(g => g.id),
+    [config.options],
+  );
+  const filterCount = filterGroupIds.reduce(
+    (sum, id) => sum + (state.filters[id]?.length ?? 0),
+    0,
+  );
   useEffect(() => {
     const hadQuery = previousQueryRef.current.trim().length > 0;
     const hasQuery = search.debouncedQuery.trim().length > 0;
     previousQueryRef.current = search.debouncedQuery;
     if (autoClearFilterOnSearch && !hadQuery && hasQuery && filterCount > 0) {
-      setOption('filter', []);
+      filterGroupIds.forEach(id => setOption(id, []));
     }
   }, [
     autoClearFilterOnSearch,
     search.debouncedQuery,
     filterCount,
+    filterGroupIds,
     setOption,
   ]);
 
@@ -221,7 +263,7 @@ export const BrowseLayout: React.FC<Props> = ({
         />
       </View>
 
-      <View style={styles.chipsSlot}>
+      <View style={styles.chipsSlot} testID="browse-active-filters">
         {activeChips.length > 0 ? (
           <FilterChips
             items={activeChips}
@@ -281,10 +323,14 @@ export const BrowseLayout: React.FC<Props> = ({
           ...(state.view ? {view: [state.view]} : {}),
         }}
         onChange={(groupId, keys) => {
-          if (groupId === 'filter') {
-            setOption('filter', keys);
+          // `sort` and `view` hold ONE value; every other group is a
+          // filter axis and holds a list. The group id is the group's
+          // own — 'filter' for the single-axis screens, 'genre' /
+          // 'country' / 'language' for the Radio screen's three.
+          if (groupId === 'sort' || groupId === 'view') {
+            setOption(groupId, keys[0] ?? '');
           } else {
-            setOption(groupId as 'sort' | 'view', keys[0] ?? '');
+            setOption(groupId, keys);
           }
         }}
         onReset={reset}

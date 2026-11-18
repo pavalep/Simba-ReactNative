@@ -62,7 +62,22 @@ export interface OptionGroup {
 /** Merged record rendered as `ctx.options` (the host's content
  *  stream reads this — single source of truth for filters/sort/view). */
 export type SectionOptionsMerged = {
+  /**
+   * The `'filter'` group's selected keys.
+   *
+   * Kept as its own field because every screen with ONE filter axis uses
+   * it, and it is the field the content reads for that axis.
+   */
   filter?: string[];
   sort?: string;
   view?: string;
+  /**
+   * EVERY filter group's selected keys, by group id.
+   *
+   * A screen can have more than one filter axis — the Radio screen has
+   * three (genre, country, language) — and one flat `filter` array cannot
+   * say which axis a key belongs to. The keys here are the same keys
+   * `filter` holds for a single-axis screen, so the two never disagree.
+   */
+  filters?: Record<string, string[]>;
 };

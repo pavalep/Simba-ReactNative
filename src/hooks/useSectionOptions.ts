@@ -49,7 +49,16 @@ export interface SectionOptionsState {
 
 export interface SectionOptionsApi {
   state: SectionOptionsState;
-  setOption(groupId: 'filter', keys: string[]): void;
+  /**
+   * Set a filter group's selection.
+   *
+   * The group id is the group's OWN id, so a screen with more than one
+   * filter axis — the Radio screen has three — can hold them
+   * independently: `setOption('genre', ['Rock'])` and
+   * `setOption('country', ['US'])` are two different groups.
+   */
+  setOption(groupId: string, keys: string[]): void;
+  /** Set the single-valued `sort` or `view` selection. */
   setOption(groupId: 'sort' | 'view', key: string): void;
   reset: () => void;
   activeFilterCount: number;
@@ -64,11 +73,22 @@ export function useSectionOptions(
   const viewGroup = config.options?.groups?.find(g => g.id === 'view');
   const defaultView = viewGroup?.options?.[0]?.key;
 
-  const seedFilterKey = useMemo<string | undefined>(() => {
+  /**
+   * The route param that seeds a filter, and the GROUP it seeds.
+   *
+   * The group matters as soon as a screen has more than one axis: the
+   * Radio screen's `genre` param belongs in the genre group, and a
+   * single flat `filter` array could not say so.
+   */
+  const seedFilter = useMemo<{groupId: string; key: string} | undefined>(() => {
     if (!routeParams) return undefined;
-    const filterOptions =
-      config.options?.groups?.find(g => g.id === 'filter')?.options ?? [];
-    const validKeys = new Set(filterOptions.map(o => o.key));
+    // ANY filter group can be seeded — not only the one whose id is
+    // 'filter'. A screen with more than one axis (Radio: genre, country,
+    // language) names its groups after the axis, and the route param
+    // that names one of them must reach it.
+    const filterGroups = (config.options?.groups ?? []).filter(
+      g => g.id !== 'sort' && g.id !== 'view',
+    );
     for (const param of FILTER_SEED_PARAMS) {
       const value = (routeParams as Record<string, unknown>)[param];
       // The route param and the filter key are both the category's id,
@@ -79,7 +99,10 @@ export function useSectionOptions(
       // ignored.
       if (typeof value !== 'string' && typeof value !== 'number') continue;
       const key = String(value);
-      if (validKeys.has(key)) return key;
+      for (const group of filterGroups) {
+        const validKeys = new Set(group.options.map(o => o.key));
+        if (validKeys.has(key)) return {groupId: group.id, key};
+      }
     }
     return undefined;
   }, [routeParams, config.options]);
@@ -88,7 +111,7 @@ export function useSectionOptions(
     config.options?.groups?.find(g => g.id === 'filter')?.id ?? 'filter';
 
   const [state, setState] = useState<SectionOptionsState>(() => ({
-    filters: seedFilterKey ? {[filterGroupId]: [seedFilterKey]} : {},
+    filters: seedFilter ? {[seedFilter.groupId]: [seedFilter.key]} : {},
     sort: undefined,
     view: defaultView,
   }));
@@ -137,6 +160,9 @@ export function useSectionOptions(
     if (filterKeys && filterKeys.length > 0) merged.filter = filterKeys;
     if (state.sort) merged.sort = state.sort;
     if (state.view) merged.view = state.view;
+    // EVERY group's selection, by group id — so a screen with more than
+    // one filter axis can read its own axis out of the context.
+    if (Object.keys(state.filters).length > 0) merged.filters = state.filters;
     return merged;
   }, [state, filterGroupId]);
 
