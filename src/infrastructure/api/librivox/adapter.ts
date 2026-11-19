@@ -124,6 +124,35 @@ function authorLine(authors: LibriVoxAuthorRaw[] | undefined): string {
 }
 
 /**
+ * The Internet Archive item a book's audio files live in.
+ *
+ * MEASURED 2026-11-19 against the live feed: LibriVox sends
+ * `url_iarchive` for NO books — twelve of twelve in one page had the
+ * key ABSENT. It sends `url_zip_file`, and that URL carries the item's
+ * identifier: `https://archive.org/compress/<identifier>/...`.
+ *
+ * So the identifier was on the wire all along and the adapter was
+ * reading a field the API does not send. The consequence was that EVERY
+ * audiobook page in the app showed "0 chapters" and no cover art,
+ * because the chapter list and the cover are both derived from this
+ * identifier (see `AudiobookDetailScreen`). The one book in the page
+ * with no `url_zip_file` has no audio files at all, so an empty chapter
+ * list is the honest answer for it.
+ *
+ * The app wants the canonical IA details URL, so the identifier is
+ * normalised into that form and the IA adapter's `archiveIdentifierFromUrl`
+ * keeps its one job.
+ */
+function archiveItemUrlForBook(b: Partial<LibriVoxBookRaw>): string {
+  const direct = String(b.url_iarchive ?? '').trim();
+  if (direct) return direct;
+  const zip = String(b.url_zip_file ?? '').trim();
+  // IA's two item-URL forms: /compress/<id>/ and /download/<id>/.
+  const match = zip.match(/\/(?:compress|download)\/([^/?#]+)/);
+  return match ? `https://archive.org/details/${match[1]}` : '';
+}
+
+/**
  * V21 W6 P21c — per-book shape validation.
  * Throws `AdapterParseError` for malformed records (was silent
  * `null` skip pre-W22). Required fields: `id` is number or
@@ -160,7 +189,7 @@ function parseRawAudiobook(raw: unknown, path: string): AudiobookResult {
     description: String(b.description ?? ''),
     urlZipFile: String(b.url_zip_file ?? ''),
     urlLibrivox: String(b.url_librivox ?? ''),
-    urlIArchive: String(b.url_iarchive ?? ''),
+    urlIArchive: archiveItemUrlForBook(b),
     totalTime: parseTotalTime(b.totaltime),
     language: String(b.language ?? ''),
   };

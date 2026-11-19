@@ -343,3 +343,109 @@ describe('librivox adapter — the feed contract', () => {
     await expect(searchAudiobooks('alice')).rejects.toBeTruthy();
   });
 });
+
+// ─── The Internet Archive item the audio lives in ───────────────────────
+//
+// MEASURED 2026-11-19 against the live feed
+// (`librivox.org/api/feed/audiobooks/?format=json&limit=12`): LibriVox
+// sends `url_iarchive` for NO books — twelve of twelve had the key
+// ABSENT. It sends `url_zip_file`, and THAT URL carries the item's
+// identifier:
+//
+//   https://archive.org/compress/count_monte_cristo_0711_librivox/
+//     formats=...&file=/count_monte_cristo_0711_librivox.zip
+//
+// So the identifier was on the wire all along and the adapter was
+// reading a field the API does not send. Every audiobook page in the
+// app showed "0 chapters" and no cover, because the chapter list AND
+// the cover are both derived from this identifier.
+//
+// The adapter owns LibriVox's wire shape, so the identifier is
+// normalised here into the canonical IA details URL and the IA
+// adapter's `archiveIdentifierFromUrl` keeps its one job.
+
+describe('librivox adapter — the Internet Archive item', () => {
+  it('derives the IA item URL from the zip URL when url_iarchive is absent', async () => {
+    mockedApiFetch.mockResolvedValueOnce({
+      books: [
+        {
+          ...validBook(1),
+          url_iarchive: undefined,
+          url_zip_file:
+            'https://archive.org/compress/count_monte_cristo_0711_librivox/' +
+            'formats=MP3%20Files&file=/count_monte_cristo_0711_librivox.zip',
+        },
+      ],
+    });
+
+    const result = await searchAudiobooks('count');
+
+    expect(result[0].urlIArchive).toBe(
+      'https://archive.org/details/count_monte_cristo_0711_librivox',
+    );
+  });
+
+  it('reads the identifier out of the /download/ form too', async () => {
+    mockedApiFetch.mockResolvedValueOnce({
+      books: [
+        {
+          ...validBook(1),
+          url_iarchive: undefined,
+          url_zip_file:
+            'https://archive.org/download/huck_finn_librivox/huck_finn_librivox.zip',
+        },
+      ],
+    });
+
+    const result = await searchAudiobooks('huck');
+
+    expect(result[0].urlIArchive).toBe(
+      'https://archive.org/details/huck_finn_librivox',
+    );
+  });
+
+  it('keeps url_iarchive when the feed does send one', async () => {
+    // The direct field wins: the adapter normalises LibriVox's wire,
+    // it does not second-guess a value that was sent.
+    mockedApiFetch.mockResolvedValueOnce({books: [validBook(1)]});
+
+    const result = await searchAudiobooks('count');
+
+    expect(result[0].urlIArchive).toBe('https://archive.org/1');
+  });
+
+  it('answers an empty IA URL when the book carries neither field', async () => {
+    // The one book in the measured page with no zip URL has no audio
+    // files at all, so an empty chapter list is the honest answer.
+    mockedApiFetch.mockResolvedValueOnce({
+      books: [
+        {
+          ...validBook(66),
+          url_iarchive: undefined,
+          url_zip_file: undefined,
+        },
+      ],
+    });
+
+    const result = await searchAudiobooks('maerchen');
+
+    expect(result[0].urlIArchive).toBe('');
+  });
+
+  it('getAudiobookById carries the derived IA URL — the field the detail screen reads', async () => {
+    mockedApiFetch.mockResolvedValueOnce({
+      books: {
+        ...validBook(1),
+        url_iarchive: undefined,
+        url_zip_file:
+          'https://archive.org/compress/bleak_house_cl_librivox/formats=MP3&file=/x.zip',
+      },
+    });
+
+    const result = await getAudiobookById(1);
+
+    expect(result?.urlIArchive).toBe(
+      'https://archive.org/details/bleak_house_cl_librivox',
+    );
+  });
+});

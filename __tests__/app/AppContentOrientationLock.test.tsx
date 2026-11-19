@@ -74,9 +74,20 @@ jest.mock('../../src/navigation/navigationHelper', () => ({
 jest.mock('../../src/navigation/linking', () => ({
   linking: {prefixes: [], config: {}},
 }));
-jest.mock('../../src/state', () => ({
-  useDownloadsStore: {getState: () => ({hydrateDownloads: jest.fn()})},
-}));
+jest.mock('../../src/state', () => {
+  // The settings store, in the shape `ThemeProvider` reads it:
+  // `themeMode` for the resolved theme and `getState().setThemeMode` for
+  // the setter. Dark, because that is the mode the app ships in.
+  const setThemeMode = jest.fn();
+  const settings = {themeMode: 'dark', setThemeMode};
+  return {
+    useDownloadsStore: {getState: () => ({hydrateDownloads: jest.fn()})},
+    useSettingsStore: Object.assign(
+      (selector: (s: typeof settings) => unknown) => selector(settings),
+      {getState: () => settings},
+    ),
+  };
+});
 jest.mock('../../src/hooks/useAuthSession', () => ({
   useAuthSession: () => undefined,
 }));
@@ -100,6 +111,7 @@ jest.mock(
 );
 
 import {AppContent} from '../../src/app/AppContent';
+import {ThemeProvider} from '../../src/theme';
 
 const {__mockSetOrientation: setOrientation} = jest.requireMock(
   '../../src/infrastructure/player',
@@ -110,20 +122,34 @@ describe('AppContent — the boot-time portrait lock', () => {
     setOrientation.mockClear();
   });
 
+  /**
+   * `AppContent` inside the app's own theme provider.
+   *
+   * `AppContent` reads `useTheme()` to build the navigator's theme, so it
+   * cannot be rendered without one — and the app never renders it without
+   * one either: `App` mounts `ThemeProvider`, `AppRoot` is its child, and
+   * `AppContent` is inside `AppRoot`. A test that renders `AppContent` bare
+   * was testing a tree the app does not have, and it broke the moment the
+   * navigator learned the app's colours.
+   */
+  const withTheme = (node: React.ReactElement) => (
+    <ThemeProvider>{node}</ThemeProvider>
+  );
+
   it('locks the window to portrait, once, at boot', async () => {
-    await render(<AppContent />);
+    await render(withTheme(<AppContent />));
 
     expect(setOrientation).toHaveBeenCalledTimes(1);
     expect(setOrientation).toHaveBeenCalledWith('portrait');
   });
 
   it('does NOT re-lock on every render', async () => {
-    const {rerender} = await render(<AppContent />);
+    const {rerender} = await render(withTheme(<AppContent />));
 
     expect(setOrientation).toHaveBeenCalledTimes(1);
 
-    await rerender(<AppContent />);
-    await rerender(<AppContent />);
+    await rerender(withTheme(<AppContent />));
+    await rerender(withTheme(<AppContent />));
 
     // A boot-time lock that re-asserts on every render is a SECOND writer
     // of a value the player also owns — the same defect class as a

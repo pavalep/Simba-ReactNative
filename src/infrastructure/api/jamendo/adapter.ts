@@ -475,37 +475,71 @@ export async function getPopularJamendoTracks(
   return lastEmpty;
 }
 
+/**
+ * The by-id lookup's empty answer is a DECLINED answer, not a "no".
+ *
+ * MEASURED 2026-11-19 on the live API: `GET /v3.0/tracks/?id=1932670`
+ * answers HTTP 200 with `headers.status = "success"`, `code = 0` and an
+ * EMPTY `results` array on roughly half the requests — eight identical
+ * requests came back 1,1,1,1,0,0,1,0. The track exists; the endpoint
+ * simply declined to answer that time.
+ *
+ * The LIST path already knows this: `fetchTracksWithRetry` repeats a
+ * request whose empty page is not an answer. The by-id path did NOT, so
+ * one declined answer became `null` and the Music detail screen said
+ * "Track not found" for the track the user had just tapped — reproduced
+ * on emulator-5554 on 2026-11-19.
+ *
+ * The list path's `emptyIsAnAnswer` rule CANNOT be reused here: the
+ * declined answers carry `results_count: 0` too, so the envelope's own
+ * count would call every empty "an answer" and the retry would never
+ * run. For a by-id lookup the id is already known-good — it came from a
+ * list that showed the track — so an empty is never an answer.
+ *
+ * The transport-error rule is unchanged: `AdapterParseError` propagates
+ * (the server returned garbage, which the caller must see) and a
+ * transport failure is swallowed into `null` (the caller's intent is
+ * "tell me whether this track exists"). The retry covers the transport
+ * failure too, because a dropped connection and a declined request both
+ * mean "not right now", not "no".
+ */
+const BY_ID_RETRY_ATTEMPTS = 4;
+
 export async function getJamendoTrackById(
   id: number,
   signal?: AbortSignal,
 ): Promise<JamendoTrackResult | null> {
-  try {
-    const raw = await apiFetch<JamendoResponseRaw<JamendoTrackRaw>>({
-      config: JAMENDO_CONFIG,
-      path: '/tracks/',
-      params: {
-        client_id: clientId(),
-        format: 'json',
-        id,
-      },
-      signal,
-    });
-    const list = parseJamendoEnvelope(raw);
-    return list.length > 0
-      ? parseRawJamendoTrack(list[0], 'results[0]')
-      : null;
-  } catch (e) {
-    // V21 W6 P21c: distinguish transport-level failures
-    // (`ApiError` from apiFetch + `AbortError` on signal abort)
-    // from wire-shape failures (`AdapterParseError`). Transport
-    // errors are still swallowed — the caller's intent is
-    // "tell me whether this track exists, with null meaning
-    // 'no'". Wire-shape failures propagate so the hook layer
-    // / caller can distinguish "server is down" from "server
-    // returned garbage" and surface an explicit diagnostic.
-    if (e instanceof AdapterParseError) throw e;
-    return null;
+  for (let attempt = 0; attempt < BY_ID_RETRY_ATTEMPTS; attempt++) {
+    // An aborted screen must not spend four more requests on the way out.
+    if (signal?.aborted) return null;
+    try {
+      const raw = await apiFetch<JamendoResponseRaw<JamendoTrackRaw>>({
+        config: JAMENDO_CONFIG,
+        path: '/tracks/',
+        params: {
+          client_id: clientId(),
+          format: 'json',
+          id,
+        },
+        signal,
+      });
+      const list = parseJamendoEnvelope(raw);
+      if (list.length > 0) {
+        return parseRawJamendoTrack(list[0], 'results[0]');
+      }
+    } catch (e) {
+      // V21 W6 P21c: distinguish transport-level failures
+      // (`ApiError` from apiFetch + `AbortError` on signal abort)
+      // from wire-shape failures (`AdapterParseError`). Transport
+      // errors are still swallowed — the caller's intent is
+      // "tell me whether this track exists, with null meaning
+      // 'no'". Wire-shape failures propagate so the hook layer
+      // / caller can distinguish "server is down" from "server
+      // returned garbage" and surface an explicit diagnostic.
+      if (e instanceof AdapterParseError) throw e;
+    }
   }
+  return null;
 }
 
 // V21 W6 P21 (T21.04): documented retries for TanStack Query.

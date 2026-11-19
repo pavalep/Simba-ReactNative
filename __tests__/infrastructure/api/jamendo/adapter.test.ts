@@ -170,11 +170,17 @@ describe('jamendo adapter — V21 W6 P21c', () => {
   });
 
   it('getJamendoTrackById returns null on a not-found (empty results)', async () => {
-    mockedApiFetch.mockResolvedValueOnce({
+    // An empty by-id answer is a DECLINED answer, so it is asked again
+    // before the adapter believes it — measured 2026-11-19, the endpoint
+    // answers empty on roughly half the requests. The full contract of
+    // the retry is pinned in `byIdRetry.test.ts`; this case only pins
+    // that the final answer for a track that never comes back is null.
+    mockedApiFetch.mockResolvedValue({
       headers: {status: 'success'},
       results: [],
     });
     expect(await getJamendoTrackById(999)).toBeNull();
+    expect(mockedApiFetch).toHaveBeenCalledTimes(4);
   });
 
   it('getJamendoTrackById swallows transport errors but propagates AdapterParseError', async () => {

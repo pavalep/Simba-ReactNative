@@ -30,10 +30,13 @@
 import React, {useEffect, useMemo, useRef} from 'react';
 import {Linking, View, StyleSheet} from 'react-native';
 import {NavigationContainer} from '@react-navigation/native';
+import type {Theme} from '@react-navigation/native';
 import {useDownloadsStore} from '../state';
 import {RootNavigator} from '../navigation';
 import {navigationRef} from '../navigation/navigationHelper';
 import {linking} from '../navigation/linking';
+import {useTheme} from '../theme';
+import {FONT_FAMILY} from '../constants/fontFamily';
 // The deep-link opener comes from the app's player layer, not from the
 // package: the PLAYER RULE in `scripts/check-import-boundaries.js` keeps
 // every `@simba-dev/react-native-media-player` import inside
@@ -129,11 +132,70 @@ export const AppContent: React.FC = () => {
     return () => subscription.remove();
   }, [openFromDeepLink]);
 
+  /**
+   * The navigator's theme — the APP's own, not React Navigation's default.
+   *
+   * Without this prop, React Navigation falls back to its DEFAULT (light)
+   * theme, and that theme's `card` background is what sits behind every
+   * screen. A screen that paints its own background (the browse shell,
+   * `ScreenContainer`) covered it; a screen that did not showed the
+   * navigator's light card behind its own dark-theme text.
+   *
+   * MEASURED 2026-11-19 on emulator-5554: the Audiobook detail, the Show
+   * detail and the Archive item detail all rendered a light cream page
+   * with washed-out text while the app was in dark mode — their roots are
+   * transparent, so the light card showed through them.
+   *
+   * So the theme belongs to the ONE owner that can set it: the
+   * navigator. One prop fixes every screen that does not paint its own
+   * background, rather than each screen patching its own root.
+   */
+  const {colors, isDark} = useTheme();
+  const navigationTheme = useMemo<Theme>(
+    () => ({
+      dark: isDark,
+      colors: {
+        primary: colors.accent.gold,
+        background: colors.background.primary,
+        card: colors.background.primary,
+        text: colors.text.primary,
+        border: colors.border.subtle,
+        notification: colors.accent.gold,
+      },
+      // React Navigation v7's theme carries four font roles. The app's
+      // OWN typography tokens are the source for all four — regular is
+      // `body1`, medium is `overline`, bold is `button` and heavy is
+      // `display` — so the navigator cannot drift from the app's type.
+      //
+      // The family/weight pairs are exactly the pairs in
+      // `src/theme/tokens.ts`: a baked family (`Inter Medium`,
+      // `Inter SemiBold`) keeps its weight BELOW 700, so Android's
+      // asset path stays `fonts/<Family>.ttf` and the file that
+      // exists is the one that loads. `Inter` at 700 resolves to
+      // `Inter_bold.ttf`.
+      //
+      // These roles are INERT in this app — every screen sets
+      // `headerShown: false` and draws its own `InternalHeader` — but
+      // the theme's type requires them, and a navigator theme that
+      // names the app's real type is honest even when it is unused.
+      fonts: {
+        regular: {fontFamily: FONT_FAMILY.inter.regular, fontWeight: '400'},
+        medium: {fontFamily: FONT_FAMILY.inter.medium, fontWeight: '500'},
+        bold: {fontFamily: FONT_FAMILY.inter.semibold, fontWeight: '600'},
+        heavy: {fontFamily: FONT_FAMILY.inter.bold, fontWeight: '700'},
+      },
+    }),
+    [colors, isDark],
+  );
+
   return (
     <>
       <SimbaStatusBar variant="home" />
       <View style={styles.root}>
-        <NavigationContainer ref={navigationRef} linking={linkingConfig}>
+        <NavigationContainer
+          ref={navigationRef}
+          linking={linkingConfig}
+          theme={navigationTheme}>
           <RootNavigator />
         </NavigationContainer>
         <OfflineBanner />

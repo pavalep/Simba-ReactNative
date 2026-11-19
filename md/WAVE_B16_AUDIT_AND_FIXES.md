@@ -451,12 +451,156 @@ The suite count grew from 198 to 204 and the test count from 1912 to 1956: four 
 
 ---
 
-## 14. CARRIED FORWARD
+## 14. Wave B16-K — the screens that dead-ended
+
+The report: *"from music, when i click on some tracks it reaches here, not correct, also check live tv, audiobooks, and subsequent, its not reaching a proper place"* — with a screenshot of the Music detail screen reading **"Track not found"**.
+
+Then: *"ui is also not darkmode, as we are in darkmdoe all through out now"*.
+
+And the method: *"from live tv and others issue is different, but for some issues are there for the secordary pages, for some its ok, validate whuch has issues first, then only fix"*.
+
+So this wave was a **sweep first and a fix second**. Every browse screen was reached on `emulator-5554`, its row tapped, and the landing page read off the accessibility tree and photographed. Only what actually broke was fixed.
+
+### 14.1 The sweep — seven screens, seven landings
+
+| screen | the row lands at | verdict |
+|---|---|---|
+| **Music** | `MusicDetail` → **"Track not found"** | **BROKEN** |
+| **Live TV** | the full-screen player, the channel playing | OK — a live stream has no detail page |
+| **Movies** | the full-screen player, the film playing (Elapsed 0:29) | OK — the same reason |
+| **Shows** | `ShowDetail` — poster, meta, description, Bookmark, Season 1's episodes — **on a light page** | **BROKEN (theme)** |
+| **Audiobooks** | `AudiobookDetail` — the data loads, but **"0 chapters"** and **no cover** — on a light page | **BROKEN (chapters + theme)** |
+| **Archive** | `ArchiveItemDetail` — poster, description, "1 track", a playable track row — on a light page | **BROKEN (theme)** |
+| **Radio** | the stream starts playing, and then the process **aborts natively** | **BROKEN (native)** |
+
+Four defects in three screens, plus one that is not the app's code.
+
+### 14.2 FIX 1 — a by-id lookup's empty answer is a DECLINED answer
+
+The Music detail screen resolves the track by id: `getJamendoTrackById(trackId)`. Measured on the live API on 2026-11-19, eight identical requests to `GET https://api.jamendo.com/v3.0/tracks/?id=1932670` came back:
+
+```
+1,1,1,1,0,0,1,0
+```
+
+— HTTP 200, `headers.status = "success"`, `code = 0`, `error_message = ""`, and an EMPTY `results` array. A second run of twelve requests missed once more. The track exists; the endpoint declined to answer that time.
+
+The LIST path already knew this — `fetchTracksWithRetry` repeats a request whose empty page is not an answer. The by-id path did not, so one declined answer became `null` and the screen said "Track not found" for the track the user had just tapped. Reproduced on the device by tapping "RED LIGHT, Egor Budennyy" (id 1932670).
+
+The list path's rule could not be reused: the DECLINED by-id answers carry `results_count: 0` too, so the envelope's own count would call every empty "an answer" and the retry would never run. **For a by-id lookup the id is already known-good — it came from a list that showed the track — so an empty is never an answer.**
+
+So the retry lives in the adapter (`BY_ID_RETRY_ATTEMPTS = 4`), not in the hook: the hook's TanStack `retry` only fires on a thrown error, and the adapter swallows transport failures by contract.
+
+Proved on the device, inside the app's own runtime, by driving the adapter directly and counting the requests on the wire:
+
+```json
+[{"i":0,"ok":true,"attempts":1,"rows":[1]},   {"i":1,"ok":true,"attempts":1,"rows":[1]},
+ {"i":2,"ok":true,"attempts":2,"rows":[0,1]}, {"i":3,"ok":true,"attempts":2,"rows":[0,1]},
+ {"i":4,"ok":true,"attempts":1,"rows":[1]},   {"i":5,"ok":true,"attempts":1,"rows":[1]}]
+```
+
+Two of the six calls got an EMPTY first answer (`rows: 0`) and the adapter asked again and got the track (`rows: 1`). All six resolved. Before the fix those two were "Track not found".
+
+### 14.3 FIX 2 — LibriVox sends the identifier, just not in the field the adapter read
+
+Every audiobook page said "0 chapters" and showed no cover, because the chapter list AND the cover are both derived from the Internet Archive item identifier — and the identifier was empty.
+
+Measured on the live feed on 2026-11-19 (`?format=json&limit=12`): **LibriVox sends `url_iarchive` for NO books.** Twelve of twelve had the key ABSENT. It sends `url_zip_file`, and that URL carries the identifier:
+
+```
+https://archive.org/compress/count_monte_cristo_0711_librivox/formats=…&file=/count_monte_cristo_0711_librivox.zip
+```
+
+So the identifier was on the wire all along and the adapter was reading a field the API does not send. The adapter now normalises it into the canonical `https://archive.org/details/<identifier>` form, so the IA adapter's `archiveIdentifierFromUrl` keeps its one job. Both IA URL forms are handled (`/compress/<id>/` and `/download/<id>/`).
+
+Verified against IA: `https://archive.org/metadata/count_monte_cristo_0711_librivox` → HTTP 200, 1052 files, 256 mp3.
+
+On the device, "Count of Monte Cristo" now reads **128 chapters**, shows its cover, and lists its chapters.
+
+### 14.4 FIX 3 — the navigator owns the theme
+
+`src/app/AppContent.tsx` rendered `<NavigationContainer ref={navigationRef} linking={linkingConfig}>` with **no `theme` prop**. React Navigation therefore used its DEFAULT (light) theme, and that theme's `card` background sat behind every screen.
+
+A screen that paints its own background (the browse shell, `ScreenContainer`) covered it. A screen that did not showed the navigator's light card behind its own dark-theme text — the Audiobook detail, the Show detail and the Archive item detail, whose roots are `flex: 1` with no `backgroundColor`.
+
+The theme belongs to the ONE owner that can set it: the navigator. One `theme` prop fixes every screen that does not paint its own background, rather than each screen patching its own root. The four font roles mirror the app's own typography tokens (`body1` / `overline` / `button` / `display`), and every baked family keeps its weight below 700, so Android's asset path stays `fonts/<Family>.ttf`.
+
+### 14.5 The test that broke — and why the TEST was the thing that was wrong
+
+`__tests__/app/AppContentOrientationLock.test.tsx` rendered `<AppContent />` bare. `AppContent` now reads `useTheme()`, so the suite threw `useTheme must be used within a ThemeProvider` — the one red gate of the wave.
+
+The app never renders `AppContent` bare: `App` mounts `ThemeProvider`, `AppRoot` is its child, and `AppContent` is inside `AppRoot`. The test was testing a tree the app does not have. The suite now mounts the real `ThemeProvider` around `AppContent`, which is the world the component actually lives in.
+
+### 14.6 The Radio crash — still open, and it is not the app's code
+
+Tapping a radio station starts the stream and then aborts the process: **SIGABRT on the main thread**, `pid 7874`, `om.simba.player`. The tombstone (11,521 lines) says:
+
+```
+Abort message: 'fdsan: failed to exchange ownership of file descriptor:
+fd 223 is owned by unique_fd 0x79cc1c6e311c, was expected to be unowned'
+```
+
+and the frames run `Notification.Builder.build()` → `Notification.reduceImageSizes()` → `Icon.scaleDownToAshmem()` → `Icon.scaleDownIfNecessary()` → `BitmapCache.getShared()` → `Bitmap.asShared()` → `Bitmap_copyAshmem` → `ashmem_create_region`, out of **`MediaPlaybackService.buildNotification`**.
+
+That is the media lib's own notification, in `android/src/main/java/com/simba/player/MediaPlaybackService.kt`:
+
+- `loadArtworkBitmap(path)` decodes the artwork **on the notification thread** — for a REMOTE url that is a network fetch, on EVERY ticker tick (the logcat shows `Failed to load artwork: null` once per second);
+- the fallback is `BitmapFactory.decodeResource(resources, android.R.drawable.ic_media_play)`, and `decodeResource` hands back the SAME cached framework bitmap every time;
+- the resulting bitmap goes to `setLargeIcon`, and the framework's own downscale-and-share path then aborts the process when that bitmap is shared twice.
+
+**It did not reproduce on the re-test.** The same station, tapped again on the same build, played for the whole observation window (position 21947 → 22946 → 23850 → 24939 ms) with the process alive — so it is INTERMITTENT, and it depends on the artwork the notification happens to be holding.
+
+The fix belongs in the LIB, not the app: the notification must not hand the framework a bitmap that can be shared twice, and it must not fetch a remote image on the notification thread. That is a lib change, a lib release, an app dependency bump and a NATIVE rebuild — see **B16-K-RADIO-NOTIFICATION** in the carried-forward list.
+
+### 14.7 The device proofs
+
+Four screens, photographed on `emulator-5554` after the fixes:
+
+| proof | screen | what it shows |
+|---|---|---|
+| `device_proof/B16_K01_music_detail.png` | Music detail | the exact track from the bug report — id 1932670, "LOW" by Egor Budennyy — with its artwork, duration, album and the Play button, instead of "Track not found" |
+| `device_proof/B16_K02_audiobook_detail.png` | Audiobook detail | "Count of Monte Cristo" in DARK, with its cover, **128 chapters** and the chapter list |
+| `device_proof/B16_K03_show_detail.png` | Show detail | "Downton Abbey" in DARK, with its poster, meta, Bookmark and Season 1's episodes |
+| `device_proof/B16_K04_archive_detail.png` | Archive item detail | "The Avenger and The Six Shooter" in DARK, with its poster, description, "1 track" and the playable track row |
+
+### 14.8 The gates
+
+```
+tsc          exit=0
+eslint       exit=0
+boundaries   exit=0   606 files scanned, 0 error(s), 0 warning(s)
+fonts        exit=0   668 resolved text usages, 11 shipped font files
+boards       exit=0   51 app routes, 49 boards, 3 "no board, on purpose"
+jest         exit=0   205 suites, 1968 passed, 1 todo, 1969 total
+```
+
+One suite and thirteen tests more than the last wave: the new `byIdRetry` suite (8 tests) and the LibriVox identifier tests (5).
+
+---
+
+## 15. CARRIED FORWARD
 
 Each item, individually, with the reason it could not be closed in this wave.
 
 ### From this wave
 
+- **B16-K-RADIO-NOTIFICATION — the media notification aborts the process.** The lib's
+  `MediaPlaybackService.buildNotification` hands the framework a large-icon bitmap that the
+  framework then downscales and shares; the second share of the same instance trips Android's
+  fdsan check and SIGABRTs the app on the main thread. Intermittent — it did not reproduce on the
+  re-test of the same station. **Reason: the fix is in the LIB.** The notification must not
+  reuse the framework's cached `ic_media_play` bitmap, must not hand the framework a bitmap it
+  will have to share twice, and must not fetch a remote artwork on the notification thread (it
+  does that today, once per ticker tick — `Failed to load artwork: null` in the logcat, once a
+  second). That is a lib change → a lib release → an app dependency bump → a NATIVE rebuild.
+  The app cannot fix it from its own side without working around the lib's contract.
+- **B16-K-THEME-SWEEP — 30 screens still have no themed root background.** The navigator's theme
+  fixed every screen that sat behind it, but the sweep that found them
+  (`src/theme` consumers without a `backgroundColor` on their root) also lists the screens that
+  are never reached with the navigator's card behind them — `Queue`, `Search`, `AllAudio`,
+  `AllVideos`, `Genre`, `Downloads`, `FolderBrowser`, `AllPlaylists`, `Artist`, `Album`,
+  `Changelog`, `Credits`, `Help`, `Licenses`, `Privacy`, `Terms`, `Equalizer`. **Reason: each one
+  is a screen-level audit, and only three of them were on the path this wave swept.**
 - **B16-J-LISTPAGES — the list-page variant of the grammar.** `Genre`, `AllVideos`, `AllAudio`,
   `FollowedPodcasts`, `History`, `DownloadsScreen`, `Bookmarks` need a shell variant with no
   filter groups, no paging and no footer. **Reason: a design decision, not a refactor** — it
