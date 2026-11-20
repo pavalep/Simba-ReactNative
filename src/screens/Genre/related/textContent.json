@@ -1,0 +1,24 @@
+{
+  "sources": {
+    "local": "My Library",
+    "streaming": "Streaming"
+  },
+  "hero": {
+    "localCaption": "{count} {countLabel} in your library",
+    "track": "track",
+    "tracks": "tracks",
+    "loadingCaption": "Loading streaming catalog…",
+    "failedCaption": "Streaming catalog unavailable",
+    "streamingCaption": "{count} tracks on Jamendo"
+  },
+  "states": {
+    "localEmptyTitle": "No Tracks Found",
+    "localEmptyMessage": "No tracks found in the \"{genre}\" genre.",
+    "streamingEmptyTitle": "No Streaming Tracks",
+    "streamingEmptyMessage": "No Jamendo tracks found for the \"{genre}\" tag.",
+    "loadingTitle": "Loading streaming catalog…",
+    "errorTitle": "Couldn't load streaming tracks",
+    "errorMessage": "Jamendo is unreachable for \"{genre}\". Check your connection and retry.",
+    "retryLabel": "Retry"
+  }
+}

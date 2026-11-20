@@ -41,7 +41,7 @@ jest.mock('../../../src/features/followedPodcasts', () => ({
   }),
 }));
 
-import {FollowedPodcastsScreen} from '../../../src/screens/FollowedPodcasts/components/FollowedPodcastsScreen';
+import {FollowedPodcastsScreen} from '../../../src/screens/FollowedPodcasts';
 import type {FollowedPodcast} from '../../../src/features/followedPodcasts';
 
 function makePodcast(overrides: Partial<FollowedPodcast> = {}): FollowedPodcast {

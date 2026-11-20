@@ -867,7 +867,7 @@ jest         exit=0   205 suites, 1968 passed, 1 todo, 1969 total
 
 §7's Group B was carried forward with the note that the list-page variant was `a design decision, not a code fact` — mapping `Genre`, `AllVideos`, `AllAudio`, `FollowedPodcasts`, `History`, `DownloadsScreen` and `Bookmarks` onto `BrowseLayout` changes the shared shell's contract, so it was not to be decided silently. The owner's instruction for this wave was to finish every carried-forward item, so the decision was taken here and is written down with its reasoning: a decision that is not written down is a decision the next screen makes differently.
 
-**This wave lands the variant and migrates All Audio onto it.** The other six list pages are migrated in the wave that follows; §18 names each one individually.
+**This wave lands the variant and migrates All Audio onto it.** The other six list pages are migrated in the wave that follows, in §18.
 
 ### 17.1 The decision — the config declares the chrome
 
@@ -967,21 +967,220 @@ jest         exit=0   206 suites, 1977 passed, 1 todo, 1978 total
 
 ---
 
-## 18. CARRIED FORWARD
+## 18. Wave B16-J2 — the six list pages on the shell
+
+The carried-forward list named six pages that were not on the shared shell: **`Genre`**,
+**`AllVideos`**, **`FollowedPodcasts`**, **`History`**, **`DownloadsScreen`** and
+**`Bookmarks`**. All six are on it now.
+
+This wave is the second half of §17's variant. The variant itself — the shell taking its
+chrome from the config — landed in §17.1 and is not repeated here. What this section
+records is the six migrations, the two shell slots they needed, and the rule that settled
+every page's chrome.
+
+### 18.1 What the six pages had in common
+
+Each of the six drew its own shell: its own `SafeAreaView` or `ScreenContainer`, its own
+`InternalHeader`, and in three cases its own full-bleed gradient, its own `BackButton`, its
+own title, its own search field and its own empty state. The six old screen components were
+**1,966 lines** in total, and every one of them is deleted:
+
+| page | the old component | lines |
+|---|---|---|
+| AllVideos | `components/AllVideosScreen.tsx` | 428 |
+| Bookmarks | `components/BookmarksScreen.tsx` | 156 |
+| Downloads | `components/DownloadsScreen.tsx` | 453 |
+| FollowedPodcasts | `components/FollowedPodcastsScreen.tsx` | 160 |
+| Genre | `components/GenreScreen.tsx` | 308 |
+| History | `components/HistoryScreen.tsx` | 461 |
+
+All six screens now carry the grammar's eight points — composition root, config, copy,
+content component, data provider, data hook, styles factory, shared types.
+
+### 18.2 Two slots the shared shell needed
+
+The variant landed in §17.1 with the header's RIGHT action already widened. Two of the six
+pages needed two more slots, and both went onto the shared shell rather than being faked in
+a page:
+
+- **`headerSubtitle`** — the header has carried a subtitle slot all along; the shell simply
+  did not pass one through. The Bookmarks page's "12 saved" and the Downloads page's
+  "3 items" are information, not controls, and the header is where the app puts a page's
+  information.
+- **`headerLeftAction`** — the header always draws a back button and it goes back by default.
+  The Downloads page's back button means "back to the LIBRARY", not "back to wherever you
+  came from" — and a cold deep link has no history to go back to. `InternalHeader` gained
+  the matching `leftAction` slot and passes it to the shared `BackButton`.
+
+### 18.3 The rule that settled every page's chrome
+
+**The config declares the chrome; the content keeps its own controls.**
+
+A filter axis is a scope ONE list answers, so it belongs in the option model — the chip strip
+carries what is applied and the sheet holds the options. A toggle or a policy that CHOOSES or
+KEEPS things is not a filter of one list, so it stays in the content. That rule decided Genre's
+source toggle, the Downloads auto-delete policy and History's media-type row, and each of
+those three is named below with its own reason.
+
+### 18.4 FollowedPodcasts ("My Podcasts") — no search field, no options
+
+The page declares **no search and no option groups**, so the shell draws no search field, no
+chip strip and no filter button. That is a decision, not an omission: Apple Podcasts'
+"Following" and Pocket Casts' list of followed podcasts are both plain lists with no search
+field, and the page never had one. An affordance that is not in the shipping apps is not
+invented here.
+
+The page's only control is the row's own **Unfollow**, and unfollow does the same three
+things `PodcastDetailScreen` does — remove the follow, fire the haptic, show the toast — so
+the two places that unfollow a podcast behave identically. Opening a row goes to
+`navigate('PodcastDetail', {podcastId})`.
+
+### 18.5 Bookmarks — the count is information, the wipe is a control
+
+The page declares a **search field only**. A bookmark list is grouped by file and ordered by
+position, and that grouping is the shared `BookmarkList` component's job — not an option
+sheet's.
+
+The header carries two things: the subtitle **"{count} saved"** and the destructive
+**"Clear All"** with its confirmation. The count used to be a tappable label in the error
+colour — "12 saved" was information pretending to be a button, and a user who tapped it
+because it looked like information was offered a wipe of every bookmark they had
+(`md/CONTENT_OWNERSHIP.md` §6.3.1).
+
+The root owns the header action and its confirm; the content owns the row-remove confirm.
+Both read the same store — the store is the one owner, and two readers of a store is not a
+second owner.
+
+### 18.6 Genre — the title IS the genre, and the toggle stays
+
+The config is a **factory**, `createGenreSectionConfig(genre)`, because the page's title is
+the genre the route asked for: a static config would put one genre's name in every genre's
+header.
+
+The source toggle — "My Library" / "Streaming" — stays in the content. It is not a filter of
+one source: it is the choice BETWEEN two sources, each with its own catalogue and its own
+failures, and the option sheet is for a single-valued option of ONE list.
+
+The old screen put a `ScrollView` around a `FlatList` with `scrollEnabled={false}` — the
+virtualised-list-in-a-scroll-view pattern React Native warns about. The hero and the source
+toggle are now the list's `ListHeaderComponent`, and one `FlatList` mounts at a time.
+
+### 18.7 AllVideos — the sort key was renamed to what the page always said
+
+The sort and the view are option-sheet **groups** now, with the config owning the defaults
+(`title` and `grid`). The page has no filter axis — a local video has no genre, no year filter
+and no category the source could answer — so the chip strip stays away and reserves no gutter.
+
+Two facts the old screen had wrong:
+
+- the sort key was `date` while the label the page always displayed was **"Year"**; the key is
+  renamed `year` to match the label the user reads;
+- the row's artist fallback was not the app's — it is now the shared `artistNameOf()` fallback,
+  **"Unknown Artist"**, the same one the list row and the artist axis use.
+
+The pre-existing row long-press menu is preserved, and the play path keeps its typed
+`play()` facade with its five error toasts.
+
+### 18.8 Downloads — the policy is not a filter, and the back button means something
+
+The page declares **no search and no option groups**. The auto-delete policy does not change
+what the page SHOWS, it changes what the app KEEPS — so the policy chips stay in the
+content, where they were, and the shell draws no chip strip and no filter button.
+
+The header carries the subtitle **"{count} items"** (or "Offline playback") and the back
+action that goes to the Library, with the accessible name **"Back to Library"**.
+
+One visual change was forced by the shell: the old warm glow was drawn under the page's own
+transparent header, and the shell's header is opaque, so the glow could not be seen. It moved
+into the content slot at `top: 0, right: -80`, where it is drawn over the content instead of
+under the header.
+
+The download row is now its own component (`components/DownloadsRow.tsx`); the old screen file
+had the row inline.
+
+### 18.9 History — the media-type row became a filter axis
+
+The old page drew a row of four chips under the search field — **All / Video / Audio /
+Streaming** — always visible, offering the whole list twice.
+
+That row is now a **filter axis** (`id: 'filter'`, title "Type", single-select,
+`defaultKey: 'all'`). The scope is a scope one list answers, so it belongs in the option model:
+the chip strip carries the applied scope and the sheet holds the options. The default is
+`all`, and a default is not an explicit selection, so nothing is in the chip strip until the
+user picks one — and the sheet draws "All" as the applied option.
+
+The page has **no pull-to-refresh**, and the reason is recorded in the hook: 54.3 shipped a
+`RefreshControl` whose handler flipped a boolean for one animation frame and re-read nothing —
+the History list is fed by a live persisted store, so there is nothing to refresh. The control
+was a spinner that never fetched anything.
+
+The root owns the destructive **"Clear All"** and its confirm; the content owns the
+row-remove confirm and the **Play Next / Add to Queue / Remove from History** menu. The hook
+keeps the four-variant typed error toasts.
+
+### 18.10 The tests
+
+Six new grammar suites, 17 tests, and three repointed suites:
+
+- `__tests__/screens/FollowedPodcasts/followedPodcastsBrowseGrammar.test.tsx` (2)
+- `__tests__/screens/Bookmarks/bookmarksBrowseGrammar.test.tsx` (3)
+- `__tests__/screens/AllVideos/allVideosBrowseGrammar.test.tsx` (3)
+- `__tests__/screens/Genre/genreBrowseGrammar.test.tsx` (3)
+- `__tests__/screens/DownloadsScreen/downloadsBrowseGrammar.test.tsx` (3)
+- `__tests__/screens/History/historyBrowseGrammar.test.tsx` (3)
+
+The three suites that pointed at the deleted components now point at the new roots:
+`FollowedPodcastsScreen.test.tsx`, `AllVideosPlaylistSheet.test.tsx` and
+`DownloadsRow.test.tsx`.
+
+### 18.11 The device proof — and what it does NOT show
+
+Driven on `emulator-5554` with the argent MCP (`restart-app` → `debugger-connect` →
+`debugger-evaluate` → the app's own `navigationRef.navigate`), each page was opened and read:
+
+| page | what was seen |
+|---|---|
+| Bookmarks | centred "Bookmarks" header, the "1 saved" subtitle, the red "Clear All", the shell's search field, the grouped list — **no chip strip and no filter FAB** |
+| History | the shell's header, "Clear All", the shell's search, the filter FAB; the sheet shows group "TYPE" with **All pre-selected**; tapping **Video** puts a **"Video" chip** in the strip, filters the list to the 3 video entries, and the FAB badge reads **"1 active"**, and the sheet's "Reset filters" footer appears |
+| My Podcasts | the "My Podcasts" header, the rows with art, title, author and Unfollow — **no search field, no chip strip, no filter FAB** |
+| Genre | the header title IS the genre ("Electronic"), the hero and its caption, the source toggle — **no filter FAB, no search** |
+| AllVideos | the shell's header, the shell's search field, the "Sorted by Title" caption, the grid, the filter FAB; a real long-press opened **Play Next / Add to Queue / Add to Playlist** |
+| Downloads | the "Downloads" header with the "1 item" subtitle, the **"Back to Library"** button, the storage card, the auto-delete policy block with its 5 chips, the download row with "Play Jam Jar (Funky jazz)" — **no filter FAB, no chip strip** |
+
+**What the proof does NOT show, stated plainly:** the emulator's file listing does not surface
+files pushed with `adb push`, so the app's own scanner reports **0 files** for the linked music
+folder — that is an emulator limitation, not an app defect. To make rows render at all, two
+`ScannedTrack` video records were written into the app's own media store **from the app's
+runtime**. That is a **proof harness**, not app behaviour: the shipped app contains no
+injected data and no injection path.
+
+### 18.12 The gates
+
+```
+tsc          exit=0
+eslint       exit=0
+boundaries   exit=0   scanned 636 files — 0 error(s), 0 warning(s)
+fonts        exit=0   660 resolved text usages, 11 shipped font files
+boards       exit=0   51 app routes, 49 boards, 3 with no board on purpose
+themed       exit=0   every screen owns a themed background.
+jest         exit=0   212 suites, 1994 passed, 1 todo, 1995 total
+```
+
+Outputs: `X:/Development/SIMBA/.scratch-figcraft/gates-waveB16t/`.
+
+---
+
+## 19. CARRIED FORWARD
 
 Each item, individually, with the reason it could not be closed in this wave.
 
 ### From this wave
 
-- **B16-J-LISTPAGES (remainder) — the six list pages that are not on the shell yet.** The
-  shell's list-page variant is **landed** (§17.1) and **All Audio** is migrated onto it (§17.4).
-  Still to migrate, one screen each: **`Genre`**, **`AllVideos`**, **`FollowedPodcasts`**,
-  **`History`**, **`DownloadsScreen`**, **`Bookmarks`**. **Reason: the variant is the shared
-  half; each screen is its own migration, and they are not the same job** — `AllVideos`,
-  `Genre` and `DownloadsScreen` wore a full-bleed gradient and need `background: 'gradient'`;
-  `Bookmarks` needs the widened `headerRightAction` for its destructive "Clear all"; `History`
-  has a **documented reason** for having no pull-to-refresh; and `Genre` nests FlatLists inside
-  a ScrollView.
+- **B16-J-LISTPAGES — CLOSED in §18.** The shell's list-page variant landed in §17.1, All Audio
+  was migrated onto it in §17.4, and the remaining six pages — **`Genre`**, **`AllVideos`**,
+  **`FollowedPodcasts`**, **`History`**, **`DownloadsScreen`**, **`Bookmarks`** — are migrated
+  in §18. All six old screen components (1,966 lines) are deleted, and each screen now has the
+  grammar's eight points.
 - **B16-J-ALLAUDIO — CLOSED in §17.4.** The All Audio rows carry the app's one
   `MediaActionsSheet` menu — Play Next, Add to Queue, Add to Playlist — and the playlist row
   opens the app's `PlaylistSheet`. Device-proved with a real long-press gesture.
@@ -1046,6 +1245,11 @@ Each item, individually, with the reason it could not be closed in this wave.
 
 ### Closed in this wave (from the carried-forward lists)
 
+- **B16-J-LISTPAGES** — the six remaining list pages — **`Genre`**, **`AllVideos`**,
+  **`FollowedPodcasts`**, **`History`**, **`DownloadsScreen`**, **`Bookmarks`** — are on the
+  shared browse shell (§18). Each declares its own chrome in a config; the shell gained a
+  `headerSubtitle` slot and a `headerLeftAction` slot for them, and the six old screen
+  components (1,966 lines) are deleted.
 - **B16-J-ALLAUDIO** — the All Audio rows have the app's one media menu (Play Next, Add to
   Queue, Add to Playlist) and the All Audio screen is on the shared browse shell (§17).
 - **The list-page shell variant** — the shell's contract now takes the chrome from the config

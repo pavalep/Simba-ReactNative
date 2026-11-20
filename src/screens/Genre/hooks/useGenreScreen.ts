@@ -1,4 +1,7 @@
-// ─── Genre Screen Hook ──────────────────────────────────────────────────
+// ─── Genre — data hook ─────────────────────────────────────────────────
+//
+// WAVE B16 (Wave B2) — rewritten.
+//
 // V18.11.4: converted from the v3-v9 4-tab pattern
 // (local / streaming / moods / radio) to the v10+ "single content
 // stream + FAB" pattern.
@@ -18,10 +21,11 @@
 //   - "Radio" duplicated the RadioScreen experience. The
 //     user can navigate there from the Library/Home tabs.
 //
-// The "source" field in the genre screen output is now
-// ('local' | 'streaming') only.
+// The SOURCE is no longer owned by this hook: it is the page's own
+// toggle, and the provider owns it, so this hook is a pure function
+// of {genre, source}.
 
-import {useCallback, useMemo, useState} from 'react';
+import {useCallback, useMemo} from 'react';
 import {useApiQuery} from '../../../hooks/useApiQuery';
 import {
   getJamendoTracksByGenre,
@@ -29,46 +33,56 @@ import {
 } from '../../../infrastructure/api/jamendo/adapter';
 import {useMediaStore, type ScannedTrack} from '../../../state';
 import {useNetworkStatus} from '../../../hooks/useNetworkStatus';
+import {resolveStreamType, useResumeAwareLaunch} from '../../../infrastructure/player';
 import type {JamendoTrackResult} from '../../../types/api';
 
 const STREAMING_LIMIT = 30;
 
 export type GenreSource = 'local' | 'streaming';
 
-export interface UseGenreScreenResult {
+export interface UseGenreScreenParams {
+  /** The genre the page is about. */
   genre: string;
-  source: GenreSource;
-  setSource: (s: GenreSource) => void;
+};
+
+export interface UseGenreScreenResult {
   localTracks: ScannedTrack[];
   streamingTracks: JamendoTrackResult[];
   streamingLoading: boolean;
   streamingFailed: boolean;
   retryStreaming: () => void;
   isOnline: boolean;
-}
+  /** Play a track from the device's own library. */
+  playLocalTrack: (track: ScannedTrack) => void;
+  /** Play a track from the streaming catalogue. */
+  playStreamingTrack: (track: JamendoTrackResult) => void;
+};
 
-export function useGenreScreen(
-  initialGenre: string,
-  initialSource: GenreSource = 'local',
-): UseGenreScreenResult {
+export function useGenreScreen({
+  genre,
+}: UseGenreScreenParams): UseGenreScreenResult {
   const allTracks = useMediaStore(s => s.tracks);
   const {isOnline} = useNetworkStatus();
-
-  const [source, setSource] = useState<GenreSource>(initialSource);
+  const {openPlayer} = useResumeAwareLaunch();
 
   // ── Local: pure zustand-derived (no async) ──
   const localTracks = useMemo<ScannedTrack[]>(
     () =>
       allTracks
-        .filter(t => t.genre.toLowerCase() === initialGenre.toLowerCase())
+        .filter(t => t.genre.toLowerCase() === genre.toLowerCase())
         .sort((a, b) => a.title.localeCompare(b.title)),
-    [allTracks, initialGenre],
+    [allTracks, genre],
   );
 
   // ── Streaming: jamendo by genre ──
+  //
+  // The catalogue is fetched for BOTH sources, the way it always was:
+  // the toggle switches what is SHOWN, and a catalogue that is already
+  // in flight when the user switches over is one they do not wait for
+  // again.
   const streaming = useApiQuery<JamendoTrackResult[]>({
-    queryKey: ['jamendo', 'byGenre', initialGenre, STREAMING_LIMIT],
-    queryFn: () => getJamendoTracksByGenre(initialGenre, {limit: STREAMING_LIMIT}),
+    queryKey: ['jamendo', 'byGenre', genre, STREAMING_LIMIT],
+    queryFn: () => getJamendoTracksByGenre(genre, {limit: STREAMING_LIMIT}),
     staleTime: 60_000,
     retry: JAMENDO_RETRIES,
   });
@@ -77,15 +91,32 @@ export function useGenreScreen(
     void streaming.refetch();
   }, [streaming]);
 
+  const playLocalTrack = useCallback(
+    (track: ScannedTrack) => {
+      openPlayer({uri: track.uri, title: track.title, type: resolveStreamType('music')});
+    },
+    [openPlayer],
+  );
+
+  const playStreamingTrack = useCallback(
+    (track: JamendoTrackResult) => {
+      openPlayer({
+        uri: track.audioUrl,
+        title: track.name,
+        type: resolveStreamType('music'),
+      });
+    },
+    [openPlayer],
+  );
+
   return {
-    genre: initialGenre,
-    source,
-    setSource,
     localTracks,
     streamingTracks: streaming.data ?? [],
     streamingLoading: streaming.isFetching,
     streamingFailed: !!streaming.error,
     retryStreaming,
     isOnline,
+    playLocalTrack,
+    playStreamingTrack,
   };
 }

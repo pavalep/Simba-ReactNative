@@ -1,0 +1,40 @@
+{
+  "page": {
+    "title": "History",
+    "searchPlaceholder": "Search history…"
+  },
+  "groups": {
+    "type": "Type"
+  },
+  "filters": {
+    "all": "All",
+    "video": "Video",
+    "audio": "Audio",
+    "streaming": "Streaming"
+  },
+  "header": {
+    "clearAllLabel": "Clear All",
+    "clearAllA11y": "Clear history"
+  },
+  "states": {
+    "emptyTitle": "No History",
+    "emptyMessage": "Play any video or audio file and it will appear here with your progress.",
+    "noMatchMessage": "Nothing matches this filter or search. Try another combination."
+  },
+  "menu": {
+    "playNext": "Play Next",
+    "addToQueue": "Add to Queue",
+    "removeFromHistory": "Remove from History"
+  },
+  "row": {
+    "removeLabel": "Remove {title} from history"
+  },
+  "dialogs": {
+    "removeTitle": "Remove from History",
+    "removeMessage": "Remove \"{title}\" from your history?",
+    "removeConfirmLabel": "Remove",
+    "clearTitle": "Clear History",
+    "clearMessage": "This removes all playback history from this device. This cannot be undone.",
+    "clearConfirmLabel": "Clear History"
+  }
+}

@@ -15,6 +15,9 @@ const TOUCH_TARGET = 44;
 
 export const createFollowedPodcastsScreenStyles = (colors: ColorTokens) =>
   StyleSheet.create({
+    sectionRoot: {
+      flex: 1,
+    },
     list: {
       paddingTop: spacing.sm,
       paddingBottom: spacing.xxl,

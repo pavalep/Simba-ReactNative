@@ -1,0 +1,47 @@
+{
+  "page": {
+    "title": "Downloads",
+    "itemsCaption": "{count} item",
+    "itemsCaptionPlural": "{count} items",
+    "offlineCaption": "Offline playback",
+    "backA11y": "Back to Library"
+  },
+  "storage": {
+    "title": "Storage",
+    "usage": "{downloaded} downloaded · {used} of {total} used"
+  },
+  "policy": {
+    "title": "Auto-delete",
+    "ageNote": "Finished downloads are deleted 30 days after they finish.",
+    "keepNote": "The last {count} are kept until then.",
+    "keepAllNote": "Every one is kept until then.",
+    "optionA11y": "Auto-delete {label}",
+    "options": {
+      "off": "Off",
+      "5": "5",
+      "10": "10",
+      "25": "25",
+      "50": "50"
+    }
+  },
+  "states": {
+    "emptyTitle": "No downloads yet",
+    "emptyMessage": "Save tracks and videos to play them without an internet connection.",
+    "emptyAction": "Go to Library"
+  },
+  "row": {
+    "playLabel": "Play {title}",
+    "actionLabel": "Play download",
+    "retryLabel": "Retry download",
+    "pauseLabel": "Pause download",
+    "resumeLabel": "Resume download",
+    "deleteLabel": "Delete download"
+  },
+  "dialog": {
+    "title": "Delete download?",
+    "message": "\"{title}\" will be removed from this device.",
+    "messageGeneric": "This download will be removed from this device.",
+    "confirmLabel": "Delete",
+    "cancelLabel": "Cancel"
+  }
+}

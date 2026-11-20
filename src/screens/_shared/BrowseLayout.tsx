@@ -99,6 +99,28 @@ interface Props {
    * draw its own heart ON TOP of the header. The slot is the header's
    * own, so the action belongs inside it.
    */
+  /**
+   * The header's SUBTITLE — a line of information under the title.
+   *
+   * The header has carried a subtitle slot all along; the shell simply
+   * did not pass one through. The Bookmarks page's "12 saved" and the
+   * Downloads page's "3 items" are information, not controls, and the
+   * header is where the app puts a page's information.
+   */
+  headerSubtitle?: string;
+  /**
+   * The header's BACK action.
+   *
+   * The header always draws a back button and it goes back by default.
+   * The Downloads page's back button means "back to the LIBRARY"
+   * rather than "back to wherever you came from", so it passes its own
+   * action.
+   */
+  headerLeftAction?: {
+    onPress: () => void;
+    /** The button's accessible name. */
+    accessibilityLabel?: string;
+  };
   headerRightAction?: {
     /**
      * The action's glyph.
@@ -129,6 +151,8 @@ export const BrowseLayout: React.FC<Props> = ({
   routeParams,
   autoClearFilterOnSearch = false,
   autoClearSearchOnFilter = false,
+  headerSubtitle,
+  headerLeftAction,
   headerRightAction,
 }) => {
   const {colors} = useTheme();
@@ -330,7 +354,12 @@ export const BrowseLayout: React.FC<Props> = ({
       ) : null}
 
       <SimbaStatusBar variant="home" />
-      <InternalHeader title={config.title} rightAction={headerRightAction} />
+      <InternalHeader
+        title={config.title}
+        subtitle={headerSubtitle}
+        leftAction={headerLeftAction}
+        rightAction={headerRightAction}
+      />
 
       {hasSearch ? (
         <View style={styles.searchSection}>

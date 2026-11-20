@@ -19,7 +19,7 @@
 import {act, fireEvent, screen, waitFor} from '@testing-library/react-native';
 
 import {renderWithProviders} from '../../helpers/renderWithProviders';
-import {AllVideosScreen} from '../../../src/screens/AllVideos/components/AllVideosScreen';
+import {AllVideosScreen} from '../../../src/screens/AllVideos';
 import {useMediaStore, usePlaylistsStore} from '../../../src/state';
 import type {Playlist} from '../../../src/types/playlist';
 import type {ScannedTrack} from '../../../src/state';

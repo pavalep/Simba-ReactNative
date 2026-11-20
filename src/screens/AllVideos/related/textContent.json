@@ -1,0 +1,34 @@
+{
+  "page": {
+    "title": "All Videos",
+    "searchPlaceholder": "Search videos…"
+  },
+  "groups": {
+    "sort": "Sort by",
+    "view": "View"
+  },
+  "sort": {
+    "title": "Title",
+    "year": "Year"
+  },
+  "view": {
+    "grid": "Grid",
+    "list": "List"
+  },
+  "states": {
+    "emptyTitle": "No Videos Found",
+    "emptyMessage": "No video files found. Scan your media library to find video tracks.",
+    "noResultsTitle": "No Results",
+    "noResultsMessage": "No videos match your search."
+  },
+  "caption": {
+    "sortedBy": "Sorted by {sort}",
+    "count": "{shown} of {total}"
+  },
+  "menu": {
+    "playNext": "Play Next",
+    "addToQueue": "Add to Queue",
+    "addToPlaylist": "Add to Playlist",
+    "longPressHint": "Long press for more actions"
+  }
+}

@@ -1,15 +1,17 @@
-// ────────────────────────────────────────────────────────
-// Simba Player — useAllVideosScreen Hook (Phase 20)
-// 54.3: pull-to-refresh triggers a media re-scan.
+// ─── All Videos — data hook ────────────────────────────────────────────
 //
-// V20.10: the manual `refreshing` state was redundant —
-// `useMediaScanner()` already exposes `isScanning` from the
-// Zustand store. The hook's `handleRefresh` is now a 1-liner
-// that just calls `startScan(true)`, and the screen's
-// `<RefreshControl>` reads `isScanning` directly.
-// ────────────────────────────────────────────────────────
+// WAVE B16 (Wave B2) — rewritten.
+//
+// The hook used to own the page's scope as its own `useState`: the sort
+// was a toggle, the view was another toggle, and the search term was a
+// third. Three owners for one page's scope.
+//
+// The scope now belongs to the OPTION MODEL (the shared
+// `useSectionOptions`), and the shell's search field owns the term.
+// This hook is a pure function of that scope: it reads the media store
+// and returns the list the scope asks for.
 
-import {useCallback, useMemo, useState} from 'react';
+import {useCallback, useMemo} from 'react';
 import {useMediaScanner} from '../../../hooks/useMediaScanner';
 import {
   isBlockedError,
@@ -20,32 +22,53 @@ import {
   usePlay,
 } from '../../../infrastructure/player';
 import {useToast} from '../../../components/feedback/Toast';
-import {useMediaVideoTracks} from '../../../state';
+import {useMediaVideoTracks, type ScannedTrack} from '../../../state';
+import text from '../related/textContent.json';
 
-export type SortMode = 'title' | 'date';
-export type ViewMode = 'grid' | 'list';
-
-export interface UseAllVideosScreenResult {
-  videoTracks: ScannedTrack[];
-  searchQuery: string;
-  setSearchQuery: (q: string) => void;
-  sortMode: SortMode;
-  toggleSort: () => void;
-  viewMode: ViewMode;
-  toggleViewMode: () => void;
-  filteredTracks: ScannedTrack[];
-  handlePlayTrack: (uri: string, title: string) => void;
-  /** 54.3: pull-to-refresh state (now the store's `isScanning`). */
-  refreshing: boolean;
-  handleRefresh: () => void;
+/**
+ * The artist a track is filed under.
+ *
+ * The media store's own catalogue uses the same fallback
+ * (`useMediaArtists` → `t.artist || 'Unknown Artist'`), so the row and
+ * the catalogue cannot disagree about an unnamed track.
+ */
+export function artistNameOf(track: ScannedTrack): string {
+  return track.artist || 'Unknown Artist';
 }
 
-export function useAllVideosScreen(): UseAllVideosScreenResult {
+export interface UseAllVideosScreenParams {
+  /** The shell's debounced search term. */
+  query?: string;
+  /** The effective sort — 'title' | 'year'. */
+  sort?: string;
+};
+
+export interface UseAllVideosScreenResult {
+  /** Every scanned video track on the device. */
+  videoTracks: ScannedTrack[];
+  /** The tracks the scope shows. */
+  visibleTracks: ScannedTrack[];
+  /** The order the list is in — the sort group's own label. */
+  sortLabel: string;
+  /** Play a track. */
+  playTrack: (track: ScannedTrack) => void;
+  /** The scan's state — the pull-to-refresh spinner. */
+  refreshing: boolean;
+  /** Run a full re-scan of the linked folders. */
+  refresh: () => void;
+};
+
+export function useAllVideosScreen({
+  query = '',
+  sort = 'title',
+}: UseAllVideosScreenParams = {}): UseAllVideosScreenResult {
+  // V21 typed facade — awaited + Result pattern-match so the
+  // 4 failure variants (network / unsupported / expired / blocked)
+  // surface as toasts. Pre-V21: direct `openPlayer()` call returned
+  // Promise<boolean>; rejection became an unhandled promise rejection,
+  // `false` discarded.
   const play = usePlay();
   const toast = useToast();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [sortMode, setSortMode] = useState<SortMode>('title');
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
   // V20.10: `isScanning` comes from the media-scan store directly
   // (via `useMediaScanner()`). No local `refreshing` state — the
   // scan-in-flight boolean is the single source of truth.
@@ -53,45 +76,40 @@ export function useAllVideosScreen(): UseAllVideosScreenResult {
 
   const videoTracks = useMediaVideoTracks();
 
-  const toggleSort = useCallback(() => {
-    setSortMode(s => (s === 'title' ? 'date' : 'title'));
-  }, []);
-
-  const toggleViewMode = useCallback(() => {
-    setViewMode(v => (v === 'grid' ? 'list' : 'grid'));
-  }, []);
-
-  const filteredTracks = useMemo(() => {
+  const visibleTracks = useMemo(() => {
     let result = [...videoTracks];
 
-    // Apply search
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
+    // The search term — the shell's field, debounced by the shell.
+    const term = query.trim().toLowerCase();
+    if (term) {
       result = result.filter(
         t =>
-          t.title.toLowerCase().includes(q) ||
-          t.artist.toLowerCase().includes(q) ||
-          t.album.toLowerCase().includes(q),
+          t.title.toLowerCase().includes(term) ||
+          artistNameOf(t).toLowerCase().includes(term) ||
+          (t.album || '').toLowerCase().includes(term),
       );
     }
 
-    // Apply sort
+    // The sort.
     result.sort((a, b) => {
-      if (sortMode === 'title') return a.title.localeCompare(b.title);
-      return b.year - a.year; // date: most recent first
+      if (sort !== 'year') return a.title.localeCompare(b.title);
+      // The year sort breaks ties on the TITLE: without it, two videos
+      // from the same year keep the device's scan order, so the list's
+      // order would change with the folder the media was found in.
+      if (b.year !== a.year) return b.year - a.year;
+      return a.title.localeCompare(b.title);
     });
 
     return result;
-  }, [videoTracks, searchQuery, sortMode]);
+  }, [videoTracks, query, sort]);
 
-  const handlePlayTrack = useCallback(
-    async (uri: string, title: string) => {
-      // V21 typed facade — awaited + Result pattern-match so the
-      // 4 failure variants (network / unsupported / expired /
-      // blocked) surface as toasts. Pre-V21: direct
-      // `openPlayer()` call returned Promise<boolean>; rejection
-      // became unhandled promise rejection, `false` discarded.
-      const result = await play({uri, title, mediaType: 'video'});
+  const playTrack = useCallback(
+    async (track: ScannedTrack) => {
+      const result = await play({
+        uri: track.uri,
+        title: track.title,
+        mediaType: 'video',
+      });
       if (result.ok) return;
       if (isNetworkError(result.error)) {
         toast.show(
@@ -110,11 +128,9 @@ export function useAllVideosScreen(): UseAllVideosScreenResult {
           duration: 6000,
         });
       } else if (isBlockedError(result.error)) {
-        toast.show(
-          'This content is not available in your region.',
-          'error',
-          {duration: 6000},
-        );
+        toast.show('This content is not available in your region.', 'error', {
+          duration: 6000,
+        });
       } else if (isLaunchError(result.error)) {
         // B-009: surface the typed bridge rejection code.
         const detail = result.error.code ? ` [${result.error.code}]` : '';
@@ -135,26 +151,16 @@ export function useAllVideosScreen(): UseAllVideosScreenResult {
   );
 
   // 54.3: pull-to-refresh — force a full re-scan of linked folders.
-  // V20.10: no async wrapper / no spinner state — the store's
-  // `isScanning` is the single source of truth for the
-  // `<RefreshControl refreshing={...}>` boolean.
-  const handleRefresh = useCallback(() => {
+  const refresh = useCallback(() => {
     startScan(true);
   }, [startScan]);
 
   return {
     videoTracks,
-    searchQuery,
-    setSearchQuery,
-    sortMode,
-    toggleSort,
-    viewMode,
-    toggleViewMode,
-    filteredTracks,
-    handlePlayTrack,
+    visibleTracks,
+    sortLabel: sort === 'year' ? text.sort.year : text.sort.title,
+    playTrack,
     refreshing: isScanning,
-    handleRefresh,
+    refresh,
   };
 }
-
-import type {ScannedTrack} from '../../../state';

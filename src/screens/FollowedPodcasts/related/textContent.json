@@ -1,0 +1,15 @@
+{
+  "page": {
+    "title": "My Podcasts"
+  },
+  "states": {
+    "emptyTitle": "No podcasts followed yet",
+    "emptyMessage": "Open a podcast and tap Follow, and it will show up here."
+  },
+  "row": {
+    "unfollow": "Unfollow",
+    "openLabel": "Open podcast {title}",
+    "openLabelWithAuthor": "Open podcast {title} by {author}",
+    "unfollowLabel": "Unfollow {title}"
+  }
+}

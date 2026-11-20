@@ -1,4 +1,13 @@
-import {useCallback, useMemo, useState} from 'react';
+// ─── Bookmarks — data hook ─────────────────────────────────────────────
+//
+// WAVE B16 (Wave B2) — rewritten.
+//
+// The hook used to own the search term as its own `useState`, because
+// the page drew its own `SearchBar`. The search field is the shell's
+// now, so the term belongs to the option model and reaches this hook
+// through the provider.
+
+import {useCallback, useMemo} from 'react';
 import {
   isBlockedError,
   isExpiredError,
@@ -10,25 +19,33 @@ import {useToast} from '../../../components/feedback/Toast';
 import {useBookmarks} from '../../../features/bookmarks';
 import type {Bookmark} from '../../../features/bookmarks';
 
-export interface UseBookmarksScreenResult {
-  allBookmarks: ReturnType<typeof useBookmarks>['allBookmarks'];
-  bookmarkCount: number;
-  searchQuery: string;
-  setSearchQuery: (q: string) => void;
-  filteredBookmarks: ReturnType<typeof useBookmarks>['allBookmarks'];
-  handlePress: (item: Bookmark) => void;
-  /** Direct removal without confirm dialog */
-  removeBookmark: (id: string) => void;
-  /** Direct clear all without confirm dialog */
-  clearAllBookmarks: () => void;
-}
+export interface UseBookmarksScreenParams {
+  /** The shell's search term — the provider owns it and pushes it down. */
+  searchQuery?: string;
+};
 
-export function useBookmarksScreen(): UseBookmarksScreenResult {
+export interface UseBookmarksScreenResult {
+  /** Every bookmark the user has. */
+  allBookmarks: Bookmark[];
+  /** How many bookmarks there are. */
+  bookmarkCount: number;
+  /** The bookmarks the search term keeps. */
+  filteredBookmarks: Bookmark[];
+  /** Open a bookmark at its saved position. */
+  handlePress: (item: Bookmark) => void;
+  /** Direct removal without confirm dialog. */
+  removeBookmark: (id: string) => void;
+  /** Direct clear all without confirm dialog. */
+  clearAllBookmarks: () => void;
+};
+
+export function useBookmarksScreen({
+  searchQuery = '',
+}: UseBookmarksScreenParams = {}): UseBookmarksScreenResult {
   // W7 P26: `usePlayWithResume` replaces the direct `useResumeAwareLaunch().openPlayer`
   // call. Pre-P26, `handlePress` did not pass `startPositionMs` at all — every
   // bookmark open played from the beginning, silently ignoring the saved position.
   // The new hook threads the position through (with the seconds→ms conversion).
-  const playWithResume = usePlayWithResume();
   // W22 F/U: `usePlayWithResume` now returns
   // `Result<PlaybackId, StreamError>` (matching `usePlaybackFacade().launch.openWithResume`).
   // Pre-W22 the return was `Promise<boolean>` and a `false` reply surfaced
@@ -37,9 +54,9 @@ export function useBookmarksScreen(): UseBookmarksScreenResult {
   // failure to `NetworkStreamError`; the W22 follow-up (native bridge
   // surfacing HTTP status codes) lights up the other variants without
   // changing the call site.
+  const playWithResume = usePlayWithResume();
   const toast = useToast();
   const {allBookmarks, bookmarkCount, remove, clearAll} = useBookmarks();
-  const [searchQuery, setSearchQuery] = useState('');
 
   const filteredBookmarks = useMemo(() => {
     if (!searchQuery.trim()) return allBookmarks;
@@ -54,11 +71,6 @@ export function useBookmarksScreen(): UseBookmarksScreenResult {
 
   const handlePress = useCallback(
     (item: Bookmark) => {
-      // W22 F/U: typed `Result<PlaybackId, StreamError>` branching
-      // (4 variants). The shared type guards live next to the
-      // `StreamError` discriminated union in `streamErrors.ts` —
-      // they're the same 4 used by `NowPlayingScreen.handleOpenFullPlayer`
-      // (T23.07) so the per-variant toast strings stay consistent.
       void playWithResume({
         uri: item.fileUri,
         title: item.title,
@@ -96,8 +108,6 @@ export function useBookmarksScreen(): UseBookmarksScreenResult {
   return {
     allBookmarks,
     bookmarkCount,
-    searchQuery,
-    setSearchQuery,
     filteredBookmarks,
     handlePress,
     removeBookmark,

@@ -9,6 +9,20 @@ import {BackButton} from '../../utility/BackButton/BackButton';
 interface InternalHeaderProps {
   title: string;
   subtitle?: string;
+  /**
+   * The header's TRAILING action's left counterpart — the BACK action.
+   *
+   * The header always draws a back button, and it goes back by
+   * default. A page whose back means something else — the Downloads
+   * page's back button goes to the LIBRARY, not to whatever screen the
+   * user came from, and a cold deep link has no history to go back
+   * to — passes its own action here.
+   */
+  leftAction?: {
+    onPress: () => void;
+    /** The button's accessible name. */
+    accessibilityLabel?: string;
+  };
   rightAction?: {
     icon?: IconName;
     label?: string;
@@ -34,6 +48,7 @@ interface InternalHeaderProps {
 export const InternalHeader: React.FC<InternalHeaderProps> = ({
   title,
   subtitle,
+  leftAction,
   rightAction,
 }) => {
   const {colors} = useTheme();
@@ -54,7 +69,10 @@ export const InternalHeader: React.FC<InternalHeaderProps> = ({
         },
       ]}>
       {/* Left action — shared BackButton (36px elevated chevron) */}
-      <BackButton />
+      <BackButton
+        onPress={leftAction?.onPress}
+        accessibilityLabel={leftAction?.accessibilityLabel}
+      />
 
       {/* Right action slot — matches the BackButton width so the row stays
           balanced when both are present. A LABEL action is wider than the

@@ -45,7 +45,7 @@ jest.mock('../../../src/components/utility/SvgIcon', () => {
 
 import {useDownloadsScreen} from '../../../src/screens/DownloadsScreen/hooks/useDownloadsScreen';
 import type {DownloadsScreenResult} from '../../../src/screens/DownloadsScreen/hooks/useDownloadsScreen';
-import {DownloadsScreen} from '../../../src/screens/DownloadsScreen/components/DownloadsScreen';
+import {DownloadsScreen} from '../../../src/screens/DownloadsScreen';
 import type {DownloadRecord} from '../../../src/services/downloadService';
 
 const mockUseDownloadsScreen =

@@ -6,8 +6,7 @@
     "clearAllA11y": "Clear all bookmarks"
   },
   "search": {
-    "placeholder": "Search bookmarks…",
-    "a11y": "Search bookmarks"
+    "placeholder": "Search bookmarks…"
   },
   "empty": {
     "title": "No Bookmarks Yet",
