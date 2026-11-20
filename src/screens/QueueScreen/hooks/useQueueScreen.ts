@@ -2,22 +2,33 @@
 // Simba Player — useQueueScreen Hook (Phase 48)
 //
 // Full-page queue: Now Playing / Up Next / Previously Played
-// sections, origin-run-clamped drag reorder, swipe-to-remove,
-// cross-type tap-to-jump, and Save Queue as Playlist.
+// sections, drag reorder, swipe-to-remove, tap-to-jump, and
+// Save Queue as Playlist.
+//
+// WAVE B16 (Wave D) — the four queue behaviours, all closed here:
+//
+//   - B15-Q8 — the explicit queue and the RUN were shown as ONE
+//     "Up Next" list, with two different origins and no way to tell
+//     them apart. They are two lists now: the queue is what the user
+//     asked for, the run's tail is what the album they launched still
+//     has left.
+//   - B15-Q5 — the jump went straight to the bridge's `loadFile`,
+//     which bypassed the launch seam. It goes through the seam now.
+//   - B15-Q2 — the lib's `clearQueue` and `shuffleQueue` were never
+//     called by anything in the app. They are the Up Next section's
+//     actions now.
+//   - B15-Q3 — the queue's durable copy lives in
+//     `src/infrastructure/player/queuePersistence.ts`.
 // ────────────────────────────────────────────────────────
 
 import {useCallback, useMemo} from 'react';
-import {useRoute} from '@react-navigation/native';
 import {playlistActions, playlistKindForItems, CROSS_LANE_QUEUE_REASON} from '../../../features/playlists';
-import {getMpvPlayerModule} from '../../../infrastructure/player';
 import {useHaptics} from '../../../hooks/useHaptics';
 import {useToast} from '../../../components/feedback/Toast';
-import {logger} from '../../../lib/logger';
 import type {PlayerQueueItem} from '../../../infrastructure/player';
 
 import type {PlaylistItem} from '../../../types/playlist';
 import type {MediaKind, MediaLane, MediaSource} from '../../../types/media';
-import type {RootStackScreenProps} from '../../../navigation/types';
 import {usePlayerStore, toPlaylistEntry, useRecentHistoryStore} from '../../../state';
 import {
   usePlayer,
@@ -30,6 +41,16 @@ import {
   useQueueItemsAs,
 } from '../../../infrastructure/player';
 
+/**
+ * Where a row came from.
+ *
+ * `queue` is the EXPLICIT queue — what "Play Next" and "Add to Queue"
+ * wrote. `playlist` is the RUN's tail — the rest of the album or
+ * playlist the user launched. `history` is the app's own "Previously
+ * Played".
+ */
+export type QueueRowOrigin = 'queue' | 'playlist' | 'history';
+
 interface QueueDisplayRow {
   /**
    * V15 Phase 65: a row may come from the module's zustand queue
@@ -40,29 +61,110 @@ interface QueueDisplayRow {
    */
   entry: PlaylistEntry;
   origin: 'queue' | 'playlist';
+  /** The index in ITS OWN list — the lib's queue, or the run's playlist. */
   rawIndex: number;
 }
 
-export interface UseQueueScreenResult {
+/**
+ * A row plus the key it is rendered under.
+ *
+ * The key must be unique WITHIN a section, and the same track can be
+ * queued TWICE — the queue is a list of tracks, not a set. So the key
+ * carries the track's identity and an OCCURRENCE counter: the first
+ * copy of a track is `#0`, the second `#1`.
+ *
+ * Without it two copies of one track collided on a single key and
+ * React said so: "Encountered two children with the same key".
+ *
+ * The counter is deliberate rather than the row's INDEX: an index
+ * changes when the queue is reordered, which remounts the row that
+ * moved. The occurrence survives a reorder.
+ */
+export type QueueRow = PlaylistEntry & {rowKey: string};
 
+function queueEntryKey(item: PlaylistEntry): string {
+  return [
+    item.uri,
+    item.source,
+    item.type,
+    item.mediaType,
+    item.provider ?? '',
+    item.folderId ?? '',
+  ].join('|');
+}
+
+/**
+ * Give every row of a list a key that is unique within that list.
+ *
+ * Exported so the screen and its test share ONE owner of the rule:
+ * the screen renders it, the test pins it.
+ */
+export function withRowKeys(rows: PlaylistEntry[]): QueueRow[] {
+  const seen = new Map<string, number>();
+  return rows.map(row => {
+    const base = queueEntryKey(row);
+    const occurrence = seen.get(base) ?? 0;
+    seen.set(base, occurrence + 1);
+    return {...row, rowKey: `${base}#${occurrence}`};
+  });
+}
+
+export interface UseQueueScreenResult {
   /** Currently playing track (Now Playing section) */
   currentTrack: PlaylistEntry | null;
-  /** Combined Up Next list: explicit queue first, then remaining playlist */
+  /**
+   * The EXPLICIT queue — the tracks the user asked to play next.
+   *
+   * Its own section (B15-Q8). The queue is the user's own list: what
+   * "Play Next" and "Add to Queue" wrote.
+   */
+  queueRows: PlaylistEntry[];
+  /**
+   * The RUN's tail — the rest of what is playing.
+   *
+   * Its own section (B15-Q8). The run has no name anywhere in the app
+   * (`PlayerState` carries no playlist title), so the section is
+   * labelled neutrally and the screen never invents one.
+   */
+  runRows: PlaylistEntry[];
+  /**
+   * Everything that plays next: the explicit queue first, then the
+   * run's tail.
+   *
+   * That order is the PLAYBACK order — the transport's next button
+   * plays the queue's head before the run's tail — so this list and
+   * the engine agree.
+   */
   upNext: PlaylistEntry[];
-  /** How many leading upNext items belong to the explicit queue run */
-  queueCount: number;
   /** Previously played, newest first */
   history: PlaylistEntry[];
   isPlaying: boolean;
   hasContent: boolean;
-  /** P48.3/48.8: play an entry and open the matching player when needed */
-  handleJumpTo: (entry: PlaylistEntry) => void;
-  /** P48.2: reorder inside the combined Up Next list (origin-run-clamped) */
-  handleReorder: (fromIndex: number, toIndex: number) => void;
-  /** P48.2: remove an Up Next item (queue or playlist run) */
-  handleRemove: (index: number) => void;
+  /**
+   * P48.3/48.8: play an entry and open the matching player when needed
+   *
+   * `index` is the row's index WITHIN ITS OWN SECTION, which is what
+   * makes the jump exact: the same track can sit in the queue AND in
+   * the run, and an identity lookup would pick the wrong one.
+   */
+  handleJumpTo: (entry: PlaylistEntry, origin: QueueRowOrigin, index: number) => void;
+  /** P48.2: reorder inside one section (the queue, or the run's tail) */
+  handleReorder: (origin: 'queue' | 'playlist', fromIndex: number, toIndex: number) => void;
+  /** P48.2: remove a row from one section (the queue, or the run's tail) */
+  handleRemove: (origin: 'queue' | 'playlist', index: number) => void;
   handlePlayNext: (entry: PlaylistEntry) => void;
   handleAddToQueue: (entry: PlaylistEntry) => void;
+  /**
+   * Clear the EXPLICIT queue (the lib's `clearQueue`).
+   *
+   * The run is NOT touched: "clear the queue" means the tracks the
+   * user queued, not the album they are listening to.
+   */
+  handleClearQueue: () => void;
+  /** Shuffle the EXPLICIT queue (the lib's `shuffleQueue`). */
+  handleShuffleQueue: () => void;
+  /** Shuffling one track is not shuffling. */
+  canShuffleQueue: boolean;
   /**
    * Why the queue cannot be saved as a playlist, or null when it can.
    *
@@ -76,7 +178,6 @@ export interface UseQueueScreenResult {
 }
 
 export function useQueueScreen(): UseQueueScreenResult {
-  const route = useRoute<RootStackScreenProps<'Queue'>['route']>();
   const haptics = useHaptics();
   // W7 P28: typed `play()` for jumping to a history entry from a
   // different media context. Returns Result<PlaybackId, StreamError>.
@@ -107,6 +208,11 @@ export function useQueueScreen(): UseQueueScreenResult {
    * The order needs no reversing: the old code reversed the lib's
    * APPEND-only array, while this store PREPENDS, so both arrive
    * newest-first.
+   *
+   * The lib's `addToPlaybackHistory` is therefore deliberately NOT
+   * called (B15-Q2). The app has ONE history owner — this store — and
+   * a second history that nothing reads is a second copy of a fact, not
+   * a feature.
    */
   const recentHistory = useRecentHistoryStore(state => state.entries);
   const currentIndex = usePlayerStore(state => state.currentIndex);
@@ -120,7 +226,17 @@ export function useQueueScreen(): UseQueueScreenResult {
     removeFromQueueByIndex,
     reorderQueue: reorderQueueAction,
     removeFromQueue: removeFromQueueAction,
+    clearQueue: clearQueueAction,
+    shuffleQueue: shuffleQueueAction,
   } = useQueue();
+
+  // ── The two origins, kept apart (B15-Q8) ──────────────────────────
+  //
+  // The explicit queue and the RUN are two different lists with two
+  // different origins, and they were rendered as ONE "Up Next" list —
+  // so a user could not tell the tracks they had queued from the rest
+  // of the album they were listening to. They are two lists now.
+  //
   // The run is NOT filtered by lane.
   //
   // It used to be: the screen showed only the active lane's items, so a
@@ -130,25 +246,31 @@ export function useQueueScreen(): UseQueueScreenResult {
   // playlist may not hold; at runtime the boundary is crossed by the
   // handover, and the handover has ONE owner — `useLaneHandover` in
   // `src/infrastructure/player/useResumeAwareLaunch.ts`.
-  const upNextRows = useMemo<QueueDisplayRow[]>(() => {
-    const queuedRows = queue.map(
-      (entry: PlayerQueueItem<MediaSource, MediaKind, MediaLane>, rawIndex) => ({
-        entry: toPlaylistEntry(entry),
-        origin: 'queue' as const,
-        rawIndex,
-      }),
-    );
-    const playlistRows = playlist
-      .map((entry, rawIndex) => ({entry, origin: 'playlist' as const, rawIndex}))
-      .filter(row => row.rawIndex > currentIndex);
-    return [...queuedRows, ...playlistRows];
-  }, [currentIndex, playlist, queue]);
-
-  const upNext = useMemo(
-    () => upNextRows.map(row => row.entry),
-    [upNextRows],
+  const queueRowsMeta = useMemo<QueueDisplayRow[]>(
+    () =>
+      queue.map(
+        (entry: PlayerQueueItem<MediaSource, MediaKind, MediaLane>, rawIndex) => ({
+          entry: toPlaylistEntry(entry),
+          origin: 'queue' as const,
+          rawIndex,
+        }),
+      ),
+    [queue],
   );
-  const queueCount = upNextRows.filter(row => row.origin === 'queue').length;
+  const runRowsMeta = useMemo<QueueDisplayRow[]>(
+    () =>
+      playlist
+        .map((entry, rawIndex) => ({entry, origin: 'playlist' as const, rawIndex}))
+        .filter(row => row.rawIndex > currentIndex),
+    [currentIndex, playlist],
+  );
+
+  const queueRows = useMemo(() => queueRowsMeta.map(row => row.entry), [queueRowsMeta]);
+  const runRows = useMemo(() => runRowsMeta.map(row => row.entry), [runRowsMeta]);
+  // The PLAYBACK order: the queue's head, then the run's tail. This is
+  // the order the transport's next button uses, so the list and the
+  // engine agree.
+  const upNext = useMemo(() => [...queueRows, ...runRows], [queueRows, runRows]);
 
   // The history is not filtered by lane either — the same reason.
   //
@@ -174,138 +296,124 @@ export function useQueueScreen(): UseQueueScreenResult {
   const hasContent = !!currentTrack || upNext.length > 0 || history.length > 0;
 
   const handleJumpTo = useCallback(
-    (entry: PlaylistEntry) => {
-      // V16 Phase 70: dropped the `candidate === entry` reference-equality
-      // tautology (always false for distinct objects) and the
-      // `as unknown as typeof candidate` cast. Field-wise equality is
-      // the real identity check. The wide `candidate` shape lets us
-      // compare against both `PlayerQueueItem[]` (module queue) and
-      // `PlaylistEntry[]` (consumer playlist) with the same function.
-      const sameEntry = (
-        candidate: {
-          uri: string;
-          source?: string;
-          type?: string;
-          mediaType?: string;
-          provider?: string;
-          folderId?: string;
-        },
-      ) =>
-        candidate.uri === entry.uri &&
-        candidate.source === entry.source &&
-        candidate.type === entry.type &&
-        candidate.mediaType === entry.mediaType &&
-        candidate.provider === entry.provider &&
-        candidate.folderId === entry.folderId;
-      const playlistIdx = playlist.findIndex(sameEntry);
-      const queueIdx = queue.findIndex(sameEntry);
-
-      if (playlistIdx >= 0) {
-        usePlayerStore.getState().playFromPlaylist(playlistIdx);
-      } else if (queueIdx >= 0) {
-        removeFromQueueByIndex(queueIdx);
+    (entry: PlaylistEntry, origin: QueueRowOrigin, index: number) => {
+      // ── The bookkeeping, first ──
+      //
+      // The run and the queue are moved BEFORE the launch, because the
+      // launch writes the now-playing session and the run's own sync
+      // ("a launch from outside the run starts a new run") reads the
+      // run at that moment.
+      if (origin === 'playlist') {
+        // A row of the run's tail: move the run to it.
+        const raw = runRowsMeta[index]?.rawIndex ?? -1;
+        if (raw >= 0) {
+          usePlayerStore.getState().playFromPlaylist(raw);
+        }
+      } else if (origin === 'queue') {
+        // A queued track that plays NOW is not "up next" any more.
+        removeFromQueueByIndex(index);
       } else {
-        // History-only item: append to the playlist, then play it.
+        // History-only item: append to the run, then play it.
         usePlayerStore.getState().addToPlaylist(entry);
-        usePlayerStore.getState().playFromPlaylist(playlist.length);
-      }
-      try {
-        getMpvPlayerModule().loadFile(entry.uri);
-      } catch (e) {
-        // V16 Phase 73: mpv bridge may be uninitialised when the user
-        // taps a history item before the player has been mounted.
-        // log + carry on — the openPlayer() call below opens the
-        // activity which re-initialises the bridge.
-        logger.warn('[useQueueScreen] mpv loadFile failed for', entry.uri, e);
+        usePlayerStore.getState().playFromPlaylist(
+          usePlayerStore.getState().playlist.length - 1,
+        );
       }
 
-      // Open the matching player unless we are already inside that lane.
-      // Forward the complete classification so resume, badges, and local-folder
-      // identity survive a queue jump.
-      const from = route.params?.from ?? 'mini';
-      const sameContext =
-        (entry.mediaType === 'audio' && from === 'audio') ||
-        (entry.mediaType === 'video' && from === 'video');
-      if (!sameContext) {
-        // W7 P28: typed `play()` — branch on the 4 StreamError variants
-        // with distinct toast messages. The V12 bridge currently maps
-        // every failure to NetworkStreamError; the W22 native update
-        // will let each variant show a distinct message.
-        void play({
-          uri: entry.uri,
-          title: entry.title,
-          // `entry.mediaType` is the LANE ('audio' | 'video'). `entry.type`
-          // is the content KIND ('movie' | 'episode' | ...) — a different
-          // axis. Passing the kind into the lane slot made every jump hand
-          // `play()` a value that is not a lane at all, and because `type`
-          // is a required field the `?? 'video'` fallback could never fire,
-          // so the garbage went straight through.
-          //
-          // This is the same MediaKind/MediaLane confusion that put music
-          // notes on film posters. The two fields are adjacent on the type
-          // and both are `string`, so nothing caught it.
-          mediaType: entry.mediaType,
-        }).then(r => {
-          if (r.ok) return;
-          if (isNetworkError(r.error)) {
-            toast.show('No connection. Will jump when online.', 'warning');
-          } else if (isUnsupportedError(r.error)) {
-            toast.show('This file format is not supported by the player.', 'error');
-          } else if (isExpiredError(r.error)) {
-            toast.show('Sign in expired. Please sign in again.', 'warning');
-          } else if (isBlockedError(r.error)) {
-            toast.show('This content is not available in your region.', 'error');
-          } else {
-            toast.show('Could not jump to that entry.', 'error');
-          }
-        });
-      }
-
+      // ── The launch, through the seam (B15-Q5) ──
+      //
+      // This used to be:
+      //
+      //   getMpvPlayerModule().loadFile(entry.uri);
+      //   if (the lane differs) play({...});
+      //
+      // — a raw bridge call that bypassed the launch seam. Three things
+      // were wrong with it, and each one was a symptom of the same
+      // mistake:
+      //
+      //   1. The session was never written, so the "Now Playing" row
+      //      could keep showing the PREVIOUS track — the queue screen
+      //      said one thing and the player did another.
+      //   2. The resume position was never resolved, because the seam
+      //      is what resolves it.
+      //   3. For AUDIO the bridge's `loadFile` loads into the mpv handle
+      //      the VIDEO surface owns; the audio lane plays through the
+      //      media service, which only the seam's launch reaches. So an
+      //      audio jump in the same lane never actually played.
+      //
+      // It goes through the seam now, always, and the lane no longer
+      // decides anything: the seam resolves the lane from the kind.
+      //
+      // `expand: false` because the user is reading a queue. The media
+      // starts and the session is written, but the player does NOT take
+      // over the screen the queue is on — Plex and YouTube Music both
+      // keep the queue on screen when an item in it is tapped.
+      void play({
+        uri: entry.uri,
+        title: entry.title,
+        // The LANE, so `resolveStreamType` gets the stream type the
+        // bridge needs.
+        mediaType: entry.mediaType,
+        // The KIND as well, so the session records what this IS and
+        // not merely which stream type it plays through.
+        mediaKind: entry.type,
+        mediaLane: entry.mediaType,
+        expand: false,
+      }).then(r => {
+        if (r.ok) return;
+        if (isNetworkError(r.error)) {
+          toast.show('No connection. Will jump when online.', 'warning');
+        } else if (isUnsupportedError(r.error)) {
+          toast.show('This file format is not supported by the player.', 'error');
+        } else if (isExpiredError(r.error)) {
+          toast.show('Sign in expired. Please sign in again.', 'warning');
+        } else if (isBlockedError(r.error)) {
+          toast.show('This content is not available in your region.', 'error');
+        } else {
+          toast.show('Could not jump to that entry.', 'error');
+        }
+      });
     },
-    [, play, playlist, queue, route.params?.from, removeFromQueueByIndex, toast],
+    [play, removeFromQueueByIndex, runRowsMeta, toast],
   );
 
   const handleReorder = useCallback(
-    (fromIndex: number, toIndex: number) => {
+    (origin: 'queue' | 'playlist', fromIndex: number, toIndex: number) => {
       if (fromIndex === toIndex) return;
-      const source = upNextRows[fromIndex];
-      if (!source) return;
-      const boundedTarget = Math.max(0, Math.min(upNextRows.length - 1, toIndex));
-      const sameOriginRows = upNextRows.filter(row => row.origin === source.origin);
-      const sourcePosition = sameOriginRows.findIndex(row => row.rawIndex === source.rawIndex);
-      if (sourcePosition < 0) return;
-
-      const targetRow = upNextRows[boundedTarget];
-      const targetPosition = targetRow?.origin === source.origin
-        ? sameOriginRows.findIndex(row => row.rawIndex === targetRow.rawIndex)
-        : boundedTarget < fromIndex
-          ? 0
-          : sameOriginRows.length - 1;
-      const destination = sameOriginRows[Math.max(0, Math.min(sameOriginRows.length - 1, targetPosition))];
-      if (!destination || destination.rawIndex === source.rawIndex) return;
-
-      if (source.origin === 'queue') {
-        reorderQueueAction({fromIndex: source.rawIndex, toIndex: destination.rawIndex});
+      if (origin === 'queue') {
+        // The queue's own indices ARE its section indices.
+        const bounded = Math.max(0, Math.min(queueRowsMeta.length - 1, toIndex));
+        if (bounded === fromIndex) return;
+        reorderQueueAction({fromIndex, toIndex: bounded});
       } else {
-        usePlayerStore.getState().reorderPlaylist({fromIndex: source.rawIndex, toIndex: destination.rawIndex});
+        // The run's tail is a WINDOW onto the run, so the section index
+        // has to be resolved back to the run's own index.
+        const from = runRowsMeta[fromIndex];
+        const to =
+          runRowsMeta[Math.max(0, Math.min(runRowsMeta.length - 1, toIndex))];
+        if (!from || !to || from.rawIndex === to.rawIndex) return;
+        usePlayerStore.getState().reorderPlaylist({
+          fromIndex: from.rawIndex,
+          toIndex: to.rawIndex,
+        });
       }
       haptics.medium();
     },
-    [, haptics, upNextRows, reorderQueueAction],
+    [haptics, queueRowsMeta, reorderQueueAction, runRowsMeta],
   );
 
   const handleRemove = useCallback(
-    (index: number) => {
-      const row = upNextRows[index];
-      if (!row) return;
-      if (row.origin === 'queue') {
-        removeFromQueueAction(row.rawIndex);
+    (origin: 'queue' | 'playlist', index: number) => {
+      if (origin === 'queue') {
+        removeFromQueueAction(index);
       } else {
-        usePlayerStore.getState().removeFromPlaylist(row.rawIndex);
+        const raw = runRowsMeta[index]?.rawIndex ?? -1;
+        if (raw < 0) return;
+        usePlayerStore.getState().removeFromPlaylist(raw);
       }
       haptics.light();
     },
-    [, haptics, upNextRows, removeFromQueueAction],
+    [haptics, removeFromQueueAction, runRowsMeta],
   );
 
   const handlePlayNext = useCallback(
@@ -323,6 +431,26 @@ export function useQueueScreen(): UseQueueScreenResult {
     },
     [haptics, addToQueueAction],
   );
+
+  // ── The queue's own actions (B15-Q2) ──────────────────────────────
+  //
+  // `clearQueue` and `shuffleQueue` existed in the library and NOTHING
+  // in the app ever called them. They are the Up Next section's actions
+  // now — both of them are nameable in YouTube Music, Apple Music and
+  // Plex, and both act on the EXPLICIT QUEUE only: the run is the album
+  // the user is listening to, and "clear the queue" does not mean
+  // "forget the album".
+  const handleClearQueue = useCallback(() => {
+    clearQueueAction();
+    haptics.medium();
+  }, [clearQueueAction, haptics]);
+
+  const handleShuffleQueue = useCallback(() => {
+    shuffleQueueAction();
+    haptics.medium();
+  }, [haptics, shuffleQueueAction]);
+
+  const canShuffleQueue = queueRowsMeta.length > 1;
 
   /**
    * Why the queue cannot be saved as a playlist, or null when it can.
@@ -371,8 +499,9 @@ export function useQueueScreen(): UseQueueScreenResult {
 
   return {
     currentTrack,
+    queueRows,
+    runRows,
     upNext,
-    queueCount,
     history,
     isPlaying: playerState.isPlaying,
     hasContent,
@@ -381,6 +510,9 @@ export function useQueueScreen(): UseQueueScreenResult {
     handleRemove,
     handlePlayNext,
     handleAddToQueue,
+    handleClearQueue,
+    handleShuffleQueue,
+    canShuffleQueue,
     handleSaveAsPlaylist,
     saveAsPlaylistBlockReason,
   };

@@ -183,6 +183,13 @@ export {useResumeAwareLaunch} from './useResumeAwareLaunch';
 // md/SIMBA_PLAYER_V19_ARCHITECTURE_AUDIT.md §3.C.
 export {useQueueSync} from './useQueueSync';
 
+// B15-Q3 — the explicit queue's DURABLE mirror. The library's queue
+// store is in-memory (it depends on `zustand` and nothing else, so it
+// has no notion of a device store), so the app keeps the copy that
+// survives a restart. Mounted ONCE, beside `useQueueSync`, in
+// `AppContent`.
+export {useQueuePersistence} from './queuePersistence';
+
 // W9.4 — the resume checkpoint writer. The producer half of the
 // "Recently Played" / resume chain that `resolveResumeMs` reads.
 // Mount once, in `AppRoot` (`src/app/AppRoot.tsx`) — above the browsing
@@ -592,6 +599,34 @@ export interface PlayInput {
   title: string;
   mediaType: MediaKind | MediaLane | 'video' | 'audio';
   /**
+   * The semantic KIND of the media ('movie' | 'music' | ...).
+   *
+   * Separate from `mediaType` on purpose: `mediaType` answers "which
+   * stream type does the bridge need" and the KIND answers "what IS
+   * this". The session records both, and the kind is what "Recently
+   * Played" shows — a film that lost its kind became a music note.
+   * Omitted when the caller has no kind to give.
+   */
+  mediaKind?: MediaKind;
+  /**
+   * The LANE ('audio' | 'video') when the caller knows it.
+   *
+   * The seam derives the lane from the kind when it is not given one,
+   * so this is only needed when the caller's lane is more specific
+   * than its kind implies.
+   */
+  mediaLane?: MediaLane;
+  /**
+   * `false` plays the media WITHOUT taking over the window.
+   *
+   * The default (`true`) opens the full player, which is the app's
+   * standing rule for a track tapped in a list. The Queue screen's
+   * jump passes `false`: the session is written and the media loads,
+   * but the queue the user is reading stays on screen. See
+   * `useResumeAwareLaunch`'s `expand` option.
+   */
+  expand?: boolean;
+  /**
    * The catalogue artwork for this launch — a remote URL or a local path.
    *
    * OPTIONAL, and optional for a reason: the ~34 `openPlayer` call sites
@@ -669,6 +704,16 @@ export function usePlay(): (input: PlayInput) => Promise<Result<PlaybackId, Stre
           // without artwork sends no artwork key at all — the seam treats
           // a present-but-empty path as artwork.
           ...(input.thumbnailPath ? {thumbnailPath: input.thumbnailPath} : {}),
+          // The KIND and the LANE, when the caller knows them. Without
+          // them the seam falls back to the stream type for both, and a
+          // film reaches "Recently Played" as a bare 'video'.
+          ...(input.mediaKind ? {mediaKind: input.mediaKind} : {}),
+          ...(input.mediaLane ? {mediaLane: input.mediaLane} : {}),
+          // `expand: false` plays in place. Only the false case is sent:
+          // the seam's default is to take over the window, and sending
+          // `expand: true` explicitly would make that a promise of this
+          // wrapper instead of the seam's own rule.
+          ...(input.expand === false ? {expand: false} : {}),
         });
         if (!accepted) {
           // No typed code on a `false` return — the bridge only

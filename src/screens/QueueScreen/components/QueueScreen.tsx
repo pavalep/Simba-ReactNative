@@ -5,6 +5,18 @@
 // Played sections, drag-to-reorder (PanResponder + Animated,
 // no gesture libs), swipe-to-remove, tap-to-jump with
 // cross-type player routing, media badges, save-as-playlist.
+//
+// WAVE B16 (Wave D):
+//
+//   - B15-Q8 — the explicit queue and the RUN are TWO sections now.
+//     They were one "Up Next" list with two different origins and no
+//     way to tell them apart.
+//
+//   - B15-Q2 — the section's own actions: Shuffle and Clear. Both act
+//     on the EXPLICIT QUEUE only, and Clear asks first.
+//
+//   - B15-Q5 — the jump goes through the launch seam (the hook owns
+//     that), so "Now Playing" can no longer go stale.
 // ────────────────────────────────────────────────────────
 
 import React, {useCallback, useMemo, useRef, useState} from 'react';
@@ -26,13 +38,19 @@ import {FONT_FAMILY} from '../../../constants/fontFamily';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {AppButton} from '../../../components/core/AppButton/AppButton';
 import {AppTextInput} from '../../../components/core/AppTextInput/AppTextInput';
+import {useConfirmDialog} from '../../../components/core/Dialog/ConfirmDialog';
+import {useToast} from '../../../components/feedback/Toast';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
 import {BackButton} from '../../../components/utility/BackButton/BackButton';
 import {EmptyState} from '../../../components/feedback/EmptyState/EmptyState';
 import {WaveformBars} from '../../../components/feedback/WaveformBars/WaveformBars';
 import {SimbaStatusBar} from '../../../components/StatusBar';
 import {useHaptics} from '../../../hooks/useHaptics';
-import {useQueueScreen} from '../hooks/useQueueScreen';
+import {
+  useQueueScreen,
+  withRowKeys,
+  type QueueRow,
+} from '../hooks/useQueueScreen';
 import type {QueueScreenProps} from '../types';
 
 // ─── Constants ──────────────────────────────────────────
@@ -41,18 +59,22 @@ const ROW_HEIGHT = 52;
 const SWIPE_REMOVE_THRESHOLD = 80;
 const SWIPE_REMOVE_DISTANCE = 140;
 
+/**
+ * Which list a row belongs to.
+ *
+ * The two origins are separate sections (B15-Q8), so a row knows which
+ * list it is in — and the words it uses ("the queue", "this list") are
+ * the ones that match what the user sees.
+ */
+type RowOrigin = 'queue' | 'playlist';
+
+const ORIGIN_WORDS: Record<RowOrigin, {list: string; order: string}> = {
+  queue: {list: 'the queue', order: 'Up Next'},
+  playlist: {list: 'this list', order: 'this list'},
+};
+
 // ─── Helpers ────────────────────────────────────────────
 
-function queueEntryKey(item: PlaylistEntry): string {
-  return [
-    item.uri,
-    item.source,
-    item.type,
-    item.mediaType,
-    item.provider ?? '',
-    item.folderId ?? '',
-  ].join('|');
-}
 
 function formatDuration(seconds: number): string {
   if (!seconds || !isFinite(seconds)) return '0:00';
@@ -151,13 +173,14 @@ const NowPlayingRow: React.FC<{entry: PlaylistEntry; isPlaying: boolean}> =
 interface DraggableRowProps {
   entry: PlaylistEntry;
   index: number;
-  onJumpTo: (entry: PlaylistEntry) => void;
-  onReorder: (from: number, to: number) => void;
-  onRemove: (index: number) => void;
+  origin: RowOrigin;
+  onJumpTo: (entry: PlaylistEntry, origin: RowOrigin, index: number) => void;
+  onReorder: (origin: RowOrigin, from: number, to: number) => void;
+  onRemove: (origin: RowOrigin, index: number) => void;
 }
 
 const DraggableQueueRow: React.FC<DraggableRowProps> = React.memo(
-  ({entry, index, onJumpTo, onReorder, onRemove}) => {
+  ({entry, index, origin, onJumpTo, onReorder, onRemove}) => {
     const {colors, spacing: s} = useTheme();
     const {heavy: hapticHeavy, medium: hapticMedium} = useHaptics();
     const [dragging, setDragging] = useState(false);
@@ -185,7 +208,7 @@ const DraggableQueueRow: React.FC<DraggableRowProps> = React.memo(
                 toValue: -SWIPE_REMOVE_DISTANCE,
                 duration: 120,
                 useNativeDriver: true,
-              }).start(() => onRemove(indexRef.current));
+              }).start(() => onRemove(origin, indexRef.current));
             } else {
               Animated.spring(translateX, {
                 toValue: 0,
@@ -196,7 +219,7 @@ const DraggableQueueRow: React.FC<DraggableRowProps> = React.memo(
             }
           },
         }),
-      [translateX, onRemove],
+      [translateX, onRemove, origin],
     );
 
     // Vertical drag on the handle → reorder (lift & drop, haptic on drop).
@@ -235,7 +258,7 @@ const DraggableQueueRow: React.FC<DraggableRowProps> = React.memo(
             setDragging(false);
             if (target !== indexRef.current) {
               hapticMedium();
-              onReorder(indexRef.current, target);
+              onReorder(origin, indexRef.current, target);
             }
           },
           onPanResponderTerminate: () => {
@@ -254,7 +277,7 @@ const DraggableQueueRow: React.FC<DraggableRowProps> = React.memo(
             setDragging(false);
           },
         }),
-      [translateY, scale, rowStride, hapticHeavy, hapticMedium, onReorder],
+      [translateY, scale, rowStride, hapticHeavy, hapticMedium, onReorder, origin],
     );
 
     return (
@@ -274,14 +297,14 @@ const DraggableQueueRow: React.FC<DraggableRowProps> = React.memo(
           {...dragResponder.panHandlers}
           accessibilityRole="button"
           accessibilityLabel={`Reorder ${entry.title || 'Untitled'}`}
-          accessibilityHint="Drag up or down to change the order in Up Next">
+          accessibilityHint={`Drag up or down to change the order in ${ORIGIN_WORDS[origin].order}`}>
           <View style={styles.dragHandleTouch}>
             <SvgIcon name="list" size={18} color={colors.text.tertiary} />
           </View>
           <TouchableOpacity
             style={styles.rowInfo}
             activeOpacity={0.7}
-            onPress={() => onJumpTo(entry)}
+            onPress={() => onJumpTo(entry, origin, index)}
             accessibilityRole="button"
             accessibilityLabel={`Play ${entry.title || 'Untitled'}`}>
             <AppText variant="body2" numberOfLines={1}>
@@ -293,11 +316,11 @@ const DraggableQueueRow: React.FC<DraggableRowProps> = React.memo(
           </TouchableOpacity>
           <MediaBadges entry={entry} />
           <TouchableOpacity
-            onPress={() => onRemove(index)}
+            onPress={() => onRemove(origin, index)}
             hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}
             style={styles.removeBtn}
             accessibilityRole="button"
-            accessibilityLabel={`Remove ${entry.title || 'Untitled'} from queue`}>
+            accessibilityLabel={`Remove ${entry.title || 'Untitled'} from ${ORIGIN_WORDS[origin].list}`}>
             <SvgIcon name="close" size={14} color={colors.semantic.error} />
           </TouchableOpacity>
         </View>
@@ -310,13 +333,14 @@ const DraggableQueueRow: React.FC<DraggableRowProps> = React.memo(
 
 interface HistoryRowProps {
   entry: PlaylistEntry;
-  onJumpTo: (entry: PlaylistEntry) => void;
+  index: number;
+  onJumpTo: (entry: PlaylistEntry, origin: 'history', index: number) => void;
   onPlayNext: (entry: PlaylistEntry) => void;
   onAddToQueue: (entry: PlaylistEntry) => void;
 }
 
 const HistoryRow: React.FC<HistoryRowProps> = React.memo(
-  ({entry, onJumpTo, onPlayNext, onAddToQueue}) => {
+  ({entry, index, onJumpTo, onPlayNext, onAddToQueue}) => {
     const {colors} = useTheme();
     return (
       <View
@@ -330,7 +354,7 @@ const HistoryRow: React.FC<HistoryRowProps> = React.memo(
         <TouchableOpacity
           style={styles.rowInfo}
           activeOpacity={0.7}
-          onPress={() => onJumpTo(entry)}
+          onPress={() => onJumpTo(entry, 'history', index)}
           accessibilityRole="button"
           accessibilityLabel={`Play ${entry.title || 'Untitled'}`}>
           <AppText variant="body2" numberOfLines={1}>
@@ -371,14 +395,18 @@ const HistoryRow: React.FC<HistoryRowProps> = React.memo(
 type QueueSection = {
   key: string;
   title: string;
-  data: PlaylistEntry[];
+  data: QueueRow[];
 };
 
 export const QueueScreen: React.FC<QueueScreenProps> = ({navigation}) => {
   const {colors} = useTheme();
   const bottomChromeInset = useBottomChromeInset();
+  const toast = useToast();
+  const {confirm, dialog} = useConfirmDialog();
   const {
     currentTrack,
+    queueRows,
+    runRows,
     upNext,
     history,
     isPlaying,
@@ -388,6 +416,9 @@ export const QueueScreen: React.FC<QueueScreenProps> = ({navigation}) => {
     handleRemove,
     handlePlayNext,
     handleAddToQueue,
+    handleClearQueue,
+    handleShuffleQueue,
+    canShuffleQueue,
     handleSaveAsPlaylist,
     saveAsPlaylistBlockReason,
   } = useQueueScreen();
@@ -395,23 +426,69 @@ export const QueueScreen: React.FC<QueueScreenProps> = ({navigation}) => {
   const [saveVisible, setSaveVisible] = useState(false);
   const [saveName, setSaveName] = useState('');
 
+  /**
+   * The two lists are two sections (B15-Q8).
+   *
+   * "Up Next" is the EXPLICIT queue — the tracks the user queued. "Next
+   * in this list" is the RUN's tail — the rest of the album or playlist
+   * they launched.
+   *
+   * The run has NO name anywhere in the app (`PlayerState` carries no
+   * playlist title), so the second heading is deliberately neutral: it
+   * says what the rows ARE without inventing a name for the list.
+   */
   const sections = useMemo<QueueSection[]>(() => {
     const result: QueueSection[] = [];
     if (currentTrack) {
-      result.push({key: 'now', title: 'Now Playing', data: [currentTrack]});
+      result.push({
+        key: 'now',
+        title: 'Now Playing',
+        data: withRowKeys([currentTrack]),
+      });
     }
-    if (upNext.length > 0) {
-      result.push({key: 'upnext', title: `Up Next (${upNext.length})`, data: upNext});
+    if (queueRows.length > 0) {
+      result.push({
+        key: 'upnext',
+        title: `Up Next (${queueRows.length})`,
+        data: withRowKeys(queueRows),
+      });
+    }
+    if (runRows.length > 0) {
+      result.push({
+        key: 'run',
+        title: `Next in this list (${runRows.length})`,
+        data: withRowKeys(runRows),
+      });
     }
     if (history.length > 0) {
       result.push({
         key: 'history',
         title: `Previously Played (${history.length})`,
-        data: history,
+        data: withRowKeys(history),
       });
     }
     return result;
-  }, [currentTrack, upNext, history]);
+  }, [currentTrack, queueRows, runRows, history]);
+
+  /**
+   * "Clear queue" is destructive, so it asks first.
+   *
+   * It clears the EXPLICIT queue only — the album the user is listening
+   * to keeps playing, and the run's tail is untouched. The reason is on
+   * screen before the action happens, not after.
+   */
+  const onClearQueue = useCallback(async () => {
+    const ok = await confirm({
+      title: 'Clear the queue?',
+      message:
+        'The tracks you queued will be removed. What is playing keeps playing.',
+      confirmLabel: 'Clear',
+      destructive: true,
+    });
+    if (!ok) return;
+    handleClearQueue();
+    toast.show('Queue cleared');
+  }, [confirm, handleClearQueue, toast]);
 
   const renderSectionHeader = useCallback(
     ({section}: {section: QueueSection}) => (
@@ -419,13 +496,37 @@ export const QueueScreen: React.FC<QueueScreenProps> = ({navigation}) => {
         <AppText variant="caption" color="tertiary" style={styles.sectionTitle}>
           {section.title}
         </AppText>
+        {section.key === 'upnext' && (
+          <View style={styles.sectionActions}>
+            {canShuffleQueue && (
+              <TouchableOpacity
+                onPress={handleShuffleQueue}
+                style={styles.sectionAction}
+                accessibilityRole="button"
+                accessibilityLabel="Shuffle the queued tracks">
+                <AppText variant="caption" color="secondary">
+                  Shuffle
+                </AppText>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              onPress={onClearQueue}
+              style={styles.sectionAction}
+              accessibilityRole="button"
+              accessibilityLabel="Clear the queued tracks">
+              <AppText variant="caption" color="error">
+                Clear
+              </AppText>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
     ),
-    [],
+    [canShuffleQueue, handleShuffleQueue, onClearQueue],
   );
 
   const renderItem = useCallback(
-    ({item, index, section}: {item: PlaylistEntry; index: number; section: QueueSection}) => {
+    ({item, index, section}: {item: QueueRow; index: number; section: QueueSection}) => {
       if (section.key === 'now') {
         return <NowPlayingRow entry={item} isPlaying={isPlaying} />;
       }
@@ -434,6 +535,19 @@ export const QueueScreen: React.FC<QueueScreenProps> = ({navigation}) => {
           <DraggableQueueRow
             entry={item}
             index={index}
+            origin="queue"
+            onJumpTo={handleJumpTo}
+            onReorder={handleReorder}
+            onRemove={handleRemove}
+          />
+        );
+      }
+      if (section.key === 'run') {
+        return (
+          <DraggableQueueRow
+            entry={item}
+            index={index}
+            origin="playlist"
             onJumpTo={handleJumpTo}
             onReorder={handleReorder}
             onRemove={handleRemove}
@@ -443,6 +557,7 @@ export const QueueScreen: React.FC<QueueScreenProps> = ({navigation}) => {
       return (
         <HistoryRow
           entry={item}
+          index={index}
           onJumpTo={handleJumpTo}
           onPlayNext={handlePlayNext}
           onAddToQueue={handleAddToQueue}
@@ -509,7 +624,7 @@ export const QueueScreen: React.FC<QueueScreenProps> = ({navigation}) => {
       {/* ── Sections (48.4) ── */}
       <SectionList
         sections={sections}
-        keyExtractor={item => queueEntryKey(item)}
+        keyExtractor={item => item.rowKey}
         renderItem={renderItem}
         renderSectionHeader={renderSectionHeader}
         ListEmptyComponent={hasContent ? null : listEmptyComponent}
@@ -547,7 +662,9 @@ export const QueueScreen: React.FC<QueueScreenProps> = ({navigation}) => {
               style={styles.modalHint}>
               {saveAsPlaylistBlockReason
                 ? saveAsPlaylistBlockReason
-                : `${upNext.length} ${upNext.length === 1 ? 'track' : 'tracks'} will be saved to your library`}
+                : `${upNext.length} ${
+                    upNext.length === 1 ? 'track' : 'tracks'
+                  } will be saved to your library`}
             </AppText>
             <AppTextInput
               value={saveName}
@@ -575,6 +692,9 @@ export const QueueScreen: React.FC<QueueScreenProps> = ({navigation}) => {
           </View>
         </View>
       </Modal>
+
+      {/* ── "Clear queue" confirmation ── */}
+      {dialog}
     </SafeAreaView>
   );
 };
@@ -606,6 +726,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingTop: spacing.md,
     paddingBottom: spacing.xs,
   },
@@ -614,6 +737,18 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILY.inter.semibold,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+  },
+  sectionActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  sectionAction: {
+    // The 44 dp floor (B13-6): a text action is still a touch target.
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   rowWrap: {
     flexDirection: 'row',

@@ -56,6 +56,9 @@ jest.mock('../../../src/infrastructure/player', () => ({
     removeFromQueueByIndex: jest.fn(),
     reorderQueue: jest.fn(),
     removeFromQueue: jest.fn(),
+    // WAVE B16 (Wave D) — the queue's own actions (B15-Q2).
+    clearQueue: jest.fn(),
+    shuffleQueue: jest.fn(),
   }),
   useQueueItemsAs: () => [],
 }));

@@ -59,6 +59,8 @@ jest.mock('../../src/infrastructure/player', () => {
     __mockSetOrientation: setOrientation,
     useDeepLinkLaunch: () => openFromDeepLink,
     useQueueSync: () => undefined,
+    // B15-Q3 — the queue's durable mirror, mounted beside useQueueSync.
+    useQueuePersistence: () => undefined,
     usePlayer: () => ({state: {}, commands}),
   };
 });

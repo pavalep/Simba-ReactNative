@@ -1382,17 +1382,30 @@ Each item, individually, with the reason it could not be closed in this wave.
 - **B13-13 (remainder) — the Live TV board.** Radio and Live TV are on the shared shell (the code
   half). **The Live TV board is still a placeholder** in the prototype. **Reason: part of the
   standing board work for the ~48 screens that have no board yet.**
+- **B16-D-UPDATE-DEPTH — React's "Maximum update depth exceeded", seen twice on device, cause
+  NOT attributed.** Bursts of three to four identical errors ~25 s apart while a radio stream was
+  playing (19:23:12–19:24:04 and 19:43:17–19:44:33 UTC). The app's own ErrorBoundary did NOT
+  catch it, so no component stack was ever available, and the React Native LogBox notification
+  that carries the stack cannot be reopened after the fact. Six controlled attempts afterwards
+  produced ZERO errors. **Reason: not reproducible on demand, and not attributable to a
+  component.** The measurements are in §21.6(a).
+- **B16-D-NATIVE-ADVANCE — the media service advanced into a video the app never queued.**
+  During the same proof the app moved from the radio into a VIDEO session ("Sex Madness", resume
+  3:43) with `MpvBridgeModule.loadFile` in the native log, while the visible queue and run never
+  held that video. The leading hypothesis is that the native media service holds a playlist the
+  app's UI does not know about. **Reason: unproven.** The evidence is in §21.6(b).
 
 ### From B15 — still open
 
 - **B15-H1** — the Home local-media rail has no board.
 - **B15-H2** — per-book audiobook progress needs a collection id in the session/history model.
 - **B15-H5** — `GenreScreen` and `AllVideosScreen` have no in-app door.
-- **B15-Q2** — "Clear queue": `clearQueue` / `shuffleQueue` / `addToPlaybackHistory` are never
-  called.
-- **B15-Q3** — the explicit queue does not survive a restart.
-- **B15-Q5** — the Queue screen's jump bypasses the launch seam.
-- **B15-Q8** — "Up Next" mixes the queue and the run with no visual distinction.
+- **B15-Q2 — CLOSED in §21.** `clearQueue` and `shuffleQueue` are the Up Next section's
+  actions; `addToPlaybackHistory` is deliberately NOT called (§21.3).
+- **B15-Q3 — CLOSED in §21.** The explicit queue's durable copy is an app-side MMKV mirror,
+  `src/infrastructure/player/queuePersistence.ts`.
+- **B15-Q5 — CLOSED in §21.** The Queue screen's jump goes through the launch seam.
+- **B15-Q8 — CLOSED in §21.** The explicit queue and the run are two sections.
 - **B15-M1** — the m3u-import residue: pre-fix `.m3u` imports hold milliseconds. A safe migration
   needs a per-record provenance flag the persisted schema does not have.
 - **B15-P2** — the player's sheets have no Penpot board.
@@ -1471,3 +1484,151 @@ Each item, individually, with the reason it could not be closed in this wave.
 - The optional `Allura.ttf` upload.
 - The board-vs-device loop for the remaining ~48 screens.
 - `md/HOME_V2_REFACTOR.md` §16's item.
+## 21. WAVE D — B15-Q2 / B15-Q3 / B15-Q5 / B15-Q8: the queue behaviours
+
+### 21.1 The four items, and what each one actually was
+
+**B15-Q8 — "Up Next" mixed the queue and the run.**
+The Queue screen rendered ONE "Up Next" list built from two different lists: the app's
+EXPLICIT queue (what "Play Next" and "Add to Queue" wrote) and the RUN's tail (the rest of
+the album or playlist the user launched). The rows came from different places and meant
+different things, and nothing on screen said which was which — the run's tail looked like
+tracks the user had queued.
+
+They are two lists now, and they are two SECTIONS:
+
+- **"Up Next (n)"** — the explicit queue. What the user asked for.
+- **"Next in this list (m)"** — the run's tail. The deliberately neutral name is not an
+  oversight: `PlayerState` carries no playlist title anywhere in the app, so the screen has
+  no name to show and does not invent one.
+
+**B15-Q5 — the jump bypassed the launch seam.**
+Tapping a queued row called the bridge's `loadFile` directly, and then called `play()` a
+second time when the lane differed. Three things were wrong with that, and each was a
+symptom of the same mistake:
+
+1. The session was never written, so the "Now Playing" row could keep showing the PREVIOUS
+   track — the queue screen said one thing and the player did another.
+2. The resume position was never resolved, because the seam is what resolves it.
+3. For AUDIO, `loadFile` loads into the mpv handle the VIDEO surface owns; the audio lane
+   plays through the media service, which only the seam's launch reaches. An audio jump in
+   the same lane never actually played.
+
+The jump goes through the seam now, always, and the lane no longer decides anything — the
+seam resolves the lane from the kind.
+
+**B15-Q2 — `clearQueue` / `shuffleQueue` were never called.**
+Both existed in the library and nothing in the app ever called them. They are the Up Next
+section's actions now, and both act on the EXPLICIT QUEUE only: the run is the album the
+user is listening to, and "clear the queue" does not mean "forget the album". Shuffle is
+offered only when the queue holds two or more tracks. Clear asks first, and its copy says
+what survives: "The tracks you queued will be removed. What is playing keeps playing."
+
+**B15-Q3 — the explicit queue did not survive a restart.**
+The queue lives in the library's in-memory zustand store, so a queue the user spent ten
+minutes building was simply gone after a restart, with nothing said.
+
+### 21.2 What changed
+
+| File | What it does now |
+| --- | --- |
+| `src/infrastructure/player/useResumeAwareLaunch.ts` | `AppOpenPlayerOptions` gains `expand?: boolean`. The seam destructures it OFF (it never reaches the bridge) and computes `takesOverWindow = expand !== false`, guarding both `expandAudioPlayer()` and `expandVideo('expanded')`. |
+| `src/infrastructure/player/index.ts` | `PlayInput` gains `mediaKind`, `mediaLane` and `expand`; `usePlay` forwards them (`expand` only when it is `false`). Exports `useQueuePersistence`. |
+| `src/infrastructure/player/queuePersistence.ts` (new) | The durable copy: `readPersistedQueue()`, `writePersistedQueue()`, `useQueuePersistence()`. |
+| `src/app/AppContent.tsx` | Mounts `useQueuePersistence()` beside `useQueueSync()`. |
+| `src/screens/QueueScreen/hooks/useQueueScreen.ts` | `queueRows`, `runRows`, `upNext`, `handleJumpTo(entry, origin, index)`, `handleClearQueue`, `handleShuffleQueue`, `canShuffleQueue`, and the row-key owner `withRowKeys()`. |
+| `src/screens/QueueScreen/components/QueueScreen.tsx` | The four sections, the Up Next header's Shuffle and Clear, origin-aware a11y labels, 44 dp touch targets. |
+
+The raw `getMpvPlayerModule().loadFile` bypass and the lane-conditional double launch are
+GONE. The jump always goes through `play({... mediaKind, mediaLane, expand: false})`, with
+four typed error toasts (network / unsupported / expired / blocked).
+
+### 21.3 The decisions that are decisions (no behaviour changed)
+
+- **`addToPlaybackHistory` stays uncalled, BY DECISION.** The app has ONE history owner —
+  `recentHistoryStore` — and the checkpoint writer upserts into it on every playback
+  checkpoint. The library's `addToPlaybackHistory` is called by nothing in the app or the
+  library (the library's own tests are its only writer), so a second history that nothing
+  reads would be a second copy of a fact, not a feature. The Queue screen's "Previously
+  Played" section reads the app's store.
+- **The run is NOT filtered by lane.** It used to be: a run that crossed lanes showed the half
+  the user could not play and hid the half they could. The lane rule belongs to the PLAYLIST
+  STORE (`isPlaylistMediaKindAllowed`), and at runtime the boundary is crossed by the
+  handover, whose single owner is `useLaneHandover`.
+- **`resumePosition` is NOT persisted.** The launch seam owns resume and resolves it per
+  launch; a position frozen onto a queued row would be a second resume rule, and two resume
+  rules are how a resume silently starts at 0:00.
+- **The durable copy lives in the APP, not the library.** The library's queue store is
+  deliberately storage-agnostic — the package depends on `zustand` and nothing else — so
+  adding persistence there would mean the LIBRARY choosing the app's storage. The app keeps
+  the durable copy and the library keeps the live one: a mirror, not a second owner. The live
+  queue is written by exactly one place; the mirror is written ONLY from the live queue and
+  read ONLY once, at boot, when the live queue is empty.
+- **The mirror's cap is 200 items** (`MAX_PERSISTED_QUEUE_ITEMS`). The head is kept — those
+  are the tracks that play next — and the tail is dropped.
+
+### 21.4 The defect found on device — two copies of one track, one key
+
+Queuing the SAME track twice produced React's "Encountered two children with the same key"
+462 times in a row. The key was the track's identity alone, and the queue is a list of
+tracks, not a set:
+
+```
+Encountered two children with the same key, `.$upnext=2https=2//xmas-node1.zip.wf/live.aac|local|radio|audio||`
+```
+
+The key now carries the track's identity AND an occurrence counter — the first copy of a
+track is `#0`, the second `#1` — and the rule's owner is the hook module
+(`withRowKeys`), which the screen and its test share. The counter is deliberate rather than
+the row's INDEX: an index changes when the queue is reordered, which remounts the row that
+moved; the occurrence survives a reorder.
+
+### 21.5 The device proofs
+
+All of them are the app's own UI on `emulator-5554`. No data was injected into the app.
+
+| Proof | What it shows |
+| --- | --- |
+| `device_proof/B16_D01_queue_sections.png` | PlaylistDetail "Play all" built a 2-item run; the Queue screen shows NOW PLAYING / UP NEXT (2) / NEXT IN THIS LIST (1) / PREVIOUSLY PLAYED (10). |
+| `device_proof/B16_D02_jump_resume_prompt.png`, `B16_D03_jump_resume_dialog.png` | Tapping a queued row raised the seam's real "Continue watching?" prompt (0:11). Choosing "Start from beginning" updated NOW PLAYING to that track and the Queue screen STAYED on screen — the player did not take over. |
+| `device_proof/B16_D04_shuffle_before.png`, `B16_D05_shuffle_after.png` | After Shuffle, the two "Radio Armisa" entries swapped (0:00 now last, 4:07 first). |
+| `device_proof/B16_D06_clear_confirm.png` | Clear asks first: "Clear the queue? / The tracks you queued will be removed. What is playing keeps playing." with a destructive Clear. |
+| `device_proof/B16_D07_cleared.png` | After confirming: live queue 0, mirror 0, toast "Queue cleared", "Save queue as playlist" disabled, NOW PLAYING untouched. |
+| `device_proof/B16_D08_queue_restored_after_reload.png` | After a Metro reload the in-memory queue was empty and the live queue came back with 3 tracks from the MMKV mirror. |
+| `device_proof/B16_D09_update_depth_toast.png` | React Native's LogBox notification for an OPEN finding (§21.6), not a proof of anything in this wave. |
+| `device_proof/B16_D10_queue_sections_after_fix.png` | The sections after the row-key fix. |
+| `device_proof/B16_D11_frozen_runtime.png` | The screen during the same finding's JS-thread freeze (§21.6). |
+
+### 21.6 Two findings that are NOT closed
+
+Both were seen during this wave's device proof. Neither is claimed to be fixed, and neither
+is attributed to a component — the evidence is recorded so the next attempt starts from
+the measurements rather than from a guess.
+
+**(a) "Maximum update depth exceeded" — observed twice, cause not attributed.**
+React's error was logged three to four times in a burst, roughly 25 seconds apart, on two
+occasions: 19:23:12 / 19:23:37 / 19:24:04 UTC and 19:43:17 / 19:43:41 / 19:44:10 /
+19:44:33 UTC. Both times a radio stream was playing. The app showed React Native's LogBox
+notification, which is where the bare message was seen; the app's own `ErrorBoundary` did
+NOT catch it (no `[ERROR] [ErrorBoundary]` entry), so no component stack was ever available.
+The LogBox notification is the only surface that carries a component stack, and it cannot be
+opened after the fact.
+
+Instrumentation that was installed and did not produce an attribution: a `console.error`
+capture (the message arrives as a bare string with no stack argument), React's DevTools
+`onCommitFiberRoot` tracer (the per-second commit rate during the failing window was not
+distinguishable from the healthy rate), and the native logcat. Six controlled attempts after
+the two bursts — a Metro reload plus a fresh radio session, a fresh radio session alone, a
+video session, and a five-minute radio run with the queue restored — produced ZERO errors
+and a steady ~2 React commits per second. **It could not be reproduced on demand.**
+
+One further observation, not a conclusion: during the same proof the app advanced from the
+radio into a VIDEO session ("Sex Madness", resume 3:43) that the visible queue and run never
+held, with `MpvBridgeModule.loadFile` in the native log. The leading hypothesis is that the
+native media service holds a playlist the app's UI does not know about, and advances into it
+when the radio item ends. **This is unproven** — it is the first thing to check.
+
+**(b) The media service advanced into a video the app never queued.**
+See (a). The same event is recorded from the native side and from the app side, and neither
+has been explained.
+

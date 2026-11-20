@@ -90,8 +90,35 @@ type NowPlayingKind = NonNullable<
   import('../../state/nowPlayingStore').NowPlaying['type']
 >;
 
-/** The launch shape the app's seam accepts: bridge options + optional identity. */
-export type AppOpenPlayerOptions = OpenPlayerOptions & LaunchIdentity;
+/**
+ * The launch shape the app's seam accepts: bridge options + optional identity.
+ */
+export interface AppOpenPlayerOptions extends OpenPlayerOptions, LaunchIdentity {
+  /**
+   * Whether this launch takes over the window.
+   *
+   * `true` (the default) is the app's standing rule: tapping a track
+   * anywhere opens the full player — Spotify, YouTube Music, Apple Music
+   * and Plex all do this, and the seam has done it since V20 Phase C.
+   *
+   * `false` is "play this WHERE THE USER IS": the session is written, the
+   * media loads and the resume position is resolved, but the player does
+   * NOT take over the window.
+   *
+   * Why the Queue screen needs it (B15-Q5): the queue screen's jump used
+   * to call the bridge's `loadFile` directly, which is why the "Now
+   * Playing" row could go stale and why an audio jump never reached the
+   * media service at all. Routing it through the seam fixes both — but the
+   * seam's default would EXPAND the player over the queue the user is
+   * still reading. Plex and YouTube Music both keep the queue on screen
+   * when an item in it is tapped, and so does this now.
+   *
+   * The flag is about PRESENTATION only. The session, the resume position,
+   * the lane and the kind are written exactly as they are for any other
+   * launch.
+   */
+  expand?: boolean;
+}
 
 /**
  * The lib's result type, with `openPlayer` widened to accept the app's
@@ -168,6 +195,11 @@ export interface UseResumeAwareLaunchOptions {
  *     by passing a store position — in SECONDS — into a MILLISECOND
  *     field, which both broke by 1000x and silently bypassed this
  *     policy on every launch.
+ *   - `expand: false` plays the media WITHOUT taking over the window.
+ *     Everything else about the launch is identical — the session, the
+ *     resume position, the lane and the kind are all written. The flag
+ *     exists for the Queue screen's jump (B15-Q5): the user is reading a
+ *     queue, and a player that covers the queue takes it away.
  *   - The launch is recorded in `useNowPlayingStore`. The lib cannot
  *     tell us which file a single-file launch is playing (its
  *     `currentUri` comes from the queue, which `openPlayer` does not
@@ -202,7 +234,16 @@ export function useResumeAwareLaunch(
         // without a window. Nothing else would put an image on the
         // notification, because before V20 that was `PlayerActivity`'s
         // job and it was hardcoded to an empty string.
-        const {mediaKind, mediaLane, provider, thumbnailPath, ...bridgeOpts} = opts;
+        const {mediaKind, mediaLane, provider, thumbnailPath, expand, ...bridgeOpts} = opts;
+
+        // Whether this launch takes over the window. `expand` is
+        // destructured OFF above, so it never reaches the bridge —
+        // it is a presentation decision, not a bridge option.
+        //
+        // The default is `true`: a launch opens the player. The Queue
+        // screen's jump passes `false`, because the user is reading a
+        // queue and a player that covers it takes the queue away.
+        const takesOverWindow = expand !== false;
 
         const candidate = resolveResumeCandidate(
           {
@@ -278,7 +319,7 @@ export function useResumeAwareLaunch(
         // shipped a black player screen (see `usePresentationStore`).
         // Screens live in the MainActivity tree, and so does this seam,
         // so there is exactly one writer.
-        if (bridgeOpts.type === 'audio') {
+        if (takesOverWindow && bridgeOpts.type === 'audio') {
           expandAudioPlayer();
         }
 
@@ -292,7 +333,7 @@ export function useResumeAwareLaunch(
         // video app does. It is a discrete event write, not an effect that
         // depends on the value it writes — the W6.0 shape is a per-tree
         // reconciliation, and this is neither.
-        if (bridgeOpts.type === 'video') {
+        if (takesOverWindow && bridgeOpts.type === 'video') {
           expandVideo('expanded');
         }
 

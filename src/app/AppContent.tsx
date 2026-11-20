@@ -41,7 +41,12 @@ import {FONT_FAMILY} from '../constants/fontFamily';
 // package: the PLAYER RULE in `scripts/check-import-boundaries.js` keeps
 // every `@simba-dev/react-native-media-player` import inside
 // `src/infrastructure/player/`.
-import {useDeepLinkLaunch, usePlayer, useQueueSync} from '../infrastructure/player';
+import {
+  useDeepLinkLaunch,
+  usePlayer,
+  useQueuePersistence,
+  useQueueSync,
+} from '../infrastructure/player';
 import {useAuthSession} from '../hooks/useAuthSession';
 import {downloadService} from '../services/downloadService';
 import {mark} from '../utils/startupPerf';
@@ -63,6 +68,14 @@ export const AppContent: React.FC = () => {
 
   // Mirrors the lib's native queue into `usePlayerStore`. Mounted once.
   useQueueSync();
+
+  // B15-Q3 — the explicit queue's DURABLE copy. The library's queue store
+  // is in-memory, so a queue the user built was gone after a restart.
+  // This hydrates the live queue from the mirror at boot and mirrors
+  // every change back. Mounted once, here, beside `useQueueSync` — the
+  // two are the two halves of the same fact: what plays next, and what
+  // played next before the app was closed.
+  useQueuePersistence();
 
   // The lib's command object — the ONE writer of the window's
   // orientation. `useQueueSync` above already reads `usePlayer()`, so
