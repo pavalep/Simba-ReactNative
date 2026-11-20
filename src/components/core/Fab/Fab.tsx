@@ -46,12 +46,13 @@
  */
 
 import React from 'react';
-import {StyleSheet, TouchableOpacity, View} from 'react-native';
+import {StyleSheet, TouchableOpacity, View, useWindowDimensions} from 'react-native';
 import {useTheme} from '../../../theme';
 import {spacing} from '../../../theme/tokens';
 import {SvgIcon, type SvgIconName} from '../../utility/SvgIcon/SvgIcon';
 import {AppText} from '../AppText/AppText';
 import {useBottomChromeInset} from '../../../infrastructure/player/miniPlayerChrome';
+import {useKeyboard} from '../../../hooks/useKeyboard';
 
 /**
  * The button's edge length (dp).
@@ -93,7 +94,46 @@ export const Fab: React.FC<FabProps> = ({
   // The rule, not a hand-written offset. With no mini player up this is
   // the app's long-standing `insets.bottom + spacing.lg`; with one up it
   // lifts the button clear of the dock.
-  const bottom = useBottomChromeInset();
+  const chromeInset = useBottomChromeInset();
+  const {keyboardVisible, keyboardTop} = useKeyboard();
+  const {height: windowHeight} = useWindowDimensions();
+
+  /**
+   * THE KEYBOARD.
+   *
+   * MEASURED on `emulator-5554` (API 37, Android 17) on 2026-11-21,
+   * with the keyboard up on the Movies screen:
+   *
+   *   • the keyboard event reported `screenY = 577.90` (its top edge),
+   *     `height = 312.38`, and the window stayed 411.43 × 914.29 dp —
+   *     the SAME height as `Dimensions.get('screen')`.
+   *
+   * So the window does NOT resize behind the keyboard on this build:
+   * Android 15+ enforces edge-to-edge, and `adjustResize` no longer
+   * resizes the window. The keyboard OVERLAYS it, and the button —
+   * anchored to the window's bottom edge — was UNDER the keyboard,
+   * where nothing could reach it. That is the defect (B13-3), and it
+   * is not iOS-only: the manifest's `adjustResize` does not save it.
+   *
+   * The lift is therefore MEASURED, not assumed per platform: the
+   * distance from the window's bottom edge down to the keyboard's top
+   * edge is what the button has to clear. On a window that resizes
+   * (older Android) that distance is the navigation bar alone, so the
+   * button keeps its normal clearance; on a window that does not, it
+   * is the keyboard's own height.
+   *
+   * The button MOVES rather than hides: the mini-player dock cannot move,
+   * but a floating button that hid itself would remove the action (see
+   * `infrastructure/player/miniPlayerChrome`).
+   */
+  const keyboardLift =
+    keyboardVisible && keyboardTop > 0
+      ? Math.max(0, windowHeight - keyboardTop) + spacing.lg
+      : 0;
+  // With the keyboard up the dock is behind it and the safe area is inside
+  // the keyboard's own height, so the keyboard IS the bottom edge to
+  // clear.
+  const bottom = keyboardLift > 0 ? keyboardLift : chromeInset;
 
   if (!visible) return null;
 

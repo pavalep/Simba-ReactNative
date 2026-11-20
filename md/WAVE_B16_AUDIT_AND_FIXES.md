@@ -1375,10 +1375,11 @@ Each item, individually, with the reason it could not be closed in this wave.
   `shows/today` and `radio?initialTag=pop` seed their scopes in tests against a stubbed adapter;
   the device proofs show the screens, not the seeded states. **Reason: each seeded state needs
   its own cold start on the emulator.**
-- **B13-3 (remainder) — the shared shell's FAB is not keyboard-aware.** The header's
-  `rightAction` slot, the group-aware chip keys and the multi-group routing are all in. **The
-  keyboard-aware FAB is not:** the shell has no `KeyboardAvoidingView`, so the floating filter
-  button stays under the keyboard. **Reason: it changes the shell's layout contract.**
+- **B13-3 — CLOSED in §22.** The FAB's keyboard lift is MEASURED from the keyboard's top edge,
+  not assumed per platform — and it was measured on ANDROID too: the window does not resize
+  behind the keyboard on API 35+, so the item's iOS-only framing was wrong. The shell's layout
+  contract did not change: the button MOVES rather than hides, and the band it needs is paid
+  for out of the chrome.
 - **B13-13 (remainder) — the Live TV board.** Radio and Live TV are on the shared shell (the code
   half). **The Live TV board is still a placeholder** in the prototype. **Reason: part of the
   standing board work for the ~48 screens that have no board yet.**
@@ -1414,8 +1415,10 @@ Each item, individually, with the reason it could not be closed in this wave.
 
 - **B13.9** — the MusicDetail board's device-frame variant.
 - The MusicDetail board-vs-device check.
-- **B13-6** — the 44 dp floor is applied nowhere; the shared chip is 23 dp and the sheet chip is
-  32 dp.
+- **B13-6 — CLOSED in §22.** The floor has ONE owner (`src/constants/touchTarget.ts`); the
+  shared chip is a 44 dp target with its 23 dp pill drawn inside it, and the sheet chip reaches
+  the floor with a 6 dp vertical `hitSlop`. The sheet's edge-clipped 38 dp case, and the
+  controls that were NOT swept against the floor, are listed in §22.9.
 - **B13.1-2**, **B13.18 / B-11-2**.
 - **B12-1, B12-2, B12-3, B12-4, B12-7, B12-8, B12-9, B12-13**.
 - **B-11-4, B-11-5, B-11-7**.
@@ -1631,4 +1634,172 @@ when the radio item ends. **This is unproven** — it is the first thing to chec
 **(b) The media service advanced into a video the app never queued.**
 See (a). The same event is recorded from the native side and from the app side, and neither
 has been explained.
+
+
+## 22. WAVE E — B13-3 / B13-6: the keyboard-aware FAB and the 44 dp floor
+
+Two carried-forward items, and they are the same item seen from two sides: **a control the
+user has to be able to reach.** The FAB could not be reached because the keyboard was on top
+of it. The chips could be reached, but only by hitting a 23 dp pill — below the floor the
+rest of the app holds itself to.
+
+### 22.1 B13-3 — the FAB was under the keyboard, on Android too
+
+The carried-forward item said the shell has no `KeyboardAvoidingView`, so the floating filter
+button stays under the keyboard, and it filed the item under iOS. **The diagnosis was half
+right, and the half that was wrong was the half that mattered.**
+
+MEASURED on `emulator-5554` (API 37 / Android 17) on 2026-11-21, with the keyboard up on the
+Movies screen:
+
+| Fact | Value |
+| --- | --- |
+| `Dimensions.get('window')` | 411.43 × 914.29 dp |
+| `Dimensions.get('screen')` | 411.43 × 914.29 dp |
+| The keyboard event | `endCoordinates = {screenX: 0, screenY: 577.90, width: 411.43, height: 312.38}` |
+
+The window and the screen are the SAME height with the keyboard up: **the window does not
+resize behind the keyboard on this build.** Android 15+ enforces edge-to-edge, so the
+manifest's `android:windowSoftInputMode=adjustResize`
+(`android/app/src/main/AndroidManifest.xml:93`) no longer resizes anything, and the keyboard
+OVERLAYS the window. The FAB is anchored to the window's bottom edge, so it was under the
+keyboard — on Android exactly as on iOS.
+
+**The lift is therefore MEASURED, not assumed per platform.** `useKeyboard` now reports the
+keyboard's TOP edge (`endCoordinates.screenY`, in screen dp) as well as its height, and the
+FAB computes:
+
+```
+bottom = max(0, windowHeight - keyboardTop) + spacing.lg     // keyboard up
+bottom = chromeInset                                         // keyboard down
+```
+
+One number serves both window behaviours:
+
+- a window that does NOT resize keeps its full height, so `windowHeight - keyboardTop` IS the
+  keyboard's own height, and the button clears it;
+- a window that DOES resize (older Android) gives up the room itself, so its bottom edge is
+  already the keyboard's top edge, the distance collapses to the navigation bar, and the
+  button keeps its normal clearance instead of jumping into the middle of the screen.
+
+The button MOVES; it does not hide. A floating button that hid itself would remove the
+action — the same rule the mini-player dock obeys. While the keyboard is up the dock is
+behind it, so the keyboard IS the bottom edge to clear, and the dock's band is not added.
+
+### 22.2 B13-6 — the 44 dp floor, and the one owner it now has
+
+The item was exact: *the 44 dp floor is applied nowhere; the shared chip is 23 dp and the
+sheet chip is 32 dp.* Both were true in the source.
+
+The floor is an ACCESSIBILITY decision and the pill is a DESIGN decision, and they are
+separable: **the drawn pill keeps its size; the TOUCH TARGET reaches 44.** The boards own
+the pill, and nothing in this wave changes what the pill looks like.
+
+The two chips needed different answers, because they are different shapes:
+
+| Control | Drawn | Before | Now |
+| --- | --- | --- | --- |
+| The shell's active-filter chip | 23 dp pill | the pill WAS the touchable | a 44 dp touchable with the 23 dp pill drawn inside it, centred |
+| The sheet's filter chip | 32 dp pill | 32 dp | the same 32 dp pill with a 6 dp vertical `hitSlop` |
+
+The shell's chip is a **physical 44 dp touchable**: a single-line strip has room for it, and
+a real target has no neighbour to fight over (an `hitSlop` in a row of chips reaches into the
+next chip's band). The sheet's chip is a **flow of stacked rows** whose rhythm — and whose
+board — the sheet owns, so growing the rows would change the sheet's design; a 6 dp vertical
+`hitSlop` reaches the floor without moving anything.
+
+Two honest consequences of the sheet's `hitSlop`, both written into the code:
+
+- React Native clips a touch target at its parent's bounds, so the FIRST and LAST chip of a
+  flow answer to 38 dp, not 44 — the reach is there, the sheet's edge is in the way;
+- the 6 dp reach overlaps the 8 dp gap between rows by 4 dp, and the LOWER row wins that
+  band.
+
+### 22.3 The floor has ONE owner
+
+`src/constants/touchTarget.ts` is now the only place the number lives:
+
+```
+export const TOUCH_TARGET = 44;
+export function touchTargetReach(drawnHeight: number): number {
+  return Math.max(0, Math.ceil((TOUCH_TARGET - drawnHeight) / 2));
+}
+```
+
+`PlayerControl.CONTROL_TARGET` and `BrowseListFooter`'s retry pill already said 44; they now
+DERIVE it, so the floor cannot drift between them and the chips.
+
+### 22.4 The strip's band is paid for out of the chrome, not out of the page
+
+A 44 dp target is taller than the 23 dp pill it holds, so the strip's band grew by 21 dp.
+Paying for that out of the content would have moved the page. It is paid out of the chrome
+instead:
+
+```
+before  12 (field → strip) + 23 (the pill) + 12 (strip → content) = 47
+after    3 (field → strip) + 44 (the band)  +  0 (strip → content) = 47
+```
+
+The band is the same height, so everything below the strip is exactly where it was, and the
+pills sit 1.5 dp lower (they are centred in a band whose top moved up by 9 dp).
+
+MEASURED on the device after the change: the chip's accessible frame is 44 dp tall (0.048 of
+914.29 dp), the sheet's chip pill is 32 dp (0.035), and the sheet's rows are 8 dp apart
+(0.009).
+
+### 22.5 What changed
+
+| File | What it does now |
+| --- | --- |
+| `src/constants/touchTarget.ts` | NEW — the floor's ONE owner: `TOUCH_TARGET = 44` and `touchTargetReach()`. |
+| `src/constants/index.ts` | Exports the floor. |
+| `src/hooks/useKeyboard.ts` | Reports the keyboard's TOP edge (`keyboardTop`) as well as its height. |
+| `src/components/core/Fab/Fab.tsx` | The measured, platform-independent keyboard lift; the button moves rather than hides. |
+| `src/components/utility/FilterChips/FilterChips.tsx` | The chip is a 44 dp target with the 23 dp pill inside it; `CHIP_HEIGHT = 23` is declared; the dead `wrap` mode is gone. |
+| `src/components/utility/FilterChips/index.ts` | Exports `CHIP_HEIGHT`. |
+| `src/components/sheets/FilterSheet/FilterSheet.tsx` | The sheet chip's 6 dp vertical `hitSlop`; `FILTER_SHEET_CHIP_HEIGHT` and `FILTER_SHEET_CHIP_REACH` are declared. |
+| `src/screens/_shared/BrowseLayout.tsx` | The strip's band is 44 dp and is paid for out of the chrome. |
+| `src/components/player/shared/PlayerControl/PlayerControl.tsx` | `CONTROL_TARGET` derives from the floor. |
+| `src/screens/_shared/BrowseListFooter.tsx` | The retry pill's `minHeight` derives from the floor. |
+
+### 22.6 The decisions that are decisions
+
+- **The pill keeps its size; the TARGET reaches the floor.** The drawn pill is the boards'
+  decision and it did not move by a single dp.
+- **The chip's WIDTH was left to the label.** Only the height was below the floor; widening
+  the target would have moved the pill.
+- **The dead `wrap` mode of `FilterChips` was deleted, not carried.** It had exactly one live
+  call site (the shell's strip) and the Audiobooks screen no longer used it.
+- **The shell's strip is the only consumer of the 44 dp physical target.** The other five
+  screens that use `FilterChips` keep their own layout; the shared component only changed
+  the target, not the pill.
+
+### 22.7 The device proofs
+
+All of them are the app's own UI on `emulator-5554`, reached through the app's own controls.
+No data was injected into the app.
+
+| Proof | What it shows |
+| --- | --- |
+| `device_proof/B16_E01_fab_clears_keyboard.png` | The Movies screen with the keyboard up: the FAB has moved from the window's bottom edge to just above the keyboard, where it can be reached. |
+| `device_proof/B16_E02_filter_sheet_chip_reach.png` | The filter sheet after a tap 3.7 dp BELOW the `Sci-Fi` chip's drawn pill: the chip answered it. |
+| `device_proof/B16_E03_active_chip_44dp_target.png` | The shell's active-filter strip: the `Sci-Fi` chip's accessible frame is 44 dp tall. |
+| `device_proof/B16_E04_chip_tap_below_pill.png` | After a tap 6.5 dp BELOW the same chip's drawn pill: the chip took it and the filter was cleared. Before the change the pill WAS the touchable, so that tap would have missed it. |
+
+### 22.8 The gates
+
+All seven gates on the committed state: `tsc`, `eslint`, `boundaries`, `fonts`, `boards`,
+`themed`, `jest` — every one exit 0.
+
+### 22.9 What is NOT closed
+
+- **The sheet's first and last chip in a flow answer to 38 dp, not 44.** React Native clips a
+  touch target at its parent's bounds and the sheet's edge is in the way. Fixing it means
+  changing the sheet's rhythm or its board, which is a design decision, not a code fact.
+- **The FAB's lift was measured on Android only.** There is no iOS device on this desk, so
+  the iOS branch of the formula (a window that does not resize) is reasoned from the same
+  `endCoordinates.screenY` the platform reports, not photographed.
+- **The 44 dp floor was audited where the item named it — the shared chip, the sheet chip, and
+  the two controls that already declared 44.** The app's OTHER controls were not swept against
+  the floor in this wave.
 

@@ -110,6 +110,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import {useTheme} from '../../../../theme';
+import {TOUCH_TARGET} from '../../../../constants/touchTarget';
 import {spacing} from '../../../../theme/tokens';
 import {AppText} from '../../../core/AppText/AppText';
 import {useHaptic} from '../../../../infrastructure/player';
@@ -132,8 +133,15 @@ export const CONTROL_ICON_SIZE_COMPACT = 22;
 /** Transport-row primary cluster. +4 over the floor so it reads first. */
 export const CONTROL_ICON_SIZE_TRANSPORT = 28;
 
-/** 44 × 44 — the hit area for every control. Never smaller. */
-export const CONTROL_TARGET = 44;
+/**
+ * 44 × 44 — the hit area for every control. Never smaller.
+ *
+ * The NUMBER is the app's floor, and the app's floor has one owner:
+ * `constants/touchTarget.ts`. This export stays because the player's
+ * controls are read by name all over the app, but it is no longer a
+ * private number in the player's folder — it is the app's.
+ */
+export const CONTROL_TARGET = TOUCH_TARGET;
 
 /** 56 — play/pause only. The one primary CTA. */
 export const CONTROL_PRIMARY_TARGET = 56;

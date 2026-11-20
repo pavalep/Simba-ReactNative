@@ -37,6 +37,7 @@ import {
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../../theme';
 import {radius, spacing} from '../../../theme/tokens';
+import {touchTargetReach} from '../../../constants/touchTarget';
 import {FONT_FAMILY} from '../../../constants/fontFamily';
 import {
   BottomSheet,
@@ -139,12 +140,55 @@ interface ChipProps {
   onPress: () => void;
 }
 
+/**
+ * THE CHIP'S DRAWN HEIGHT (dp).
+ *
+ * 6 (padding) + 15 (the label's line height) + 6 (padding) + 1.5 (border)
+ * + 1.5 (border) = 30, and the chip declares `minHeight: 32`, so the
+ * drawn chip is 32 dp.
+ */
+export const FILTER_SHEET_CHIP_HEIGHT = 32;
+
+/**
+ * How far the chip's touch area reaches beyond the pill.
+ *
+ * The app's floor is 44 dp and the pill is 32, so the touch area has to
+ * reach 6 dp above and below it.
+ *
+ * It REACHES rather than GROWS: the sheet's chips are stacked in rows,
+ * and a row that grew to 44 dp would push the rows apart and change the
+ * sheet's rhythm — the sheet is drawn on a board, and a roomier sheet is
+ * a different design. The space the touch area uses is the gap between
+ * the rows.
+ *
+ * Two consequences, both stated rather than hidden:
+ *
+ *   • React Native clips a touch area at its PARENT's bounds, so the
+ *     FIRST and LAST row of a chip flow cannot reach past the flow's own
+ *     edge — those chips answer to 38 dp instead of 44. The rows between
+ *     them reach the full 44, because the flow's own height contains the
+ *     reach.
+ *   • The reach is 6 dp into an 8 dp gap, so the two rows' touch areas
+ *     overlap by 4 dp in the gap between them. A tap in that band goes
+ *     to the lower row (the one drawn on top); the band is in the gap,
+ *     not on either pill.
+ */
+export const FILTER_SHEET_CHIP_REACH = touchTargetReach(FILTER_SHEET_CHIP_HEIGHT);
+
 const Chip: React.FC<ChipProps> = React.memo(({label, selected, onPress}) => {
   const {colors} = useTheme();
   return (
     <TouchableOpacity
       activeOpacity={0.7}
       onPress={onPress}
+      // The touch area reaches past the pill so the chip answers to the
+      // app's 44 dp floor without its row growing — see the constant.
+      hitSlop={{
+        top: FILTER_SHEET_CHIP_REACH,
+        bottom: FILTER_SHEET_CHIP_REACH,
+        left: 0,
+        right: 0,
+      }}
       accessibilityRole={selected ? 'radio' : 'button'}
       accessibilityState={{selected}}
       accessibilityLabel={label}
@@ -513,7 +557,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: radius.full,
     borderWidth: 1.5,
-    minHeight: 32,
+    minHeight: FILTER_SHEET_CHIP_HEIGHT,
     justifyContent: 'center',
   },
   chipLabel: {

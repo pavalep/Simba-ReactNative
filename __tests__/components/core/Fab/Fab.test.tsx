@@ -26,7 +26,7 @@
  */
 
 import React from 'react';
-import {StyleSheet, type ViewStyle} from 'react-native';
+import {Dimensions, StyleSheet, type ViewStyle} from 'react-native';
 import {render, screen, fireEvent} from '@testing-library/react-native';
 import type {JsonNode} from 'test-renderer';
 import {ThemeProvider} from '../../../../src/theme';
@@ -36,6 +36,22 @@ import {MINI_PLAYER_HEIGHT} from '../../../../src/infrastructure/player/miniPlay
 import {useNowPlayingStore} from '../../../../src/state/nowPlayingStore';
 import {useAudioPresentationStore} from '../../../../src/state/useAudioPresentationStore';
 import {spacing} from '../../../../src/theme/tokens';
+import {useKeyboard} from '../../../../src/hooks/useKeyboard';
+
+/**
+ * The keyboard is mocked rather than driven: the hook is a thin
+ * wrapper over `Keyboard.addListener`, and what these tests are about
+ * is the button's REACTION to a keyboard, not the hook.
+ */
+jest.mock('../../../../src/hooks/useKeyboard', () => ({
+  useKeyboard: jest.fn(() => ({
+    keyboardVisible: false,
+    keyboardHeight: 0,
+    keyboardTop: 0,
+  })),
+}));
+
+const mockUseKeyboard = useKeyboard as jest.MockedFunction<typeof useKeyboard>;
 
 /**
  * The `bottom` of the first node that declares one.
@@ -110,6 +126,11 @@ function beginAudioSession() {
 afterEach(() => {
   useNowPlayingStore.getState().reset();
   useAudioPresentationStore.setState({mode: 'expanded'});
+  mockUseKeyboard.mockReturnValue({
+    keyboardVisible: false,
+    keyboardHeight: 0,
+    keyboardTop: 0,
+  });
 });
 
 describe('Fab', () => {
@@ -130,6 +151,60 @@ describe('Fab', () => {
     // over the bottom of the button.
     expect(findBottom(toJSON())).toBe(MINI_PLAYER_HEIGHT + spacing.lg);
     expect(findBottom(toJSON())).not.toBe(spacing.lg);
+  });
+
+  it('lifts clear of the keyboard, measured from the keyboard top edge', async () => {
+    // The defect (B13-3): on a window that does NOT resize behind the
+    // keyboard (iOS, and Android from API 35 where edge-to-edge is
+    // enforced), a button anchored to the window bottom edge sat UNDER
+    // the keyboard, where nothing could reach it. The lift is therefore
+    // MEASURED from the keyboard top edge, not assumed per platform.
+    const windowHeight = Dimensions.get('window').height;
+    mockUseKeyboard.mockReturnValue({
+      keyboardVisible: true,
+      keyboardHeight: 300,
+      keyboardTop: windowHeight - 300,
+    });
+
+    const {toJSON} = await renderFab();
+
+    // The distance from the window bottom edge down to the keyboard top
+    // edge is what the button has to clear.
+    expect(findBottom(toJSON())).toBe(300 + spacing.lg);
+  });
+
+  it('keeps its normal clearance when the window resizes behind the keyboard', async () => {
+    // Older Android shrinks the window, so the window bottom edge IS the
+    // keyboard top edge: there is nothing extra to clear, and lifting
+    // would put the button in the middle of the screen.
+    const windowHeight = Dimensions.get('window').height;
+    mockUseKeyboard.mockReturnValue({
+      keyboardVisible: true,
+      keyboardHeight: 300,
+      keyboardTop: windowHeight,
+    });
+
+    const {toJSON} = await renderFab();
+
+    expect(findBottom(toJSON())).toBe(spacing.lg);
+  });
+
+  it('clears the keyboard rather than the mini-player dock while it is up', async () => {
+    // The dock is 54 dp tall at the window bottom and it sits BEHIND the
+    // keyboard while the keyboard is up, so the keyboard IS the bottom
+    // edge to clear.
+    beginAudioSession();
+    const windowHeight = Dimensions.get('window').height;
+    mockUseKeyboard.mockReturnValue({
+      keyboardVisible: true,
+      keyboardHeight: 300,
+      keyboardTop: windowHeight - 300,
+    });
+
+    const {toJSON} = await renderFab();
+
+    expect(findBottom(toJSON())).toBe(300 + spacing.lg);
+    expect(findBottom(toJSON())).not.toBe(MINI_PLAYER_HEIGHT + spacing.lg);
   });
 
   it('is a button, with a name, that calls its handler', async () => {

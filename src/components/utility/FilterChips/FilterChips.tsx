@@ -31,9 +31,20 @@
 //   • optional leading icon (Archive) and trailing count badge (Radio
 //     stations / Live TV channels) on the chip's right edge
 //
+// THE TARGET
+// ----------
+// The PILL is 23 dp; the app's floor is 44
+// (`constants/touchTarget.ts`). The chip's touch target is therefore a
+// 44 dp tall touchable with the pill drawn inside it and centred — the
+// pill is not the target, the target is. The band that costs comes out
+// of the strip's own padding, so the page's rhythm does not move (see
+// `BrowseLayout.tsx`).
+//
 // Modes:
-//   • horizontal (default) — scrolling FlatList (Radio / Live TV / Music)
-//   • wrap — flex-wrap flow layout (Audiobooks' 20 genres)
+//   • horizontal — scrolling FlatList. It is the ONLY mode: the wrap
+//     flow layout had no call site left (the Audiobooks screen's
+//     genre row went with the browse shell), so it is gone rather than
+//     carried as a second geometry for a row nobody draws.
 //
 // Selection semantics:
 //   • singleSelect (default true) — tapping the ACTIVE chip clears the
@@ -51,6 +62,7 @@ import {
 } from 'react-native';
 import {useTheme} from '../../../theme';
 import {radius, spacing} from '../../../theme/tokens';
+import {TOUCH_TARGET} from '../../../constants/touchTarget';
 import {FONT_FAMILY} from '../../../constants/fontFamily';
 import {AppText} from '../../core/AppText/AppText';
 import {SvgIcon, type SvgIconName} from '../SvgIcon';
@@ -65,6 +77,16 @@ export interface FilterChipItem {
   count?: number;
 }
 
+/**
+ * THE PILL'S DRAWN HEIGHT (dp).
+ *
+ * 4 (padding) + 13 (the label's line height) + 4 (padding) + 1 (border)
+ * + 1 (border) = 23. It is DECLARED so the touch-target arithmetic and
+ * the shell's band arithmetic have one number to work from, and so a
+ * change to the chip's type or padding cannot quietly move either.
+ */
+export const CHIP_HEIGHT = 23;
+
 interface FilterChipsProps {
   items: FilterChipItem[];
   /** Active chip key, or null/undefined when nothing is selected.
@@ -77,8 +99,6 @@ interface FilterChipsProps {
   onSelect: (key: string) => void;
   /** true → tapping the active chip clears it (toggle). Default true. */
   singleSelect?: boolean;
-  /** true → wrapping flow layout (Audiobooks genres); false → horizontal scroll. */
-  wrap?: boolean;
   /** Outer container style override (per-screen parity). */
   style?: StyleProp<ViewStyle>;
   /** Content container style override (per-screen padding parity). */
@@ -92,7 +112,6 @@ export const FilterChips: React.FC<FilterChipsProps> = React.memo(
     selectedKeys,
     onSelect,
     singleSelect = true,
-    wrap = false,
     style,
     contentContainerStyle,
   }) => {
@@ -118,73 +137,80 @@ export const FilterChips: React.FC<FilterChipsProps> = React.memo(
             accessibilityRole="button"
             accessibilityState={{selected: active}}
             accessibilityLabel={item.label}
-            style={[
-              styles.chip,
-              active
-                ? {
-                    backgroundColor: colors.accent.gold,
-                    borderColor: colors.accent.gold,
-                  }
-                : {
-                    // 2026-11-12 (SEARCH_PAGE_REDESIGN): the inactive chip
-                    // was a hard-coded WHITE pill (see the header). It is now
-                    // the app's own elevated surface with a hairline border —
-                    // quiet on the dark theme, still a pill on the light one.
-                    backgroundColor: colors.background.elevated,
-                    borderColor: colors.border.subtle,
-                  },
-            ]}>
-            {item.icon ? (
-              <SvgIcon
-                name={item.icon}
-                size={14}
-                color={active ? colors.text.inverse : colors.accent.gold}
-              />
-            ) : null}
-            <AppText
-              variant="caption"
+            style={styles.chipTarget}>
+            {/*
+              THE PILL IS NOT THE TARGET.
+
+              The pill is 23 dp; the app's floor is 44
+              (`constants/touchTarget.ts`). The TARGET is a 44 dp tall
+              touchable with the pill drawn inside it and centred — the
+              same rule the player's controls follow ("a 44 pt target
+              with a centred glyph, no hitSlop").
+
+              The band the target needs comes out of the strip's own
+              padding, so the page's rhythm does not move — see
+              `BrowseLayout.tsx`.
+            */}
+            <View
               style={[
-                styles.chipText,
-                {
-                  color: active ? colors.text.inverse : colors.text.secondary,
-                },
+                styles.chip,
+                active
+                  ? {
+                      backgroundColor: colors.accent.gold,
+                      borderColor: colors.accent.gold,
+                    }
+                  : {
+                      // 2026-11-12 (SEARCH_PAGE_REDESIGN): the inactive chip
+                      // was a hard-coded WHITE pill (see the header). It is now
+                      // the app's own elevated surface with a hairline border —
+                      // quiet on the dark theme, still a pill on the light one.
+                      backgroundColor: colors.background.elevated,
+                      borderColor: colors.border.subtle,
+                    },
               ]}>
-              {item.label}
-            </AppText>
-            {item.count != null ? (
-              <View
+              {item.icon ? (
+                <SvgIcon
+                  name={item.icon}
+                  size={14}
+                  color={active ? colors.text.inverse : colors.accent.gold}
+                />
+              ) : null}
+              <AppText
+                variant="caption"
                 style={[
-                  styles.countBadge,
+                  styles.chipText,
                   {
-                    backgroundColor: active
-                      ? colors.background.primary
-                      : colors.accent.goldDim,
+                    color: active ? colors.text.inverse : colors.text.secondary,
                   },
                 ]}>
-                <AppText
-                  variant="caption"
+                {item.label}
+              </AppText>
+              {item.count != null ? (
+                <View
                   style={[
-                    styles.countText,
-                    {color: colors.accent.gold},
+                    styles.countBadge,
+                    {
+                      backgroundColor: active
+                        ? colors.background.primary
+                        : colors.accent.goldDim,
+                    },
                   ]}>
-                  {item.count}
-                </AppText>
-              </View>
-            ) : null}
+                  <AppText
+                    variant="caption"
+                    style={[
+                      styles.countText,
+                      {color: colors.accent.gold},
+                    ]}>
+                    {item.count}
+                  </AppText>
+                </View>
+              ) : null}
+            </View>
           </TouchableOpacity>
         );
       },
       [colors, onSelect, selectedKey, selectedKeys, singleSelect],
     );
-
-    // Wrap mode: flex-wrap flow (Audiobooks' 20 genres can't virtualize).
-    if (wrap) {
-      return (
-        <View style={[styles.wrapRow, style, contentContainerStyle]}>
-          {items.map(renderChip)}
-        </View>
-      );
-    }
 
     return (
       <FlatList
@@ -204,6 +230,17 @@ export const FilterChips: React.FC<FilterChipsProps> = React.memo(
 );
 
 const styles = StyleSheet.create({
+  /**
+   * THE TARGET.
+   *
+   * 44 dp tall — the app's floor (`constants/touchTarget.ts`) — with the
+   * pill centred inside it. The touchable is transparent; the pill inside
+   * it is the 23 dp pill the boards draw.
+   */
+  chipTarget: {
+    minHeight: TOUCH_TARGET,
+    justifyContent: 'center',
+  },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -245,11 +282,6 @@ const styles = StyleSheet.create({
   },
   horizontalRow: {
     paddingHorizontal: spacing.md,
-    gap: spacing.xs + 2,
-  },
-  wrapRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: spacing.xs + 2,
   },
 });

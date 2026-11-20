@@ -34,12 +34,17 @@ import LinearGradient from 'react-native-linear-gradient';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
 import {spacing} from '../../theme/tokens';
+import {TOUCH_TARGET} from '../../constants/touchTarget';
 import {useNetworkStatus} from '../../hooks/useNetworkStatus';
 import {SimbaStatusBar} from '../../components/StatusBar';
 import {InternalHeader} from '../../components/layout/InternalHeader/InternalHeader';
 import type {IconName} from '../../components/utility/SvgIcon';
 import {SearchBar} from '../../components/core/SearchBar/SearchBar';
-import {FilterChips, type FilterChipItem} from '../../components/utility/FilterChips';
+import {
+  FilterChips,
+  CHIP_HEIGHT,
+  type FilterChipItem,
+} from '../../components/utility/FilterChips';
 import {Fab} from '../../components/core/Fab/Fab';
 import {FilterSheet, type FilterSheetGroup} from '../../components/sheets/FilterSheet/FilterSheet';
 import {useSectionSearch} from '../../hooks/useSectionSearch';
@@ -56,6 +61,25 @@ import type {SectionRouteParams} from './sectionRoute';
  * removing one must not remove the other.
  */
 const FILTER_CHIP_PREFIX = 'f:';
+
+/**
+ * THE STRIP'S BAND — the touch target's band.
+ *
+ * The chip's target is 44 dp tall (the app's floor), so the strip's band
+ * is 44 dp: the target IS the band, and the 23 dp pill sits centred
+ * inside it.
+ */
+const STRIP_BAND = TOUCH_TARGET;
+
+/**
+ * The gap between the search field and the strip's band, when the strip
+ * is there.
+ *
+ * The chrome's height above the content must not move. It was
+ * 12 (field → strip) + 23 (the pill) + 12 (strip → content) = 47, and the
+ * band is 44, so the field's own bottom padding gives up 47 − 44 = 3.
+ */
+const STRIP_FIELD_GAP = spacing.md + CHIP_HEIGHT + spacing.md - STRIP_BAND;
 
 interface Props {
   config: SectionBrowseConfig;
@@ -241,6 +265,16 @@ export const BrowseLayout: React.FC<Props> = ({
         : [];    return [...sortChips, ...filterChips];
   }, [config.options, state.filters, state.sort]);
 
+  /**
+   * Is the strip there?
+   *
+   * The strip only appears when a filter is ACTIVE, and its band is the
+   * touch target's band — which is taller than the pill it holds. The
+   * band's height comes out of the chrome's own padding (see the
+   * styles below), so the page's rhythm does not move.
+   */
+  const hasStrip = hasFilterGroups && activeChips.length > 0;
+
   const handleChipSelect = useCallback(
     (key: string) => {
       if (key.startsWith('sort:')) {
@@ -362,7 +396,11 @@ export const BrowseLayout: React.FC<Props> = ({
       />
 
       {hasSearch ? (
-        <View style={styles.searchSection}>
+        <View
+          style={[
+            styles.searchSection,
+            hasStrip ? styles.searchSectionStrip : null,
+          ]}>
           <SearchBar
             value={search.query}
             onChangeText={search.setQuery}
@@ -377,7 +415,9 @@ export const BrowseLayout: React.FC<Props> = ({
       ) : null}
 
       {hasFilterGroups ? (
-        <View style={styles.chipsSlot} testID="browse-active-filters">
+        <View
+          style={[styles.chipsSlot, hasStrip ? styles.chipsSlotStrip : null]}
+          testID="browse-active-filters">
           {activeChips.length > 0 ? (
             <FilterChips
               items={activeChips}
@@ -461,9 +501,27 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
     paddingBottom: spacing.md,
   },
+  // THE STRIP'S BAND IS PAID FOR OUT OF THE CHROME, NOT OUT OF THE PAGE.
+  //
+  // The chip's touch target is 44 dp tall, so the strip's band is 44 dp:
+  // the target IS the band and the 23 dp pill sits centred inside it. The
+  // band's extra height comes out of the padding around it, so the page's
+  // rhythm does not move:
+  //
+  //   before  12 (field → strip) + 23 (the pill) + 12 (strip → content) = 47
+  //   after    3 (field → strip) + 44 (the band)  +  0 (strip → content) = 47
+  //
+  // The pills therefore sit 1.5 dp lower than they did, and everything
+  // below the strip is exactly where it was.
+  searchSectionStrip: {
+    paddingBottom: STRIP_FIELD_GAP,
+  },
   chipsSlot: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.md,
+  },
+  chipsSlotStrip: {
+    paddingBottom: 0,
   },
   chipsRow: {
     paddingHorizontal: 0,
