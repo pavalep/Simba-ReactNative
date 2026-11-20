@@ -732,19 +732,143 @@ Outputs: `X:/Development/SIMBA/.scratch-figcraft/gates-waveB16l/`.
 
 ---
 
-## 16. CARRIED FORWARD
+## 16. Wave B16-K — the three screens that borrowed their background
+
+### 16.1 The carried-forward item named a defect that was real, and a count that was not
+
+The item said **"30 screens still have no themed root background"**. The first sweep agreed
+with it — 22 screens whose root container had no `backgroundColor` — and the first uniform
+edit painted all of them. That edit was **reverted, not shipped**: it was wrong, and the
+device said so.
+
+A screen in this codebase owns its background in TWO ways, and the first sweep only knew
+one of them:
+
+1. **the root paints it** — `Home`, the list pages, the detail pages;
+2. **the root carries a full-bleed themed gradient** — `<LinearGradient colors={[colors.background.primary,
+   colors.background.elevated]} style={StyleSheet.absoluteFill} />`. That gradient paints OVER
+   the root, so it IS the screen's surface, and a root background under it would never be seen.
+
+The gradient form covers **20** screens: About, Album, AllAudio, AllPlaylists, AllVideos,
+Artist, Changelog, Credits, Downloads, Equalizer, FolderBrowser, Genre, Help, Licenses,
+PlaylistDetail, Privacy, Queue, Search, Song and Terms. Re-running the first sweep's rule
+set today (the two false negatives below fixed) names exactly those 20.
+
+The device caught the rest of it. On the About screen the page surface was measured before
+and after the first edit:
+
+| build | light mode, top of the page → bottom | dark mode, top → bottom |
+|---|---|---|
+| before (the screen's own gradient) | `#F6F2EB` → `#FDFCFB` | `#0B0B0D` → `#121214` |
+| after (the first edit's flat background) | `#F5F0E8` everywhere | `#0A0A0C` everywhere |
+
+The first edit had put a background on a container that **wrapped** the gradient, so it
+replaced the app's surface with a flat colour — a regression in three screens (About,
+Privacy, Terms). The whole edit was reverted and the gate was rewritten to know about the
+gradient form.
+
+### 16.2 The corrected gate, and the two false negatives it had
+
+`scripts/check-themed-roots.js` decides whether a screen owns its background. A screen passes
+when
+
+- its root IS `ScreenContainer` or `BrowseLayout` (both paint `colors.background.primary`), or
+- its root paints a themed background — `backgroundColor:` with a `colors.background.*` colour,
+  inline or through its style block, or
+- its root carries a full-bleed themed gradient (the form above).
+
+Anything else fails, and the gate names the file and the line.
+
+Two things had to be fixed before the gate could be trusted, and both were found by RUNNING
+it rather than by reading it:
+
+- **A `return null` in a NESTED helper skipped the whole file.** FolderBrowser's empty state
+  returns null; the gate read that as "this screen renders nothing" and never looked at
+  FolderBrowser's root. The check now reads only the screen's own shallowest `return`.
+- **A screen that reads its colours from its own hook was skipped.** Home does not call
+  `useTheme()` — it takes `colors` from its own hook — so the old scope test left Home
+  unchecked. The scope test is the theme colour itself now.
+
+With both fixed, the gate names **three** screens on the pristine tree:
+
+```
+src/screens/ArchiveItemDetailScreen/components/ArchiveItemDetailScreen.tsx:426  <View>
+src/screens/AudiobookDetailScreen/components/AudiobookDetailScreen.tsx:581     <View>
+src/screens/ShowDetailScreen/components/ShowDetailScreen.tsx:232                <View>
+```
+
+Those are exactly the three screens §14.4 named when React Navigation's default LIGHT
+card showed through their transparent roots.
+
+### 16.3 The fix
+
+Each of the three now paints `colors.background.primary` on its root — and on **all three**
+of its roots (the loading state, the error state and the loaded screen), because a loading
+state is a full screen too, and it was transparent as well.
+
+```
+3 files changed, 9 insertions(+), 9 deletions(-)
+```
+
+### 16.4 The gate is wired into CI
+
+`package.json` gains `lint:themed-roots`, and `.github/workflows/ci.yml` runs it next to the
+import-boundary linter — so a screen cannot go back to borrowing its background.
+
+### 16.5 The device proof — and what it does NOT show
+
+Measured on `emulator-5554`: the Show detail (Downton Abbey), reached the same way on both
+builds (Shows screen → the show row), each time from a FRESH app start in the app's own
+dark theme, with the page surface sampled at five points:
+
+| build | page surface at (40,300) (40,900) (40,1500) (40,2000) (1040,2000) |
+|---|---|
+| without the fix | `#0A0A0C` `#0A0A0C` `#0A0A0C` `#0A0A0C` `#0A0A0C` |
+| with the fix | `#0A0A0C` `#0A0A0C` `#0A0A0C` `#0A0A0C` `#0A0A0C` |
+
+**The two builds are identical, and that is the honest result.** §14.4 already gave the
+navigator a themed card of the same colour (`card: colors.background.primary`,
+`src/app/AppContent.tsx:160`), so a transparent root on a pushed screen shows a surface of
+the right colour anyway. The fix does not change what the user sees on the push path — it
+removes the screen's DEPENDENCE on what happens to be behind it, and the gate stops that
+dependency from coming back.
+
+Proofs: `device_proof/B16_K05_show_detail_dark_before.png` and
+`device_proof/B16_K06_show_detail_dark_after.png`.
+
+One thing the measurements cleared up, and it is worth recording because the first sweep
+got it wrong: the light page of §14.4 was **not** a hard-coded light palette anywhere (the
+theme has one source: `src/theme/index.tsx` → `useTheme()` → the settings store). It was
+the navigator's default theme. FIX 3 fixed the symptom at the navigator; this wave removes
+the class of screen that made it visible.
+
+A second measurement, recorded because it is easy to misread a before/after pair:
+**switching the theme while a screen is open does not repaint that screen.** With the Show
+detail open, the store was set to `light` and the page stayed `#0A0A0C` at every sampled
+point — the open screen does not re-render on a theme change. An earlier before/after pair
+taken across such a switch looked exactly like the light-page symptom; it was the stale
+frame, not the transparent root. The pair above was retaken from a fresh start on both
+builds for exactly that reason.
+
+### 16.6 The gates
+
+```
+tsc          exit=0
+eslint       exit=0
+boundaries   exit=0   scanned 606 files — 0 error(s), 0 warning(s)
+fonts        exit=0   every usage resolves to a shipped font file (11 shipped)
+boards       exit=0   the board registry covers every app route
+themed       exit=0   every screen owns a themed background.
+jest         exit=0   205 suites, 1968 passed, 1 todo, 1969 total
+```
+
+---
+## 17. CARRIED FORWARD
 
 Each item, individually, with the reason it could not be closed in this wave.
 
 ### From this wave
 
-- **B16-K-THEME-SWEEP — 30 screens still have no themed root background.** The navigator's theme
-  fixed every screen that sat behind it, but the sweep that found them
-  (`src/theme` consumers without a `backgroundColor` on their root) also lists the screens that
-  are never reached with the navigator's card behind them — `Queue`, `Search`, `AllAudio`,
-  `AllVideos`, `Genre`, `Downloads`, `FolderBrowser`, `AllPlaylists`, `Artist`, `Album`,
-  `Changelog`, `Credits`, `Help`, `Licenses`, `Privacy`, `Terms`, `Equalizer`. **Reason: each one
-  is a screen-level audit, and only three of them were on the path this wave swept.**
 - **B16-J-LISTPAGES — the list-page variant of the grammar.** `Genre`, `AllVideos`, `AllAudio`,
   `FollowedPodcasts`, `History`, `DownloadsScreen`, `Bookmarks` need a shell variant with no
   filter groups, no paging and no footer. **Reason: a design decision, not a refactor** — it
@@ -813,6 +937,9 @@ Each item, individually, with the reason it could not be closed in this wave.
 
 ### Closed in this wave (from the carried-forward lists)
 
+- **B16-K-THEME-SWEEP** — the three screens that borrowed their background (the Show detail, the
+  Audiobook detail and the Archive item detail) now paint their own; the 20 screens that own a
+  full-bleed themed gradient were left alone, and `scripts/check-themed-roots.js` is in CI.
 - The Jamendo genre badge (dead code) — the badge, the false `genre_name` wire field and the
   Audius `genre` field are gone; the board already drew two badges.
 - **B13-4** — the four identical Radio / Live TV blocks: they were the shell's own chrome, and

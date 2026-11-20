@@ -218,7 +218,7 @@ export const ArchiveItemDetailScreen: React.FC<Props> = ({route}) => {
   // ── Loading State ──
   if (isLoading) {
     return (
-      <View style={styles.root}>
+      <View style={[styles.root, {backgroundColor: colors.background.primary}]}>
         <SimbaStatusBar variant="home" />
         <InternalHeader title={title} />
         <Placeholder variant="loading" anchor="center" title="Loading item…" />
@@ -232,7 +232,7 @@ export const ArchiveItemDetailScreen: React.FC<Props> = ({route}) => {
   // body shows a minimal placeholder rather than a giant error card.
   if (error || !item) {
     return (
-      <View style={styles.root}>
+      <View style={[styles.root, {backgroundColor: colors.background.primary}]}>
         <SimbaStatusBar variant="home" />
         <InternalHeader title={title} />
         <Placeholder
@@ -246,7 +246,7 @@ export const ArchiveItemDetailScreen: React.FC<Props> = ({route}) => {
   }
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, {backgroundColor: colors.background.primary}]}>
       <SimbaStatusBar variant="home" />
       <InternalHeader
         title={title}

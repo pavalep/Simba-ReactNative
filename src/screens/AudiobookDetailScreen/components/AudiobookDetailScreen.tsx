@@ -320,7 +320,7 @@ export const AudiobookDetailScreen: React.FC<Props> = ({route}) => {
   // ── Loading State ──
   if (isLoading) {
     return (
-      <View style={styles.root}>
+      <View style={[styles.root, {backgroundColor: colors.background.primary}]}>
         <SimbaStatusBar variant="home" />
         <InternalHeader title={title} />
         <Placeholder variant="loading" anchor="center" title="Loading audiobook…" />
@@ -333,7 +333,7 @@ export const AudiobookDetailScreen: React.FC<Props> = ({route}) => {
   // the user can navigate back; the body shows a minimal placeholder.
   if (error || !book) {
     return (
-      <View style={styles.root}>
+      <View style={[styles.root, {backgroundColor: colors.background.primary}]}>
         <SimbaStatusBar variant="home" />
         <InternalHeader title={title} />
         <Placeholder
@@ -347,7 +347,7 @@ export const AudiobookDetailScreen: React.FC<Props> = ({route}) => {
   }
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, {backgroundColor: colors.background.primary}]}>
       <SimbaStatusBar variant="home" />
       <InternalHeader
         title={title}

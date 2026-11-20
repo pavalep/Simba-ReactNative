@@ -7,6 +7,7 @@
     "ios": "react-native run-ios",
     "lint": "eslint .",
     "lint:boundaries": "node scripts/check-import-boundaries.js",
+    "lint:themed-roots": "node scripts/check-themed-roots.js",
     "postinstall": "patch-package",
     "start": "react-native start",
     "start:debug": "react-native start --reset-cache",

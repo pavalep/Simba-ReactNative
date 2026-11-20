@@ -88,6 +88,7 @@ scripts/*.mjs
 scripts/*.js
 !scripts/check-import-boundaries.js
 !scripts/check-font-resolution.js
+!scripts/check-themed-roots.js
 !scripts/eslint-sweep.js
 !scripts/gen-mcp-descriptors.js
 !scripts/generate-icons.js

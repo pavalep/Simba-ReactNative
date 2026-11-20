@@ -113,7 +113,7 @@ export const ShowDetailScreen: React.FC<Props> = ({route}) => {
 
   if (isLoading) {
     return (
-      <View style={styles.root}>
+      <View style={[styles.root, {backgroundColor: colors.background.primary}]}>
         <SimbaStatusBar variant="home" />
         <InternalHeader title={showName ?? 'Show'} />
         <Placeholder variant="loading" anchor="center" title="Loading show…" />
@@ -123,7 +123,7 @@ export const ShowDetailScreen: React.FC<Props> = ({route}) => {
 
   if (error || !show) {
     return (
-      <View style={styles.root}>
+      <View style={[styles.root, {backgroundColor: colors.background.primary}]}>
         <SimbaStatusBar variant="home" />
         <InternalHeader title={showName ?? 'Show'} />
         <Placeholder
@@ -143,7 +143,7 @@ export const ShowDetailScreen: React.FC<Props> = ({route}) => {
   if (show.runtime) metaParts.push(`${show.runtime} min`);
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, {backgroundColor: colors.background.primary}]}>
       <SimbaStatusBar variant="home" />
       <InternalHeader
         title={show.name}

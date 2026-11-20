@@ -38,7 +38,7 @@ concurrency:
 
 jobs:
   js-gate:
-    name: JS gate (tsc + eslint + jest + boundaries)
+    name: JS gate (tsc + eslint + jest + boundaries + themed-roots)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -70,6 +70,13 @@ jobs:
         # `src/infrastructure/player/` that import the player
         # module will trip the PLAYER rule and fail the build.
         run: npm run lint:boundaries
+
+      - name: Themed-root linter — every screen owns its background
+        # `scripts/check-themed-roots.js` fails when a screen's root container
+        # paints no themed background: the screen then shows whatever is
+        # behind it (the navigator's card, or the white Android window at
+        # app start). The Wave B16-K sweep found 22 such screens.
+        run: npm run lint:themed-roots
 
       - name: V19 isolation contract — Rule 1-9 grep checks
         # V19 W0 Phase 0.0 — the isolation contract (SPEC §2.1).
