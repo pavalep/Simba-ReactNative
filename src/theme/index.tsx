@@ -119,15 +119,4 @@ export function useTheme(): ThemeContextValue {
   return ctx;
 }
 
-/** Alias of useTheme — returns the full context value.
- *  Code that previously called useTheme() expecting ThemeTokens
- *  should switch to .legacy or .tokens as needed. */
-export function useThemeContext(): ThemeContextValue {
-  return useTheme();
-}
 
-/** Returns the legacy flat ThemeTokens object for backward compat.
- *  New code should use useTheme() and access .tokens or .colors directly. */
-export function useColors(): LegacyThemeTokens {
-  return useTheme().legacy;
-}

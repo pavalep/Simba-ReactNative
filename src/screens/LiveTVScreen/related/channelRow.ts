@@ -44,7 +44,7 @@ export interface ChannelRow {
  * disagree about it: the favourites store persists the subtitle the
  * browser wrote, and this rebuilds it from the channel itself.
  */
-export function channelSubtitle(channel: {
+ function channelSubtitle(channel: {
   category?: string;
   country?: string;
 }): string {

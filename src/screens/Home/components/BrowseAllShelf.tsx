@@ -50,7 +50,7 @@ export interface BrowseAllEntry {
 }
 
 /** Canonical order of the top-level sections in the Discover rail. */
-export const BROWSE_ALL_SECTIONS: BrowseAllEntry[] = [
+ const BROWSE_ALL_SECTIONS: BrowseAllEntry[] = [
   {
     route: 'MoviesScreen',
     name: 'Movies',

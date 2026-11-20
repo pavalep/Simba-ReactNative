@@ -6,5 +6,4 @@ export {
   createAllVideosScreenStyles,
   COLUMN_COUNT,
   GAP,
-  CARD_WIDTH,
 } from './AllVideosScreen.styles';

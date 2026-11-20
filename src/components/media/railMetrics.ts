@@ -20,7 +20,7 @@ import {spacing} from '../../theme/tokens';
 export const RAIL_CARD_WIDTH = 160;
 
 /** The gap between two cards on a rail. */
-export const RAIL_CARD_GAP = spacing.md; // 12
+ const RAIL_CARD_GAP = spacing.md; // 12
 
 /** What the rail actually snaps to: the card plus the gap. */
 export const RAIL_CARD_PITCH = RAIL_CARD_WIDTH + RAIL_CARD_GAP;

@@ -33,7 +33,7 @@ import {PlayerControl} from '../../shared/PlayerControl/PlayerControl';
  */
 export const REPEAT_CYCLE: readonly RepeatMode[] = ['off', 'all', 'one'] as const;
 
-export const MODE_LABEL: Record<RepeatMode, string> = {
+ const MODE_LABEL: Record<RepeatMode, string> = {
   off: 'Off',
   one: 'Repeat one',
   all: 'Repeat all',

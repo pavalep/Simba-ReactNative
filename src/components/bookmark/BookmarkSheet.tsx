@@ -189,7 +189,7 @@ export const BookmarkSheet: React.FC<Props> = ({
 // every parent tick. The hook passes a fresh `MpvPlayer.getPosition()`
 // value on every render; without memo the FlatList re-renders each
 // position update while the sheet is open.
-export const MemoizedBookmarkSheet = React.memo(BookmarkSheet);
+ const MemoizedBookmarkSheet = React.memo(BookmarkSheet);
 export default MemoizedBookmarkSheet;
 
 const styles = StyleSheet.create({

@@ -9,7 +9,6 @@ import type {
   BookmarkInput,
   BookmarkPositionUpdate,
 } from '../../state';
-import {mediaKey} from '../../infrastructure/player/playbackProgress';
 
 export type {
   Bookmark,
@@ -69,22 +68,6 @@ export function isSameBookmarkPosition(a: number, b: number): boolean {
   return Math.abs(a - b) < BOOKMARK_POSITION_TOLERANCE_SEC;
 }
 
-/**
- * Bookmarks belonging to one media item.
- *
- * Compares on the **normalised** URI (W9.4), matching how the resume
- * reader and the history store key media. A raw comparison would miss a
- * bookmark saved as `/a/b.mkv` when the player is playing
- * `file:///a/b.mkv` — the same file, one entry, invisible.
- */
-export function bookmarksForUri(
-  items: readonly Bookmark[],
-  uri: string | undefined,
-): Bookmark[] {
-  if (!uri) return [];
-  const key = mediaKey(uri);
-  return items.filter(b => mediaKey(b.fileUri) === key);
-}
 
 /** A14: bookmark id is now `(fileUri, position)`-derived so multiple
  *  bookmarks per file are allowed. Two saves at the same position
@@ -236,14 +219,5 @@ export function addBookmark(
   return dispatchAddBookmark(items, input, options);
 }
 
-export function updateBookmarkPosition(update: BookmarkPositionUpdate): void {
-  useBookmarksStore.getState().updateBookmarkPosition(update);
-}
 
-export function removeBookmark(id: string): void {
-  useBookmarksStore.getState().removeBookmark(id);
-}
 
-export function clearBookmarks(): void {
-  useBookmarksStore.getState().clearAllBookmarks();
-}

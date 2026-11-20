@@ -1,4 +1,4 @@
-import {parseLrc, type LrcLine, type LrcParseResult} from '../utils/lrcParser';
+import {parseLrc, type LrcParseResult} from '../utils/lrcParser';
 
 // ─── In-memory cache ─────────────────────────────────────
 
@@ -41,49 +41,12 @@ export async function loadLrc(fileUri: string): Promise<LrcParseResult | null> {
   return null;
 }
 
-/**
- * Invalidate cached LRC data for a file (e.g. when the file changes).
- */
-export function clearLrcCache(fileUri?: string): void {
-  if (fileUri) {
-    lrcCache.delete(fileUri);
-  } else {
-    lrcCache.clear();
-  }
-}
 
 /**
  * Get the active lyric line index for a given playback position.
  * Returns -1 when no lyrics are loaded or position is before the first line.
  */
-export function getActiveLyricIndex(
-  lines: LrcLine[],
-  positionSeconds: number,
-): number {
-  if (lines.length === 0) return -1;
-  let idx = -1;
-  for (let i = 0; i < lines.length; i++) {
-    if (lines[i].time <= positionSeconds) {
-      idx = i;
-    } else {
-      break;
-    }
-  }
-  return idx;
-}
 
-/**
- * Get upcoming lyric lines starting from the given position.
- */
-export function getUpcomingLyrics(
-  lines: LrcLine[],
-  positionSeconds: number,
-  count = 5,
-): LrcLine[] {
-  const cur = getActiveLyricIndex(lines, positionSeconds);
-  const start = Math.max(0, cur + 1);
-  return lines.slice(start, start + count);
-}
 
 // ─── Internals ───────────────────────────────────────────
 

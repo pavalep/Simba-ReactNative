@@ -13,15 +13,16 @@
  * store instance), use `useAuthStore.getState().signOut()`.
  */
 export {
-  useSessionStore,
-  type MediaLibraryEntry,
-  type SessionState,
-  type SessionActions,
-} from './sessionStore';
+  useStatsRollupStore,
+  localDayKey,
+  MAX_ACTIVE_DAYS,
+  type PlayedMedia,
+  type StatsRollupState,
+  type StatsRollupActions,
+} from './statsRollupStore';
 
 export {
   useAuthStore,
-  SESSION_TTL_MS,
   type AuthUser,
   type AuthErrorKind,
   type AuthState,
@@ -62,9 +63,6 @@ export {
   useMediaAlbums,
   useMediaAudioTracks,
   useMediaVideoTracks,
-  useMediaLocalVideos,
-  buildSearchIndex,
-  EMPTY_SCAN_HISTORY,
   type ScannedTrack,
   type ArtistEntry,
   type AlbumEntry,
@@ -81,7 +79,6 @@ export {
   // W9.4 — the single definition of "same bookmarked moment", shared by
   // the store's dedup and the player chrome's toggle.
   BOOKMARK_POSITION_TOLERANCE_SEC,
-  normalizeBookmarks,
   type Bookmark,
   type BookmarkInput,
   type BookmarkPositionUpdate,

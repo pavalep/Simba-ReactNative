@@ -12,7 +12,7 @@ interface EpisodeRef {
 const EPISODE_PATTERN = /[Ss](\d{1,2})[Ee](\d{1,3})/;
 
 /** Strip extension, collapse separators, lowercase — for fuzzy compare. */
-export function normalizeTitle(input: string): string {
+ function normalizeTitle(input: string): string {
   return input
     .toLowerCase()
     .replace(/\.[a-z0-9]+$/i, '')
@@ -21,7 +21,7 @@ export function normalizeTitle(input: string): string {
 }
 
 /** Parse "S01E02" from a filename; null when no episode marker exists. */
-export function parseEpisodeReference(fileName: string): EpisodeRef | null {
+ function parseEpisodeReference(fileName: string): EpisodeRef | null {
   const match = fileName.match(EPISODE_PATTERN);
   if (!match) return null;
   const season = parseInt(match[1], 10);

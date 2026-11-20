@@ -138,7 +138,7 @@ import {BookmarkControl} from '../../shared/BookmarkControl/BookmarkControl';
 export const FADE_IN_MS = 220;
 
 /** Entrance travel (px), resolved from a raised start position. */
-export const RISE_PX = 10;
+ const RISE_PX = 10;
 
 export const VideoTitleOverlay: React.FC = () => {
   const {state, commands} = useTransport();

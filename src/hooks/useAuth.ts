@@ -12,6 +12,7 @@ import {
   useRecentHistoryStore,
   usePlayerStore,
   useDownloadsStore,
+  useStatsRollupStore,
 } from '../state';
 import {
   signInWithGoogle,
@@ -140,8 +141,15 @@ export function useAuth() {
     // V17 Phase 85: per-store reset. The persisted keys (auth,
     // settings, weather, liveFavorites, followedPodcasts, media,
     // bookmark, playlists, recentHistory, player, downloads) are
-    // cleared independently. The sessionStore is transient and
-    // doesn't need a reset (it auto-clears on next mount).
+    // cleared independently.
+    //
+    // The stats roll-up is persisted too, so it is cleared HERE. It
+    // used to be a transient session store that was left alone - and
+    // the comment claimed it "auto-clears on next mount", which was
+    // never true: a transient store keeps its state in memory until
+    // the process dies, so the previous account's play counts stayed
+    // on screen through the sign-out. A persisted ledger would have
+    // made that permanent.
     useAuthStore.getState().reset();
     useSettingsStore.getState().reset();
     useWeatherStore.getState().reset();
@@ -153,6 +161,7 @@ export function useAuth() {
     useRecentHistoryStore.getState().reset();
     usePlayerStore.getState().reset();
     useDownloadsStore.getState().reset();
+    useStatsRollupStore.getState().reset();
     // Immediately force navigation to Login
     if (navigationRef.isReady()) {
       navigationRef.reset({index: 0, routes: [{name: 'Login'}]});
@@ -184,6 +193,7 @@ export function useAuth() {
       useRecentHistoryStore.getState().reset();
       usePlayerStore.getState().reset();
       useDownloadsStore.getState().reset();
+      useStatsRollupStore.getState().reset();
       // Immediately force navigation to Login
       if (navigationRef.isReady()) {
         navigationRef.reset({index: 0, routes: [{name: 'Login'}]});

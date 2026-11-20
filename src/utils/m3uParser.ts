@@ -6,7 +6,6 @@
 //   - Plain playlists (one URI per line)
 //   - Export to M3U format
 
-import {Platform} from 'react-native';
 import type {PlaylistItem} from '../types/playlist';
 import type {MediaLane, MediaSource} from '../types/media';
 import {getMediaType} from '../services/fileService';
@@ -172,31 +171,8 @@ export function generatePlaylistJson(items: PlaylistItem[]): string {
 /**
  * Create a sanitised file name for export (no extension).
  */
-export function getExportFileName(playlistName: string): string {
-  const safe = playlistName.replace(/[<>:"/\\|?*]/g, '_').trim();
-  return safe || 'playlist';
-}
 
-/**
- * Get the MIME type for M3U files.
- */
-export function getM3uMimeType(): string {
-  return Platform.OS === 'android'
-    ? 'audio/x-mpegurl'
-    : 'audio/mpegurl';
-}
 
-/**
- * Get a suggested file URI for sharing an M3U file on the device.
- */
-export function getExportFilePath(
-  playlistName: string,
-  format: 'm3u' | 'json' = 'm3u',
-): string {
-  const baseName = getExportFileName(playlistName);
-  const ext = format === 'm3u' ? '.m3u' : '.json';
-  return `${baseName}${ext}`;
-}
 
 // ─── Internal helpers ───────────────────────────────────────
 

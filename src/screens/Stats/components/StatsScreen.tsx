@@ -1,7 +1,8 @@
 // ────────────────────────────────────────────────────────
 // Simba Player — Stats Screen (Phase 50.4-50.6)
-// Honest session statistics — totals, days active,
-// streaks and top media, all derived from real history.
+// Honest lifetime statistics — totals, days active,
+// streaks and top media, all derived from the persisted play
+// ledger (`useStatsRollupStore`).
 // ────────────────────────────────────────────────────────
 
 import React, {useMemo} from 'react';
@@ -13,18 +14,12 @@ import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
 import {BackButton} from '../../../components/utility/BackButton/BackButton';
 import {EmptyState} from '../../../components/feedback/EmptyState/EmptyState';
-import {useSessionStore} from '../../../state';
-import {useRecentHistory} from '../../../features/recentHistory';
+import {useStatsRollupStore, localDayKey} from '../../../state';
 import {formatDuration} from '../../../utils/timeAgo';
 import type {StatsScreenProps} from '../types';
-import { resolveStreamType, useResumeAwareLaunch } from '../../../infrastructure/player';
+import {resolveStreamType, useResumeAwareLaunch} from '../../../infrastructure/player';
 
 type Props = StatsScreenProps;
-
-/** Local calendar day key (avoids UTC shifting from toISOString). */
-function dayKey(d: Date): string {
-  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-}
 
 export const StatsScreen: React.FC<Props> = ({navigation}) => {
   const {colors} = useTheme();
@@ -34,66 +29,57 @@ export const StatsScreen: React.FC<Props> = ({navigation}) => {
   const bottomChromeInset = useBottomChromeInset();
   const {openPlayer} = useResumeAwareLaunch();
 
-  const {list: recentFiles} = useRecentHistory();
-  // V17 Phase 77: session.mediaLibrary + session.playCounts moved
-  // to the new `useSessionStore` Zustand store. The Redux
-  // `useAppSelector` calls are removed for these two fields; the
-  // other selectors in this file (settings) will move to
-  // `useSettingsStore` in Phase 79.
-  const mediaLibrary = useSessionStore(state => state.mediaLibrary);
-  const playCounts = useSessionStore(state => state.playCounts);
+  // The roll-up is PERSISTED (it is the app's lifetime play ledger),
+  // so every number below survives a cold start. It used to be a
+  // transient session store, and the screen said "Plays 0" beside a
+  // real streak.
+  const plays = useStatsRollupStore(state => state.plays);
+  const activeDays = useStatsRollupStore(state => state.activeDays);
 
-  // ── Totals (50.4 — every number below comes from the session store) ──
-  const totalPlays = useMemo(
-    () => Object.values(playCounts).reduce((sum, n) => sum + n, 0),
-    [playCounts],
+  // ── Totals (50.4 — every number below comes from the roll-up) ──
+  const playRecords = useMemo(
+    () => Object.entries(plays).map(([fileUri, record]) => ({fileUri, ...record})),
+    [plays],
   );
 
-  /** Σ(playCount × duration) — mediaLibrary is authoritative, recentFiles fallback. */
-  const playbackSeconds = useMemo(() => {
-    const durationByUri = new Map<string, number>();
-    mediaLibrary.forEach(e => durationByUri.set(e.fileUri, e.duration));
-    recentFiles.forEach(e => {
-      if (!durationByUri.has(e.fileUri)) {
-        durationByUri.set(e.fileUri, e.duration);
-      }
-    });
-    let total = 0;
-    Object.entries(playCounts).forEach(([uri, count]) => {
-      total += count * Math.max(0, durationByUri.get(uri) ?? 0);
-    });
-    return total;
-  }, [mediaLibrary, recentFiles, playCounts]);
+  const totalPlays = useMemo(
+    () => playRecords.reduce((sum, record) => sum + record.count, 0),
+    [playRecords],
+  );
+
+  /** Σ(playCount × duration). The record's own duration, in seconds. */
+  const playbackSeconds = useMemo(
+    () =>
+      playRecords.reduce(
+        (sum, record) => sum + record.count * Math.max(0, record.duration),
+        0,
+      ),
+    [playRecords],
+  );
 
   const trackCount = useMemo(
-    () => mediaLibrary.filter(e => e.mediaType === 'audio').length,
-    [mediaLibrary],
+    () => playRecords.filter(record => record.mediaType === 'audio').length,
+    [playRecords],
   );
   const videoCount = useMemo(
-    () => mediaLibrary.filter(e => e.mediaType === 'video').length,
-    [mediaLibrary],
+    () => playRecords.filter(record => record.mediaType === 'video').length,
+    [playRecords],
   );
 
   // ── Days active + streak (50.5) ──
-  const activeDays = useMemo(() => {
-    const days = new Set<string>();
-    recentFiles.forEach(e => {
-      const d = new Date(e.lastPlayedAt);
-      if (!Number.isNaN(d.getTime())) {
-        days.add(dayKey(d));
-      }
-    });
-    return days;
-  }, [recentFiles]);
+  // From the roll-up's DAY ledger, not from the ten-entry recency
+  // list: the old source could never report more than ten active
+  // days, whatever the user actually did.
+  const activeDayCount = Object.keys(activeDays).length;
 
   const streak = useMemo(() => {
     let count = 0;
     const cursor = new Date();
     // Streak survives if the last play was yesterday.
-    if (!activeDays.has(dayKey(cursor))) {
+    if (!activeDays[localDayKey(cursor)]) {
       cursor.setDate(cursor.getDate() - 1);
     }
-    while (activeDays.has(dayKey(cursor))) {
+    while (activeDays[localDayKey(cursor)]) {
       count += 1;
       cursor.setDate(cursor.getDate() - 1);
     }
@@ -103,21 +89,20 @@ export const StatsScreen: React.FC<Props> = ({navigation}) => {
   // ── Top media (50.4) ──
   const topMedia = useMemo(
     () =>
-      [...recentFiles]
-        .filter(e => (playCounts[e.fileUri] ?? 0) > 0)
-        .sort((a, b) => (playCounts[b.fileUri] ?? 0) - (playCounts[a.fileUri] ?? 0))
+      [...playRecords]
+        .sort((a, b) => b.count - a.count || b.lastPlayedAt - a.lastPlayedAt)
         .slice(0, 5),
-    [recentFiles, playCounts],
+    [playRecords],
   );
 
-  const hasData = totalPlays > 0 || recentFiles.length > 0;
+  const hasData = totalPlays > 0 || activeDayCount > 0;
 
   const statCards: Array<{label: string; value: string; icon: 'play' | 'maximize' | 'music' | 'video' | 'list' | 'speed'}> = [
     {label: 'Plays', value: String(totalPlays), icon: 'play'},
     {label: 'Playback Time', value: formatDuration(playbackSeconds), icon: 'maximize'},
     {label: 'Tracks', value: String(trackCount), icon: 'music'},
     {label: 'Videos', value: String(videoCount), icon: 'video'},
-    {label: 'Days Active', value: String(activeDays.size), icon: 'list'},
+    {label: 'Days Active', value: String(activeDayCount), icon: 'list'},
     {label: 'Day Streak', value: String(streak), icon: 'speed'},
   ];
 
@@ -210,7 +195,7 @@ export const StatsScreen: React.FC<Props> = ({navigation}) => {
                       }}
                       activeOpacity={0.7}
                       accessibilityRole="button"
-                      accessibilityLabel={`${entry.title}, played ${playCounts[entry.fileUri]} times`}>
+                      accessibilityLabel={`${entry.title}, played ${entry.count} ${entry.count === 1 ? 'time' : 'times'}`}>
                       <View
                         style={[
                           styles.rankBadge,
@@ -228,7 +213,7 @@ export const StatsScreen: React.FC<Props> = ({navigation}) => {
                           {entry.title}
                         </AppText>
                         <AppText variant="caption" color="tertiary">
-                          {playCounts[entry.fileUri]} plays ·{' '}
+                          {entry.count} {entry.count === 1 ? 'play' : 'plays'} ·{' '}
                           {formatDuration(entry.duration)}
                         </AppText>
                       </View>

@@ -36,7 +36,7 @@ export type AuthErrorKind =
  * 43.2: Session TTL — 30 days of inactivity. On foreground the app
  * compares `sessionExpiresAt` against now and re-prompts when stale.
  */
-export const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+ const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 export interface AuthState {
   user: AuthUser | null;

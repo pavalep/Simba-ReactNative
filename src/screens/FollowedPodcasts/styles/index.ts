@@ -2,5 +2,4 @@
 
 export {
   createFollowedPodcastsScreenStyles,
-  ARTWORK_SIZE,
 } from './FollowedPodcastsScreen.styles';

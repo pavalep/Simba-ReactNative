@@ -145,7 +145,7 @@ function buildBookmark(input: BookmarkInput, existing?: Bookmark): Bookmark {
 
 /** Normalize persisted data. A14: dedup by `id` (not by `fileUri`), so
  *  multiple bookmarks per file are preserved. */
-export function normalizeBookmarks(items: Bookmark[]): Bookmark[] {
+ function normalizeBookmarks(items: Bookmark[]): Bookmark[] {
   const byId = new Map<string, Bookmark>();
 
   for (const item of Array.isArray(items) ? items : []) {

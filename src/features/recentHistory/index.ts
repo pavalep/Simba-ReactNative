@@ -1,5 +1,5 @@
 import {useCallback, useImperativeHandle, type ForwardedRef} from 'react';
-import {useSessionStore} from '../../state';
+import {useStatsRollupStore} from '../../state';
 import {
   useRecentHistoryStore,
   type RecentHistoryEntryInput,
@@ -16,11 +16,20 @@ export interface RecentHistoryHandle {
   clearRecent: () => void;
 }
 
-function addRecentEntry(entry: RecentHistoryEntryInput): void {
-  // V17 Phase 77: the play-count + library roll-up moved to
-  // `useSessionStore` (zustand). The `recordPlaybackStats` call
-  // is non-React and goes through `useSessionStore.getState()`.
-  useSessionStore.getState().recordPlaybackStats({
+/**
+ * The session id rides along with the write.
+ *
+ * It is what tells the lifetime play ledger "the user started this
+ * again" apart from "the thirty-second checkpoint fired again". A
+ * session id is monotonic per launch, so a new one IS a new viewing.
+ */
+function addRecentEntry(entry: RecentHistoryEntryInput, sessionId?: number): void {
+  // The lifetime play ledger is `useStatsRollupStore` (zustand), and
+  // it is PERSISTED - it is the reason the Stats screen still knows
+  // how many times the user has played something after a cold start.
+  // The `recordPlaybackStats` call is non-React and goes through
+  // `useStatsRollupStore.getState()`.
+  useStatsRollupStore.getState().recordPlaybackStats({
     fileUri: entry.fileUri,
     title: entry.title,
     duration: entry.duration,
@@ -29,6 +38,7 @@ function addRecentEntry(entry: RecentHistoryEntryInput): void {
     source: entry.source,
     provider: entry.provider,
     folderId: entry.folderId,
+    ...(sessionId !== undefined ? {sessionId} : {}),
   });
 }
 
@@ -72,15 +82,9 @@ export function useRecentHistory(
  * Non-React write façade for services that already own a store handle.
  * The retention policy remains private to this feature.
  */
-export function addRecent(entry: RecentHistoryEntryInput): void {
-  addRecentEntry(entry);
+export function addRecent(entry: RecentHistoryEntryInput, sessionId?: number): void {
+  addRecentEntry(entry, sessionId);
   useRecentHistoryStore.getState().upsertRecentHistoryEntry(entry);
 }
 
-export function removeRecent(fileUri: string): void {
-  useRecentHistoryStore.getState().removeRecentHistoryEntry(fileUri);
-}
 
-export function clearRecent(): void {
-  useRecentHistoryStore.getState().clearRecentHistory();
-}

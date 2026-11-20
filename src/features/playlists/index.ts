@@ -39,10 +39,25 @@ export interface PlaylistController {
   setPinned: (playlistId: string, pinned: boolean) => void;
 }
 
+/**
+ * THE owner of "an item entering a playlist".
+ *
+ * Every path that puts an item into a playlist - the picker's "add to
+ * playlist", the folder browser's selection, the M3U and JSON importers
+ * - comes through here, so this is the ONE place that stamps the
+ * duration's unit.
+ *
+ * The unit is SECONDS. That was not always true: the pre-fix M3U
+ * importer multiplied the parsed `#EXTINF` seconds by 1000, and the
+ * playlists it created are still on disk. A record that says its unit
+ * is never guessed about; a record that does not is resolved by the
+ * legacy rule in `src/utils/playlistDuration.ts`.
+ */
 const createItem = (input: PlaylistItemInput): PlaylistItem => ({
   ...input,
   id: input.id || `pli_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
   addedAt: input.addedAt || new Date().toISOString(),
+  durationUnit: input.durationUnit ?? 'seconds',
 });
 
 const makePlaylist = (input: {name: string; info?: string; kind: PlaylistKind}): Playlist => {
@@ -61,7 +76,7 @@ const makePlaylist = (input: {name: string; info?: string; kind: PlaylistKind}):
   };
 };
 
-export function createPlaylist(
+ function createPlaylist(
   input: {name: string; info?: string; kind: PlaylistKind},
 ): CreatePlaylistResult {
   const playlists = usePlaylistsStore.getState().playlists;
@@ -71,7 +86,7 @@ export function createPlaylist(
   return {status: 'created', playlist};
 }
 
-export function addItemToPlaylist(
+ function addItemToPlaylist(
   playlistId: string,
   input: PlaylistItemInput,
 ): AddPlaylistItemResult {
@@ -95,7 +110,7 @@ export function addItemToPlaylist(
   return {status: 'added', playlist: {...playlist, items: [...playlist.items, item]}, item};
 }
 
-export function importPlaylist(
+ function importPlaylist(
   input: {name: string; info?: string; kind: PlaylistKind; items: PlaylistItemInput[]},
 ): void {
   usePlaylistsStore.getState().importPlaylist({
@@ -157,7 +172,7 @@ export const CROSS_LANE_QUEUE_REASON =
  * Pin a playlist, or unpin it. The pinned order is the recency of pinning,
  * so pinning again moves a playlist back to the top.
  */
-export function setPlaylistPinned(playlistId: string, pinned: boolean): void {
+ function setPlaylistPinned(playlistId: string, pinned: boolean): void {
   usePlaylistsStore.getState().setPlaylistPinned({playlistId, pinned});
 }
 
@@ -186,7 +201,7 @@ export function pinnedAtMs(playlist: Playlist): number {
   return new Date(playlist.pinnedAt ?? playlist.updatedAt ?? playlist.createdAt).getTime();
 }
 
-export function updatePlaylistItemPosition(
+ function updatePlaylistItemPosition(
   playlistId: string,
   fileUri: string,
   position: number,

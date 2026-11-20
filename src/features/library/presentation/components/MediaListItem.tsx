@@ -213,7 +213,7 @@ const MediaListItem: React.FC<MediaListItemProps> = React.memo(
   },
 );
 
-export const ITEM_HEIGHT = 66;
+ const ITEM_HEIGHT = 66;
 
 const styles = StyleSheet.create({
   container: {

@@ -65,19 +65,6 @@ export function withCacheToken(uri: string, token: string): string {
   return `${uri}${separator}t=${encodeURIComponent(token)}`;
 }
 
-/**
- * Best-effort human-readable source label for a URI (host for remote URIs,
- * otherwise undefined). Used to tag recents/bookmarks/playlist entries.
- */
-export function sourceFromUri(uri: string | null | undefined): string | undefined {
-  if (!uri || !isRemoteUri(uri)) return undefined;
-  try {
-    const match = /^[a-z]+:\/\/([^/]+)/i.exec(uri);
-    return match?.[1] ?? undefined;
-  } catch {
-    return undefined;
-  }
-}
 
 /**
  * Extract a stable cache key (hash) from a URI for artwork caching.
@@ -103,14 +90,6 @@ export function cacheKeyFromUri(uri: string): string {
  */
 export type StreamType = 'hls' | 'dash' | 'file' | 'other';
 
-export function classifyStreamType(uri: string | null | undefined): StreamType {
-  if (!uri) return 'other';
-  const lower = uri.toLowerCase();
-  if (lower.includes('.m3u8')) return 'hls';
-  if (lower.includes('.mpd')) return 'dash';
-  if (!isRemoteUri(uri)) return 'file';
-  return 'other';
-}
 
 // ─── Local media: which lane, and what it is called ────────────────────
 //

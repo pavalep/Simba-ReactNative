@@ -8,7 +8,7 @@ import {FONT_FAMILY} from '../../../constants/fontFamily';
 const {width: SCREEN_WIDTH} = Dimensions.get('window');
 export const COLUMN_COUNT = 2;
 export const GAP = 12;
-export const CARD_WIDTH = (SCREEN_WIDTH - spacing.lg * 2 - GAP) / COLUMN_COUNT;
+ const CARD_WIDTH = (SCREEN_WIDTH - spacing.lg * 2 - GAP) / COLUMN_COUNT;
 
 export const createAllVideosScreenStyles = () =>
   StyleSheet.create({

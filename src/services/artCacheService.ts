@@ -87,7 +87,7 @@ export async function cacheArt(uri: string): Promise<string | null> {
 /**
  * Evict the oldest files (by mtime) past the cap. Best-effort, fire-and-forget.
  */
-export async function pruneArtCache(maxFiles: number = MAX_FILES): Promise<void> {
+ async function pruneArtCache(maxFiles: number = MAX_FILES): Promise<void> {
   try {
     const files = await RNFS.readDir(ART_CACHE_DIR);
     if (files.length <= maxFiles) return;

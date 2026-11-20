@@ -410,7 +410,7 @@ export interface TypographyTokens {
   displaySans: TextStyle;
 }
 
-export const typography: TypographyTokens = {
+ export const typography: TypographyTokens = {
   // v3 Atlas variants — Inter. The family names the family; the
   // weight selects the file (see the note above this object).
   display:     {fontFamily: FONT_FAMILY.inter.bold,     fontWeight: '700', fontSize: 36, lineHeight: 44},
@@ -484,7 +484,7 @@ export interface ShadowTokens {
   gold: ViewStyle;
 }
 
-export const darkShadows: ShadowTokens = {
+ export const darkShadows: ShadowTokens = {
   sm: {
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 1},
@@ -515,7 +515,7 @@ export const darkShadows: ShadowTokens = {
   },
 };
 
-export const lightShadows: ShadowTokens = {
+ export const lightShadows: ShadowTokens = {
   sm: {
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 1},
@@ -600,33 +600,6 @@ export const lightTokens: FullThemeTokens = {
 
 // ─── mergeTokens Utility ──────────────────────────────────
 
-export function mergeTokens(
-  base: FullThemeTokens,
-  overrides: Partial<FullThemeTokens>,
-): FullThemeTokens {
-  return {
-    ...base,
-    ...overrides,
-    colors: overrides.colors
-      ? {...base.colors, ...overrides.colors}
-      : base.colors,
-    typography: overrides.typography
-      ? {...base.typography, ...overrides.typography}
-      : base.typography,
-    spacing: overrides.spacing
-      ? {...base.spacing, ...overrides.spacing}
-      : base.spacing,
-    radius: overrides.radius
-      ? {...base.radius, ...overrides.radius}
-      : base.radius,
-    shadows: overrides.shadows
-      ? {...base.shadows, ...overrides.shadows}
-      : base.shadows,
-    motion: overrides.motion
-      ? {...base.motion, ...overrides.motion}
-      : base.motion,
-  };
-}
 
 // ─── Backward Compat: Old ThemeTokens (Legacy) ────────────
 // Keep until all old components are migrated.

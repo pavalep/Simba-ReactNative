@@ -132,9 +132,3 @@ export const useNowPlayingStore = create<NowPlayingState>()((set, _get) => ({
   },
 }));
 
-/**
- * Non-React reader for services that already hold a store handle.
- * Exists so a future background/auto-play caller does not have to reach
- * for a hook outside a component.
- */
-export const getNowPlaying = (): NowPlaying | null => useNowPlayingStore.getState().current;

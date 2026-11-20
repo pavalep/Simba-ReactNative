@@ -8,7 +8,7 @@ import {FONT_FAMILY} from '../../../constants/fontFamily';
 import type {ColorTokens} from '../../../theme/tokens';
 
 /** The circular cover on a row. */
-export const ARTWORK_SIZE = 56;
+ const ARTWORK_SIZE = 56;
 
 /** The app's minimum touch target. */
 const TOUCH_TARGET = 44;

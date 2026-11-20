@@ -100,12 +100,3 @@ export const useOrientationLockStore = create<OrientationLockStore>()(
   ),
 );
 
-/**
- * Non-reactive read for imperative callers (the header's tap handler),
- * matching `getSkipPrevThresholdMs()` in `useSkipPrevThresholdStore`.
- * A component that needs to RENDER the lock state must use the hook so
- * it re-renders on change.
- */
-export function getOrientationLocked(): boolean {
-  return useOrientationLockStore.getState().locked;
-}

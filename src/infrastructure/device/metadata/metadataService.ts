@@ -21,8 +21,6 @@
 //     (never read in this file).
 
 import {readDir as nativeReadDir, stat as nativeStat, UnsupportedContentUriError} from '../../nativeFs';
-import {getMpvPlayerModule} from '../../player';
-import {LrcParseResult, parseLrc} from '../../../utils/lrcParser';
 
 import {linkedMediaFolderIdFromPath} from '../../../types/media';
 import type {ScannedTrack} from '../../../state';
@@ -44,17 +42,6 @@ export interface TrackMetadata {
   raw: Record<string, string>;
 }
 
-export const EMPTY_METADATA: TrackMetadata = {
-  title: '',
-  artist: '',
-  album: '',
-  year: 0,
-  genre: '',
-  trackNumber: 0,
-  albumArtUri: '',
-  language: '',
-  raw: {},
-};
 
 /**
  * V21 W5 P19 (D-007 / D-022 partly): richer scan-result shape so
@@ -100,135 +87,22 @@ export interface CorruptFile {
 // ─── Helpers ────────────────────────────────────────────
 
 /** Known cover-art filenames (lowercase), checked in order of preference. */
-const COVER_FILENAMES = [
-  'cover.jpg',
-  'cover.png',
-  'folder.jpg',
-  'folder.png',
-  'album.jpg',
-  'album.png',
-  'front.jpg',
-  'front.png',
-];
 
 /** Resolve potential cover-art paths relative to a file URI. */
-function resolveCoverArtCandidates(fileUri: string): string[] {
-  try {
-    const lastSlash = fileUri.lastIndexOf('/');
-    if (lastSlash === -1) return [];
-    const dir = fileUri.slice(0, lastSlash + 1);
-    return COVER_FILENAMES.map(name => `${dir}${name}`);
-  } catch {
-    return [];
-  }
-}
 
 /**
  * Parse mpv-format metadata (JSON object of key→string) into a typed record.
  */
-function parseMpvMetadata(rawJson: string): Record<string, string> {
-  try {
-    const obj = JSON.parse(rawJson);
-    if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
-      const result: Record<string, string> = {};
-      for (const [k, v] of Object.entries(obj)) {
-        result[k] = String(v ?? '');
-      }
-      return result;
-    }
-  } catch {
-    // ignore parse failure
-  }
-  return {};
-}
 
 /**
  * Best-effort cover-URI lookup.  Checks known cover filenames in the
  * same directory as the media file and returns the first that exists,
  * or empty string.
  */
-async function findCoverArt(fileUri: string): Promise<string> {
-  const candidates = resolveCoverArtCandidates(fileUri);
-  for (const uri of candidates) {
-    try {
-      const resp = await fetch(uri, {method: 'HEAD'});
-      if (resp.ok) return uri;
-    } catch {
-      // file does not exist
-    }
-  }
-  return '';
-}
 
 // ─── Public API ──────────────────────────────────────────
 
-/**
- * Read track metadata from the mpv engine, augmented with file-adjacent
- * cover art and LRC lookup.
- */
-export async function readTrackMetadata(
-  fileUri: string,
-  artistOverride?: string,
-  albumOverride?: string,
-): Promise<TrackMetadata> {
-  // V13 Phase 53: resolve the module bridge once per call instead of
-  // importing the legacy `MpvPlayer` wrapper (which is being deleted
-  // in Phase 56).
-  const bridge = getMpvPlayerModule();
 
-  // 1. Read mpv metadata property
-  let rawJson = '{}';
-  try {
-    rawJson = String(bridge.getProperty('metadata') ?? '{}');
-  } catch {
-    // player not initialised
-  }
-  const raw = parseMpvMetadata(rawJson);
-
-  // 2. Read media-title (mpv's best-guess title)
-  let mediaTitle = '';
-  try {
-    mediaTitle = String(bridge.getProperty('media-title') ?? '');
-  } catch {
-    // ignore
-  }
-
-  // 3. Resolve cover art
-  const albumArtUri = await findCoverArt(fileUri);
-
-  // 4. Assemble result
-  return {
-    title: raw.Title || raw.title || mediaTitle || '',
-    artist: artistOverride || raw.Artist || raw.artist || '',
-    album: albumOverride || raw.Album || raw.album || '',
-    year: parseInt(raw.Year || raw.year || '0', 10) || 0,
-    genre: raw.Genre || raw.genre || '',
-    trackNumber: parseInt(raw.Track || raw.track || '0', 10) || 0,
-    albumArtUri,
-    language: raw.Language || raw.language || '',
-    raw,
-  };
-}
-
-/**
- * Attempt to load and parse an LRC file adjacent to the given audio file.
- * Looks for `<filename>.lrc` in the same directory.
- */
-export async function loadAdjacentLrc(fileUri: string): Promise<LrcParseResult | null> {
-  try {
-    // Guess .lrc path: replace extension with .lrc
-    const dot = fileUri.lastIndexOf('.');
-    const lrcUri = dot === -1 ? `${fileUri}.lrc` : `${fileUri.slice(0, dot)}.lrc`;
-
-    const resp = await fetch(lrcUri);
-    if (!resp.ok) return null;
-    const text = await resp.text();
-    if (!text.trim()) return null;
-    return parseLrc(text);
-  } catch {
-    return null;
-  }
-}
 
 // ─── Phase 7 — Batch scanning from filesystem ─────────────
 
@@ -237,16 +111,6 @@ const AUDIO_EXTENSIONS = new Set([
 ]);
 
 /** Known cover-art filenames for directory-level lookup. */
-const DIR_COVER_FILENAMES = [
-  'cover.jpg',
-  'cover.png',
-  'folder.jpg',
-  'folder.png',
-  'album.jpg',
-  'album.png',
-  'front.jpg',
-  'front.png',
-];
 
 /**
  * Extract file name without extension from a URI path segment.
@@ -558,50 +422,4 @@ export async function scanAudioFolders(
   return {tracks, duplicates, corruptFiles};
 }
 
-/**
- * Try to find a cover-art image in the given directory.
- * Returns the first matching file URI, or empty string.
- */
-export async function findCoverInDir(dirPath: string): Promise<string> {
-  try {
-    const items = await nativeReadDir(dirPath);
-    for (const item of items) {
-      if (!item.isFile()) continue;
-      const lower = item.name.toLowerCase();
-      if (DIR_COVER_FILENAMES.includes(lower)) {
-        return item.path;
-      }
-    }
-  } catch {
-    // ignore
-  }
-  return '';
-}
 
-/**
- * Estimate duration for an audio file by inspecting its size and
- * assuming an average bitrate.  This is a rough fallback — accurate
- * duration requires ffprobe or native metadata reading.
- *
- * @param fileSizeBytes  File size from RNFS.stat
- * @param ext            File extension (lowercase, with dot)
- */
-export function estimateAudioDuration(
-  fileSizeBytes: number,
-  ext: string,
-): number {
-  // Approximate bitrates (kbps)
-  const bitrateMap: Record<string, number> = {
-    '.mp3': 192,
-    '.flac': 800,
-    '.wav': 1411,
-    '.aac': 192,
-    '.ogg': 192,
-    '.wma': 128,
-    '.m4a': 192,
-    '.opus': 128,
-  };
-  const bitrate = bitrateMap[ext] || 192;
-  // duration (seconds) = fileSize (bytes) * 8 / (bitrate * 1000)
-  return Math.round((fileSizeBytes * 8) / (bitrate * 1000));
-}

@@ -6,5 +6,4 @@ export {
   createAllAudioScreenStyles,
   COLUMN_COUNT,
   GAP,
-  CARD_WIDTH,
 } from './AllAudioScreen.styles';

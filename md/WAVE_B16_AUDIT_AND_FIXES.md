@@ -1407,8 +1407,9 @@ Each item, individually, with the reason it could not be closed in this wave.
   `src/infrastructure/player/queuePersistence.ts`.
 - **B15-Q5 — CLOSED in §21.** The Queue screen's jump goes through the launch seam.
 - **B15-Q8 — CLOSED in §21.** The explicit queue and the run are two sections.
-- **B15-M1** — the m3u-import residue: pre-fix `.m3u` imports hold milliseconds. A safe migration
-  needs a per-record provenance flag the persisted schema does not have.
+- **B15-M1 — CLOSED in §23.** The m3u-import residue: pre-fix `.m3u` imports hold milliseconds. A
+  safe migration needs a per-record provenance flag the persisted schema does not have — the
+  flag now exists, and the residue is migrated under a rule that is written down.
 - **B15-P2** — the player's sheets have no Penpot board.
 
 ### From B14 — still open
@@ -1422,8 +1423,12 @@ Each item, individually, with the reason it could not be closed in this wave.
 - **B13.1-2**, **B13.18 / B-11-2**.
 - **B12-1, B12-2, B12-3, B12-4, B12-7, B12-8, B12-9, B12-13**.
 - **B-11-4, B-11-5, B-11-7**.
-- **R4** — a persisted, timestamped roll-up for the Stats screen.
-- **R5** — the 68 named dead exports, the 8 store keys and the Help FAQ answers.
+- **R4 — CLOSED in §23.** A persisted, timestamped roll-up for the Stats screen — the play ledger
+  and the day ledger, both on disk, both timestamped.
+- **R5 — CLOSED in §23.** The 68 named dead exports, the 8 store keys and the Help FAQ answers —
+  with the list's own numbers corrected against the tree: **0** dead runtime exports remain,
+  **7** of the 8 store keys were dead, and the Help FAQ answers and the Bookmarks strings were
+  already gone before this wave.
 - **CO-06**, **CO-07**.
 - **B13.1-1** — the 960 `#EXTVLCOPT` directives: needs a lib option and a published release.
 - **B13.1-5**, **B13.1-6**.
@@ -1803,3 +1808,300 @@ All seven gates on the committed state: `tsc`, `eslint`, `boundaries`, `fonts`, 
   the two controls that already declared 44.** The app's OTHER controls were not swept against
   the floor in this wave.
 
+
+
+## 23 WAVE F — R5 (the dead code), R4 (the Stats roll-up), B15-M1 (the m3u residue)
+
+Three items, one wave. R5 is the sweep; R4 is the Stats roll-up; B15-M1 is the m3u residue.
+They are in one wave because they share one thing: each of them was a claim about the tree
+that had to be MEASURED against the tree before anything was changed.
+
+### 23.1 R5 — what the item said, and what the tree actually holds
+
+R5 was one line in §20: *"the 68 named dead exports, the 8 store keys and the Help FAQ
+answers."*
+
+That line is a LIST, measured on an older tree. **The tree is the authority**, and three of
+its four claims were stale. What is written down here is what the tree holds:
+
+| The carried-forward item said | The tree holds | What this wave did |
+| --- | --- | --- |
+| 68 named dead exports | **0** dead runtime exports | removed them all, and the count is now a measured 0 |
+| 8 dead store keys | **7** dead store keys | removed the 7; `homeCity` is ALIVE |
+| the Help FAQ answers | **already gone** | nothing to do |
+| 6 of 8 Bookmarks strings | **0** dead Bookmarks strings | nothing to do |
+
+**`homeCity` is alive.** `src/hooks/useWeather.ts:74` reads
+`useSettingsStore.getState().homeCity` — it is the SECOND tier of the weather cascade
+(coordinates → manual city → IANA timezone → locale). It and its setter stay. Its setter has
+no caller in the tree, which is the same shape as `setPlaybackSpeed` and `setSleepTimer`: a
+setter whose screen has not been built yet. Removing it would have deleted the only way to
+ever set the one value the cascade reads.
+
+**The Help FAQ answers are already gone.** The Profile/Settings merge rewrote
+`src/screens/Help/components/HelpScreen.tsx`; grepping for those answer texts finds nothing
+in `src/`. There was nothing to delete.
+
+**The Bookmarks strings are all read.** `src/screens/Bookmarks/related/textContent.json` holds
+13 strings and every one of them is read:
+
+| Key | Read by |
+| --- | --- |
+| `header.title` | `src/screens/Bookmarks/related/browseConfig.ts:33` |
+| `header.countSaved` | `src/screens/Bookmarks/index.tsx:78` |
+| `header.clearAllLabel`, `header.clearAllA11y` | `src/screens/Bookmarks/index.tsx:62,64` |
+| `search.placeholder` | `src/screens/Bookmarks/related/browseConfig.ts:34` — the shell's search field |
+| `empty.title`, `empty.description` | `src/screens/Bookmarks/components/BookmarksContent.tsx:58,59` |
+| `dialogs.clearAll*` | `src/screens/Bookmarks/index.tsx:48-50` |
+| `dialogs.remove*` | `src/screens/Bookmarks/components/BookmarksContent.tsx:37-39` |
+
+The "No Bookmarks Yet" string the item pointed at does exist — as a HARDCODED string in
+`src/components/bookmark/BookmarkSheet.tsx` and `src/screens/Song/components/SongBookmarks.tsx`,
+which are different surfaces (a bookmark sheet, and a song's bookmark list), not the Bookmarks
+page. The JSON key was never dead.
+
+### 23.2 The census — what "dead" was measured to mean
+
+A regex sweep is not a census. The sweep ran the **TypeScript compiler** over `src/`,
+`__tests__/`, `tools/`, `App.tsx` and `jest.setup.ts`, resolved every module's real exports,
+and counted inbound references from ES imports, `export … from`, namespace imports,
+`require()` and `jest.requireActual()`. A symbol is dead only with ZERO inbound references
+across all of them.
+
+Two things the first pass got WRONG, and what each cost:
+
+- **The census did not see the root `App.tsx`.** It deleted the `typography` export, and the app
+  stopped typechecking. Restored.
+- **The census did not see `jest.requireActual('<module>').typography`.** It de-exported
+  `typography`, `darkShadows` and `lightShadows` from `src/theme/tokens.ts`, and the theme's own
+  tests failed. Re-exported.
+
+The final count is a COUNT, not a claim:
+
+```
+DEAD_TOTAL 0
+DEAD_FULLY 0
+DEAD_EXPORT_ONLY 0
+```
+
+Type-only exports are out of scope — R5 counted runtime exports, and a type that nothing
+imports is erased by the compiler anyway.
+
+### 23.3 What the sweep removed
+
+Nine files were dead in full and are deleted:
+
+```
+src/hooks/useAutoHideControls.ts
+src/hooks/useOrientation.ts
+src/hooks/useScreenTransition.ts
+src/navigation/useNavigation.ts
+src/features/bookmarks/confirmAdd.ts
+src/components/core/AppDivider/AppDivider.tsx
+src/components/feedback/PulseRing/PulseRing.tsx
+src/components/utility/MediaTile/MediaTile.tsx
+src/theme/animations.ts
+```
+
+Sixty-one files under `src/` were modified in this wave — the sweep's, plus the roll-up, the store-key
+removal and the duration migration. A dead declaration was DELETED where the whole thing was dead,
+and DE-EXPORTED where only the export was. The imports those left behind were removed too —
+eslint is the detector, `tsc` is the proof. Two barrels were damaged by the first pass (overlapping
+removal ranges) and were repaired by merging the ranges; `src/components/index.ts` also carried a
+stale `export type {AppDividerProps}` for a component that is gone.
+
+### 23.4 The seven dead store keys
+
+`src/state/settingsStore.ts` held seven preference keys with **no reader and no writer**:
+
+```
+rememberPlaybackPosition      externalSubtitleDirectories
+largerControls               highContrastSubtitles
+scanOnLaunch                 notificationsEnabled
+appLanguage
+```
+
+The keys, their seven setters and their default values are gone. The store's `merge` now sheds
+them from an install that still carries them, using the mechanism the store already had for
+`hasLaunched`: the merge drops the key, and the rehydrate callback forces exactly ONE write so
+the dead key leaves the on-disk blob too. A blob that never had them is not rewritten — there is
+no write per launch.
+
+`__tests__/state/settingsStore.test.ts` covers the shedding, the forced write, the absence of
+every setter, and the survival of `homeCity`.
+
+### 23.5 R4 — the Stats roll-up
+
+R4 was: *a persisted, timestamped roll-up for the Stats screen.*
+
+The evidence in §20 was exact: `StatsScreen.tsx:37,78-111` read the PERSISTED ten-entry
+recent-history store for days and streak, and the TRANSIENT `sessionStore` for play counts and
+the played-media roll-up. `sessionStore.ts:67` created the store with no `persist`, and its only
+writer was `features/recentHistory/index.ts:24` — so after a cold start the page said "Plays 0"
+beside a real day streak.
+
+**The old store's own comment claimed the roll-up was "recomputed at runtime from the
+recentHistory feature's persisted history on cold start".** Nothing recomputed it, and it could
+not have: a ten-entry recency list does not know that a film was played five times. That claim
+was the defect's cover story, and it is gone with the store.
+
+The roll-up is now `src/state/statsRollupStore.ts` — **persisted**, and it owns two ledgers:
+
+| Ledger | What it holds | What it answers |
+| --- | --- | --- |
+| `plays` | one record per media file: the play COUNT, the LAST play's timestamp, the first play's timestamp, the title, the duration and the classification | Plays, Playback Time, Tracks, Videos, Most Played |
+| `activeDays` | one entry per local calendar day, with the plays that happened on it | Days Active, Day Streak |
+
+Two facts, one owner, and the numbers are DERIVED from them rather than cached beside them:
+
+```
+totalPlays      = Σ record.count
+playbackSeconds = Σ record.count × record.duration
+trackCount      = records on the audio lane
+videoCount      = records on the video lane
+activeDays      = |activeDays|
+streak          = consecutive days, walking back from today
+```
+
+**The day ledger is not derived from the files.** A file's last play says when it was last
+watched; it does not say which days were active. The old screen counted days from the ten-entry
+recency list, so "Days Active" could never exceed ten, whatever the user actually did. The day
+ledger is counted as the days happen, and it is capped at 400 days (about thirteen months) — the
+oldest day is dropped when the cap is crossed.
+
+The day key is LOCAL and zero-padded (`2026-11-21`), so it sorts as a date and a play at 11pm
+belongs to the day the user lived.
+
+**A PLAY is a session, not a checkpoint.** The resume writer writes a checkpoint every thirty
+seconds and once more when the session ends, so counting the WRITES would report one viewing of
+a film as a hundred plays — and the old transient store counted the writes, so the old screen
+said "3 plays" for one two-minute film. The checkpoint writer now passes the playback SESSION id
+(`session.sessionId`, monotonic per launch) with the write, and the ledger raises the count only
+when the session id is not the one it already recorded. One viewing is one play.
+
+**The store is persisted, and that has a consequence the transient store did not:** a persisted
+ledger has to be cleared when the account is. `useAuth.signOut` and `useAuth.revokeAccess` now
+reset it alongside every other persisted store.
+
+Two false claims were corrected on the way:
+
+- the sign-out comment claimed the transient session store "auto-clears on next mount" — **it
+  never did**. A transient store keeps its state in memory until the process dies, so the previous
+  account's play counts stayed on screen through the sign-out. A persisted ledger would have made
+  that permanent;
+- the store's comment claimed the roll-up was recomputed at cold start. It was not, and it could
+  not be.
+
+### 23.6 B15-M1 — the m3u residue
+
+B15-M1 was: *the m3u-import residue: pre-fix `.m3u` imports hold milliseconds. A safe migration
+needs a per-record provenance flag the persisted schema does not have.*
+
+The flag now exists. `PlaylistItem.durationUnit` (`'seconds' | 'milliseconds'`) says what the
+record's number means, and `src/utils/playlistDuration.ts` is the ONE owner of what a number
+means.
+
+**The flag.** Every path that puts an item into a playlist goes through `createItem` in
+`src/features/playlists/index.ts` — the picker, the folder browser, the M3U importer and the
+JSON importer — so that is the one place that stamps the unit. The app's unit is seconds, and
+every record now says so.
+
+**The legacy rule.** A record written before the flag existed does not say what its number
+means, so the rule decides, and it is written down:
+
+| Condition | Why |
+| --- | --- |
+| the record was written by an importer (its id carries the `imp_` prefix) | the app's own picker never used that prefix |
+| its number is a whole number of seconds times 1000 | the old importer's arithmetic was `seconds * 1000`, so a number that is NOT a multiple of 1000 cannot be one of its |
+| read as SECONDS, the number is at least an hour | no track in a playlist is an hour long |
+| read as MILLISECONDS, the number is at most a day | that is the most the old importer could have written |
+
+A legacy record that matches all four is a millisecond value: a three-minute track stored as
+180000 reads as fifty hours, and is migrated to 180 seconds. A legacy record that matches NONE of
+them keeps its number and keeps NO flag — the rule is applied, not guessed around.
+
+**What the rule cannot decide.** A legacy record whose number is 1000, 2000 or 3000 could be
+seconds (a 16, 33 or 50 minute track) or milliseconds (a 1, 2 or 3 second clip), and nothing in
+the record says which. Those are left exactly as they were. The same is true of a JSON import of
+an export made before the unit was fixed: that file's durations are seconds by the format's own
+definition, and a row in it that came from a pre-fix m3u import carries milliseconds — a fresh
+import stamps the unit it was given and does not re-apply the legacy rule.
+
+**The migration is idempotent, and it lands on disk.** A migrated record is converted and
+stamped, so the rule never runs twice over it; and because zustand v5 does not write the merged
+state back on rehydrate, the store forces exactly ONE write when the migration changed something —
+otherwise the residue would be re-resolved on every launch and never actually fixed.
+
+### 23.7 What changed
+
+| File | What it does now |
+| --- | --- |
+| `src/state/statsRollupStore.ts` | NEW — the persisted play ledger and day ledger. |
+| `src/state/sessionStore.ts` | DELETED — the transient store it replaces. |
+| `src/state/index.ts` | Exports the roll-up and `localDayKey`. |
+| `src/features/recentHistory/index.ts` | Writes the play into the roll-up, with the session id. |
+| `src/screens/Stats/components/StatsScreen.tsx` | Reads the roll-up; every number is derived from it. |
+| `src/hooks/useAuth.ts` | Resets the roll-up on sign-out and on revoke; the two false comments are corrected. |
+| `src/infrastructure/player/usePlaybackCheckpointSync.ts` | The checkpoint write carries the playback session id. |
+| `src/state/settingsStore.ts` | The seven dead keys and setters are gone; the merge sheds them from disk. |
+| `src/types/playlist.ts` | `PlaylistItem.durationUnit` — the per-record provenance flag. |
+| `src/utils/playlistDuration.ts` | NEW — the ONE owner of what a duration number means. |
+| `src/state/playlistsStore.ts` | Resolves each record's duration on read; forces one write when the migration ran. |
+| `src/features/playlists/index.ts` | `createItem` stamps the unit — the one place an item enters a playlist. |
+| the other modified `src/` files | The sweep's de-exported and de-imported dead code. |
+| `__tests__/state/statsRollupStore.test.ts` | NEW — the roll-up, including the cold-start proof. |
+| `__tests__/utils/playlistDuration.test.ts` | NEW — the legacy rule. |
+| `__tests__/state/settingsStore.test.ts` | The seven dead keys: the shedding, the forced write, the setters, `homeCity`. |
+
+### 23.8 The decisions that are decisions
+
+- **A symbol is dead only with zero inbound references from the compiler's own view of the
+  tree.** Not a grep. A grep misses `App.tsx` and `jest.requireActual`, and both misses cost a
+  real export before they were found.
+- **Deleting a declaration beats de-exporting it.** An export-only symbol loses the `export`
+  keyword; a dead declaration loses the whole thing.
+- **The tree is the authority over the carried-forward list.** `homeCity`, the Help FAQ answers
+  and the Bookmarks strings were all claimed dead and all alive or already gone. The
+  corrections are written down here rather than dropped.
+- **The Stats numbers are DERIVED from one ledger, not cached beside it.** Six counters that
+  could disagree with the ledger are worse than one ledger and six `useMemo`s.
+- **A play is a session, not a checkpoint.** The number was wrong before it was invisible: the
+  ledger counted the resume writer's thirty-second checkpoints, so one viewing read as three
+  plays. The session id is what separates the two.
+- **A persisted ledger is cleared with the account.** The transient store was not, and the
+  comment said it was — it was not.
+- **The legacy rule is a rule, and where it cannot decide it decides NOTHING.** The ambiguous
+  numbers are left alone rather than guessed at.
+- **The migration lands on disk.** A migration that only runs in memory is not a migration.
+
+### 23.9 The device proofs
+
+Both on `emulator-5554`, driven with the argent MCP against the app's own UI. **No data was
+injected**: the one play in the proof is a real video the app fetched and played, and the
+numbers on screen are the app's own.
+
+| Proof | What it shows |
+| --- | --- |
+| `device_proof/B16_F01_stats_after_one_play.png` | The Stats screen after ONE viewing of one film: **Plays 1**, Playback Time **51:57**, Tracks 0, Videos 1, Days Active 1, Day Streak 1, and the Most Played row reading **"1 play · 51:57"**. |
+| `device_proof/B16_F02_stats_after_cold_start.png` | The SAME screen after the app process was RESTARTED — the native splash, the bundle reloaded, the app cold: **the numbers are still there**. Before this wave the same screen said "Plays 0" beside a real day streak. |
+
+The first proof is also the answer to a question the old counter raised: the viewing produced
+several resume checkpoints, and the screen says **one** play, because a play is a session and a
+checkpoint is not.
+
+### 23.10 The gates
+
+All seven gates on the committed state: `tsc`, `eslint`, `boundaries`, `fonts`, `boards`,
+`themed`, `jest` — every one exit 0. The jest run is **219 suites, 2062 passed, 1 todo**.
+
+### 23.11 What is NOT closed
+
+- **The legacy rule leaves three numbers alone.** A legacy record whose duration is 1000, 2000
+  or 3000 could be seconds or milliseconds and is left as it was. So is a JSON import of an
+  export made before the unit was fixed.
+- **The play ledger is not capped.** It is the lifetime statistic, and capping it would make
+  "Plays" a lie. Its size is bounded by the number of distinct files the user has played.
+- **The day ledger is capped at 400 days.** A streak longer than a year is not read by anybody,
+  and the cap is what keeps the ledger from growing forever.
+- **The dead-export census is a snapshot.** It is true of this tree at this commit; a later
+  wave can make it stale again.

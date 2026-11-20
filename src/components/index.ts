@@ -6,8 +6,6 @@
 
 // Core
 export {AppButton} from './core/AppButton/AppButton';
-export {AppDivider} from './core/AppDivider/AppDivider';
-export type {AppDividerProps} from './core/AppDivider/AppDivider';
 export {AppBadge} from './core/AppBadge/AppBadge';
 export type {AppBadgeProps} from './core/AppBadge/AppBadge';
 
@@ -36,7 +34,6 @@ export {ErrorState} from './feedback/ErrorState/ErrorState';
 export {Placeholder} from './feedback/Placeholder/Placeholder';
 export type {PlaceholderProps, PlaceholderVariant} from './feedback/Placeholder/Placeholder';
 export {PlayerErrorFallback} from './feedback/PlayerErrorFallback/PlayerErrorFallback';
-export {PulseRing} from './feedback/PulseRing/PulseRing';
 export {ScanProgressBanner} from './feedback/ScanProgressBanner/ScanProgressBanner';
 export {ScreenErrorBoundary} from './feedback/ScreenErrorBoundary/ScreenErrorBoundary';
 export {ToastProvider, useToast} from './feedback/Toast/Toast';
@@ -55,7 +52,6 @@ export {ScreenContainer} from './layout/ScreenContainer/ScreenContainer';
 // Utility
 export {SectionHeader} from './utility/SectionHeader/SectionHeader';
 export {SettingsRow} from './utility/SettingsRow/SettingsRow';
-export {MediaTile} from './utility/MediaTile/MediaTile';
 export {SvgIcon} from './utility/SvgIcon/SvgIcon';
 export type {SvgIconName} from './utility/SvgIcon/SvgIcon';
 

@@ -49,7 +49,7 @@ interface Props {
  * A book is hours, not minutes, so this is "3h 25m" and not "205:00" —
  * the Music row's `m:ss` is right for a track and absurd for a book.
  */
-export function formatBookDuration(totalSeconds: number): string {
+ function formatBookDuration(totalSeconds: number): string {
   if (!totalSeconds || totalSeconds <= 0) return '';
   const h = Math.floor(totalSeconds / 3600);
   const m = Math.round((totalSeconds % 3600) / 60);

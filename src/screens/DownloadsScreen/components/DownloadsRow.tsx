@@ -17,7 +17,7 @@ import text from '../related/textContent.json';
 /**
  * The row's second line — what the download is doing.
  */
-export function statusLabel(record: DownloadRecord): string {
+ function statusLabel(record: DownloadRecord): string {
   switch (record.status) {
     case 'downloading': {
       if (record.size > 0 && record.received > 0) {
@@ -40,7 +40,7 @@ export function statusLabel(record: DownloadRecord): string {
 /**
  * How far the download has got.
  */
-export function progressOf(record: DownloadRecord): number {
+ function progressOf(record: DownloadRecord): number {
   if (record.size <= 0) return 0;
   return Math.min(1, record.received / record.size);
 }

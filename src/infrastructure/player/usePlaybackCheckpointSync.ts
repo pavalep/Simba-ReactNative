@@ -104,17 +104,23 @@ function writeCheckpoint(
   const durationSec = snapshot.durationMs / 1000;
   if (!shouldRecordCheckpoint({positionSec, durationSec})) return false;
 
-  addRecent({
-    fileUri: session.uri,
-    title: session.title,
-    position: positionSec,
-    duration: durationSec,
-    ...(session.thumbnailPath ? {thumbnailPath: session.thumbnailPath} : {}),
-    ...(resumeThumbnailPath ? {resumeThumbnailPath} : {}),
-    ...(session.type ? {type: session.type} : {}),
-    ...(session.mediaLane ? {mediaType: session.mediaLane} : {}),
-    ...(session.provider ? {provider: session.provider} : {}),
-  });
+  // The SESSION id rides along: it is what tells the lifetime play
+  // ledger "the user started this again" apart from "the thirty-second
+  // checkpoint fired again".
+  addRecent(
+    {
+      fileUri: session.uri,
+      title: session.title,
+      position: positionSec,
+      duration: durationSec,
+      ...(session.thumbnailPath ? {thumbnailPath: session.thumbnailPath} : {}),
+      ...(resumeThumbnailPath ? {resumeThumbnailPath} : {}),
+      ...(session.type ? {type: session.type} : {}),
+      ...(session.mediaLane ? {mediaType: session.mediaLane} : {}),
+      ...(session.provider ? {provider: session.provider} : {}),
+    },
+    session.sessionId,
+  );
   return true;
 }
 

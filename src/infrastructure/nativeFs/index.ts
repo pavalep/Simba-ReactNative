@@ -114,13 +114,3 @@ export async function stat(uri: string): Promise<{ size: number; isFile: () => b
 /**
  * Replacement for `RNFS.exists`. Same return type.
  */
-export async function exists(uri: string): Promise<boolean> {
-  if (isContentUri(uri)) {
-    // Conservative: assume the content URI is reachable (since the
-    // caller likely got it from MediaStore). If you need strict
-    // existence, query ContentResolver via the future
-    // MediaStoreFsModule.
-    return true;
-  }
-  return RNFS.exists(uri);
-}

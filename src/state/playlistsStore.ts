@@ -2,6 +2,7 @@ import {create} from 'zustand';
 import {persist} from 'zustand/middleware';
 import {createJSONStorage, sharedMMKVStorage, CURRENT_PERSIST_VERSION} from './persistence';
 import {isPlaylistMediaKindAllowed, type Playlist, type PlaylistItem, type PlaylistKind} from '../types/playlist';
+import {resolveDuration} from '../utils/playlistDuration';
 import type {MediaKind, MediaLane} from '../types/media';
 
 /**
@@ -75,6 +76,18 @@ const generateId = (prefix: string): string =>
  */
 const LEGACY_MIXED_KIND = 'MIXED';
 
+/**
+ * TRUE when the last normalisation gave a record a duration unit, or
+ * converted a legacy record's duration.
+ *
+ * zustand v5 does not write the merged state back on rehydrate, so a
+ * migration that ran in memory would not reach the disk until some
+ * unrelated write happened to rewrite the blob. The rehydrate callback
+ * forces exactly one write when this flag is set, so the migrated
+ * playlists really do land on disk.
+ */
+let durationUnitMigrationPending = false;
+
 const isPlaylistKind = (value: unknown): value is PlaylistKind =>
   value === 'AUDIO_ONLY' || value === 'VIDEO_ONLY';
 
@@ -93,11 +106,27 @@ const normalizeItem = (raw: Partial<PlaylistItem>, index: number): PlaylistItem 
   const mediaType = isMediaLane(raw.mediaType) ? raw.mediaType : undefined;
   const type = isMediaKind(raw.type) ? raw.type : mediaType === 'video' ? 'video' : 'audio';
   const lane = mediaType ?? (type === 'video' || type === 'movie' || type === 'live-tv' || type === 'archive-video' ? 'video' : 'audio');
+  const id = raw.id || generateId(`pli_${index}`);
+  const rawDuration = typeof raw.duration === 'number' ? raw.duration : 0;
+  // The duration's UNIT. A record that declares one is converted to
+  // seconds; a legacy record that does not is resolved by the rule in
+  // `src/utils/playlistDuration.ts`, which is the ONE owner of what a
+  // number means. This is the M3U residue fix: the pre-fix importer
+  // wrote milliseconds here.
+  const resolved = resolveDuration({
+    id,
+    duration: rawDuration,
+    durationUnit: raw.durationUnit,
+  });
+  if (resolved.seconds !== rawDuration || resolved.unit !== raw.durationUnit) {
+    durationUnitMigrationPending = true;
+  }
   return {
-    id: raw.id || generateId(`pli_${index}`),
+    id,
     fileUri: raw.fileUri,
     title: raw.title,
-    duration: typeof raw.duration === 'number' ? raw.duration : 0,
+    duration: resolved.seconds,
+    ...(resolved.unit ? {durationUnit: resolved.unit} : {}),
     ...(raw.artist ? {artist: raw.artist} : {}),
     ...(raw.album ? {album: raw.album} : {}),
     ...(raw.thumbnailPath ? {thumbnailPath: raw.thumbnailPath} : {}),
@@ -374,6 +403,13 @@ export const usePlaylistsStore = create<PlaylistsState & PlaylistsActions>()(
       onRehydrateStorage: () => (state) => {
         if (!state) return;
         state.playlists = normalizePersistedPlaylists(state.playlists);
+        // The migration ran in memory. Force ONE write so the migrated
+        // playlists reach the disk - otherwise the residue would be
+        // re-resolved on every launch and never actually fixed.
+        if (durationUnitMigrationPending) {
+          durationUnitMigrationPending = false;
+          usePlaylistsStore.setState({});
+        }
       },
     },
   ),

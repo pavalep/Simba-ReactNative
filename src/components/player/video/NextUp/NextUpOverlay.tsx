@@ -61,7 +61,7 @@ const NEXT_UP_LEAD_MS = 10_000; // Show overlay at durationMs - 10s
  *     the 10-second window)
  *     secondsRemaining = 10..0 inside the window
  */
-export function deriveNextUpView(args: {
+ function deriveNextUpView(args: {
   positionMs: number;
   durationMs: number;
   canGoNext: boolean;

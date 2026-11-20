@@ -5,9 +5,6 @@
 export {
   useBookmarks,
   addBookmark,
-  updateBookmarkPosition,
-  removeBookmark,
-  clearBookmarks,
 } from '../features/bookmarks';
 
 export type {

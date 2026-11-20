@@ -1,5 +1,5 @@
 export {RootNavigator} from './RootNavigator';
-export {navigate, goBack, navigationRef} from './navigationHelper';
+export {navigate, navigationRef} from './navigationHelper';
 export type {
   RootStackParamList,
   RootStackScreenProps,

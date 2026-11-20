@@ -315,18 +315,3 @@ export async function revokeGoogleAccess(): Promise<void> {
   await GoogleSignin.revokeAccess();
 }
 
-/**
- * Returns true if Google Play Services are available (Android only).
- */
-export async function isPlayServicesAvailable(): Promise<boolean> {
-  if (Platform.OS !== 'android') {
-    return true;
-  }
-  try {
-    const GoogleSignin = getGoogleSignin();
-    await GoogleSignin.hasPlayServices({showPlayServicesUpdateDialog: false});
-    return true;
-  } catch {
-    return false;
-  }
-}

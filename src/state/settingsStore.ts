@@ -24,7 +24,6 @@ export interface SettingsState {
   playbackSpeed: number;
   sleepTimerMinutes: number;
   isShuffleOn: boolean;
-  rememberPlaybackPosition: boolean;
 
   // Preferences (Phase 3)
   isAudioNormalizationEnabled: boolean;
@@ -32,7 +31,6 @@ export interface SettingsState {
   isHardwareAccelerationEnabled: boolean;
   isAutoLoadSubtitlesEnabled: boolean;
   preferredLanguages: string;
-  externalSubtitleDirectories: string;
 
   // Subtitle appearance (Phase 22)
   subtitleFontSize: number;
@@ -69,14 +67,13 @@ export interface SettingsState {
   // so the field is gone with it. The `merge` below drops the stale key out
   // of installs that still have it persisted.
 
-  // Accessibility & misc (Phase 46)
-  largerControls: boolean;
-  highContrastSubtitles: boolean;
-  scanOnLaunch: boolean;
-  notificationsEnabled: boolean;
-  appLanguage: string;
-
   // P61: home greeting.
+  //
+  // `homeCity` is the ONE manual tier of the weather cascade (see
+  // `src/hooks/useWeather.ts`), so it stays. Its setter has no caller
+  // in the tree yet - the same shape as `setPlaybackSpeed` and
+  // `setSleepTimer` - so the key is only ever non-empty from a blob
+  // an older build wrote.
   homeCity: string;
 }
 
@@ -95,14 +92,12 @@ export interface SettingsActions {
   setPlaybackSpeed: (speed: number) => void;
   setSleepTimer: (minutes: number) => void;
   toggleShuffle: () => void;
-  setRememberPlaybackPosition: (on: boolean) => void;
 
   setAudioNormalization: (on: boolean) => void;
   setDialogueBoost: (on: boolean) => void;
   setHardwareAcceleration: (on: boolean) => void;
   setAutoLoadSubtitles: (on: boolean) => void;
   setPreferredLanguages: (langs: string) => void;
-  setExternalSubtitleDirectories: (dirs: string) => void;
 
   setSubtitleFontSize: (size: number) => void;
   setSubtitleTextColor: (color: string) => void;
@@ -133,12 +128,6 @@ export interface SettingsActions {
 
   setMpvOptions: (options: MpvOption[]) => void;
 
-  setLargerControls: (on: boolean) => void;
-  setHighContrastSubtitles: (on: boolean) => void;
-  setScanOnLaunch: (on: boolean) => void;
-  setNotificationsEnabled: (on: boolean) => void;
-  setAppLanguage: (lang: string) => void;
-
   setHomeCity: (city: string) => void;
 
   reset: () => void;
@@ -167,14 +156,12 @@ const initialState: SettingsState = {
   playbackSpeed: 1.0,
   sleepTimerMinutes: 0,
   isShuffleOn: false,
-  rememberPlaybackPosition: true,
 
   isAudioNormalizationEnabled: false,
   isDialogueBoostEnabled: false,
   isHardwareAccelerationEnabled: true,
   isAutoLoadSubtitlesEnabled: true,
   preferredLanguages: 'eng, jpn, und',
-  externalSubtitleDirectories: './subs, ./subtitles',
 
   subtitleFontSize: 16,
   subtitleTextColor: DEFAULT_SUBTITLE_COLOR,
@@ -197,12 +184,6 @@ const initialState: SettingsState = {
   isScanning: false,
 
   mpvOptions: [],
-
-  largerControls: false,
-  highContrastSubtitles: false,
-  scanOnLaunch: false,
-  notificationsEnabled: true,
-  appLanguage: 'system',
 
   homeCity: '',
 };
@@ -230,19 +211,19 @@ function upsertLinkedFolder(
 }
 
 /**
- * True when the last rehydrate found a stale `hasLaunched` in the persisted
- * blob, and the store has not yet written the shed state back.
+ * True when the last rehydrate found a stale key in the persisted blob,
+ * and the store has not yet written the shed state back.
  *
  * zustand v5 does NOT write the merged state back to storage on rehydrate.
  * `hydrate()` calls `set(mergedState, true)` — the raw store `set`, not the
- * persisted `api.setState` — and only a `migrate` triggers a write-back, and
- * a `migrate` fires solely on a version mismatch. The `merge` below therefore
+ * persisted `api.setState` — and only a `migrate` triggers a write-back, and a
+ * `migrate` fires solely on a version mismatch. The `merge` below therefore
  * fixes the IN-MEMORY state, but the dead key would sit in the on-disk blob
  * until some unrelated write happened to rewrite it. This flag lets the
  * rehydrate callback force exactly one write, so an install really does shed
  * the key rather than merely ignoring it.
  */
-let staleLaunchFlagOnDisk = false;
+let staleKeysOnDisk = false;
 
 export const useSettingsStore = create<SettingsState & SettingsActions>()(
   persist(
@@ -255,9 +236,6 @@ export const useSettingsStore = create<SettingsState & SettingsActions>()(
       setSleepTimer: (sleepTimerMinutes) => set({sleepTimerMinutes}),
       toggleShuffle: () =>
         set((s) => ({isShuffleOn: !s.isShuffleOn})),
-      setRememberPlaybackPosition: (rememberPlaybackPosition) =>
-        set({rememberPlaybackPosition}),
-
       setAudioNormalization: (isAudioNormalizationEnabled) =>
         set({isAudioNormalizationEnabled}),
       setDialogueBoost: (isDialogueBoostEnabled) =>
@@ -267,8 +245,6 @@ export const useSettingsStore = create<SettingsState & SettingsActions>()(
       setAutoLoadSubtitles: (isAutoLoadSubtitlesEnabled) =>
         set({isAutoLoadSubtitlesEnabled}),
       setPreferredLanguages: (preferredLanguages) => set({preferredLanguages}),
-      setExternalSubtitleDirectories: (externalSubtitleDirectories) =>
-        set({externalSubtitleDirectories}),
 
       setSubtitleFontSize: (subtitleFontSize) => set({subtitleFontSize}),
       setSubtitleTextColor: (subtitleTextColor) => set({subtitleTextColor}),
@@ -346,14 +322,6 @@ export const useSettingsStore = create<SettingsState & SettingsActions>()(
 
       setMpvOptions: (mpvOptions) => set({mpvOptions}),
 
-      setLargerControls: (largerControls) => set({largerControls}),
-      setHighContrastSubtitles: (highContrastSubtitles) =>
-        set({highContrastSubtitles}),
-      setScanOnLaunch: (scanOnLaunch) => set({scanOnLaunch}),
-      setNotificationsEnabled: (notificationsEnabled) =>
-        set({notificationsEnabled}),
-      setAppLanguage: (appLanguage) => set({appLanguage}),
-
       setHomeCity: (homeCity) => set({homeCity}),
 
       reset: () => set({...initialState}),
@@ -395,26 +363,53 @@ export const useSettingsStore = create<SettingsState & SettingsActions>()(
         const {
           hasLaunched: _dropped,
           autoDeleteDownloads: _droppedAutoDelete,
+          rememberPlaybackPosition: _droppedRememberPlaybackPosition,
+          externalSubtitleDirectories: _droppedExternalSubtitleDirectories,
+          largerControls: _droppedLargerControls,
+          highContrastSubtitles: _droppedHighContrastSubtitles,
+          scanOnLaunch: _droppedScanOnLaunch,
+          notificationsEnabled: _droppedNotificationsEnabled,
+          appLanguage: _droppedAppLanguage,
           ...rest
         } = (persisted ?? {}) as Partial<SettingsState> & {
           hasLaunched?: boolean;
           autoDeleteDownloads?: number;
+          // The seven preference keys the R5 sweep removed: no reader,
+          // no writer, no owner. They are declared here only so the
+          // destructuring below can DROP them from an install that
+          // still carries them.
+          rememberPlaybackPosition?: boolean;
+          externalSubtitleDirectories?: string;
+          largerControls?: boolean;
+          highContrastSubtitles?: boolean;
+          scanOnLaunch?: boolean;
+          notificationsEnabled?: boolean;
+          appLanguage?: string;
         };
-        staleLaunchFlagOnDisk = _dropped !== undefined;
+        staleKeysOnDisk =
+          _dropped !== undefined ||
+          _droppedAutoDelete !== undefined ||
+          _droppedRememberPlaybackPosition !== undefined ||
+          _droppedExternalSubtitleDirectories !== undefined ||
+          _droppedLargerControls !== undefined ||
+          _droppedHighContrastSubtitles !== undefined ||
+          _droppedScanOnLaunch !== undefined ||
+          _droppedNotificationsEnabled !== undefined ||
+          _droppedAppLanguage !== undefined;
         return {...current, ...rest};
       },
       /**
-       * Force one write when the merge shed a stale `hasLaunched`, so the
-       * dead key leaves the persisted blob too — see the note on
-       * `staleLaunchFlagOnDisk`. The write carries the merged state (the key
-       * is already gone from it) and the flag is cleared, so this happens
-       * once, on the launch that finds the key, and not on every launch.
+       * Force one write when the merge shed a stale key, so the dead key
+       * leaves the persisted blob too - see the note on
+       * `staleKeysOnDisk`. The write carries the merged state (the key is
+       * already gone from it) and the flag is cleared, so this happens once,
+       * on the launch that finds the key, and not on every launch.
        */
       onRehydrateStorage: () => () => {
-        if (!staleLaunchFlagOnDisk) {
+        if (!staleKeysOnDisk) {
           return;
         }
-        staleLaunchFlagOnDisk = false;
+        staleKeysOnDisk = false;
         useSettingsStore.setState({});
       },
     },

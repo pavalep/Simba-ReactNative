@@ -84,7 +84,7 @@ export const SHEET_MAX_HEIGHT = '62%';
 export const DISMISS_DRAG_PX = 88;
 
 /** Drag velocity that dismisses regardless of distance (a real flick). */
-export const DISMISS_VELOCITY = 0.6;
+const DISMISS_VELOCITY = 0.6;
 
 /* ─────────────────────────────────────────────────────────────────────────
  *                            THE EXPANSION STATE

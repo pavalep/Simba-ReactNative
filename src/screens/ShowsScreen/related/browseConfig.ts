@@ -59,7 +59,7 @@
 import type {SectionBrowseConfig} from '../types';
 
 /** The scope group's option keys — and the legacy `initialTab` values. */
-export const SHOWS_SCOPE_BROWSE = 'browse';
+ const SHOWS_SCOPE_BROWSE = 'browse';
 export const SHOWS_SCOPE_TODAY = 'today';
 
 /**

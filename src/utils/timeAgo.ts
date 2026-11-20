@@ -2,27 +2,6 @@
  * Convert an ISO date string to a relative "time ago" label.
  * Examples: "just now", "2m ago", "1h ago", "Yesterday", "3d ago"
  */
-export function timeAgo(isoDate: string): string {
-  const now = Date.now();
-  const then = new Date(isoDate).getTime();
-  const diffMs = now - then;
-
-  if (diffMs < 0) return 'just now';
-  if (diffMs < 60_000) return 'just now';
-
-  const mins = Math.floor(diffMs / 60_000);
-  if (mins < 60) return `${mins}m ago`;
-
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-
-  const days = Math.floor(hours / 24);
-  if (days === 1) return 'Yesterday';
-  if (days < 7) return `${days}d ago`;
-
-  const weeks = Math.floor(days / 7);
-  return `${weeks}w ago`;
-}
 
 /**
  * Format seconds to display duration.
@@ -50,11 +29,3 @@ export function isVideoFile(fileName: string): boolean {
   return videoExts.includes(ext);
 }
 
-/**
- * Get display extension from a URI or file name.
- */
-export function getDisplayExt(fileName: string): string {
-  const dot = fileName.lastIndexOf('.');
-  if (dot < 0) return '';
-  return fileName.slice(dot).toLowerCase();
-}

@@ -46,7 +46,7 @@ export interface UseHistoryScreenResult {
 };
 
 /** 47.3: streaming = remote URIs (http/https), local = file/content. */
-export function isStreamingUri(uri: string): boolean {
+ function isStreamingUri(uri: string): boolean {
   return /^https?:\/\//i.test(uri);
 }
 

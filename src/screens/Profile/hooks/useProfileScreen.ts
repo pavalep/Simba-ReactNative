@@ -36,7 +36,7 @@ import {SUBTITLE_LANGUAGES} from '../components/SubtitleLanguageDialog';
  *
  * The key is the store's value and the label is what the user reads.
  */
-export const THEME_LABELS: Record<string, string> = {
+ const THEME_LABELS: Record<string, string> = {
   system: 'System',
   dark: 'Dark',
   light: 'Light',

@@ -14,6 +14,17 @@ import type {MediaKind, MediaLane, MediaSource} from './media';
  */
 export type PlaylistKind = 'AUDIO_ONLY' | 'VIDEO_ONLY';
 
+/**
+ * The unit a playlist item's duration is stored in.
+ *
+ * SECONDS is the app's unit, everywhere. The unit is declared on the
+ * RECORD rather than assumed, because one producer used to disagree
+ * with the rest: the pre-fix M3U importer multiplied the parsed
+ * `#EXTINF` seconds by 1000 and wrote milliseconds into a field that
+ * every other producer filled with seconds.
+ */
+export type DurationUnit = 'seconds' | 'milliseconds';
+
 export interface PlaylistItem {
   id: string;
   fileUri: string;
@@ -30,6 +41,21 @@ export interface PlaylistItem {
    * the JSON import, `useAddToPlaylistScreen` — stored seconds.
    */
   duration: number;
+  /**
+   * The unit `duration` was stored in, DECLARED by whoever wrote the
+   * record.
+   *
+   * The app's unit is seconds, everywhere, and this record's number is
+   * read as seconds unless it says otherwise. The flag exists because
+   * one producer disagreed: the pre-fix M3U importer multiplied the
+   * parsed `#EXTINF` seconds by 1000 and wrote milliseconds into this
+   * field, so a playlist imported before that fix reads 1000x too long.
+   *
+   * It is ABSENT on a record written before the flag existed. Those are
+   * resolved by the legacy rule in `src/utils/playlistDuration.ts`, which
+   * is the ONE place that decides what a flagless record means.
+   */
+  durationUnit?: DurationUnit;
   /** Last native-confirmed playback position for optional playlist resume. */
   position?: number;
   artist?: string;
@@ -83,7 +109,7 @@ export const playlistKindToLane = (kind: PlaylistKind): MediaLane =>
  * whether an item may enter a playlist depends on the kind its caller
  * declares. That is a fact about the callers, not about this list.
  */
-export const PLAYLIST_ALLOWED_MEDIA_KINDS: Record<PlaylistKind, readonly MediaKind[]> = {
+ const PLAYLIST_ALLOWED_MEDIA_KINDS: Record<PlaylistKind, readonly MediaKind[]> = {
   AUDIO_ONLY: ['audio', 'music', 'podcast'],
   VIDEO_ONLY: ['video', 'movie'],
 };

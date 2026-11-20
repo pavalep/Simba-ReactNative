@@ -49,7 +49,7 @@ import {useChromeAutoHide} from '../../../../infrastructure/player';
  * Exported so the test suite can assert the motion is real without
  * hardcoding a magic number in two places.
  */
-export const CHROME_TRAVEL_PX = 8;
+ const CHROME_TRAVEL_PX = 8;
 
 export interface ChromeAutoHideControllerProps
   extends Omit<ViewProps, 'children'> {

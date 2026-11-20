@@ -85,7 +85,7 @@ function toArchiveRow(item: ArchiveListItem): ArchiveRow {
   };
 }
 
-export const ArchiveContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => {
+ const ArchiveContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => {
   const {colors} = useTheme();
   const styles = useMemo(() => createArchiveScreenStyles(colors), [colors]);
   // The app's ONE bottom-chrome rule: the safe area, or the mini-player

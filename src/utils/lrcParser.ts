@@ -117,38 +117,4 @@ export function parseLrc(lrcText: string): LrcParseResult {
  * @param position Current playback position in seconds
  * @returns Index of the current active lyric line, or -1 if none
  */
-export function getCurrentLyricIndex(
-  lines: LrcLine[],
-  position: number,
-): number {
-  if (lines.length === 0) return -1;
 
-  // Find the last line whose time <= position
-  let activeIdx = -1;
-  for (let i = 0; i < lines.length; i++) {
-    if (lines[i].time <= position) {
-      activeIdx = i;
-    } else {
-      break;
-    }
-  }
-  return activeIdx;
-}
-
-/**
- * Get upcoming lyric lines from a given position.
- *
- * @param lines Sorted array of LRC lines
- * @param position Current playback position in seconds
- * @param count Number of upcoming lines to return
- * @returns Array of upcoming lyric lines
- */
-export function getUpcomingLyrics(
-  lines: LrcLine[],
-  position: number,
-  count: number = 5,
-): LrcLine[] {
-  const currentIdx = getCurrentLyricIndex(lines, position);
-  const startIdx = Math.max(0, currentIdx + 1);
-  return lines.slice(startIdx, startIdx + count);
-}

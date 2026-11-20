@@ -143,18 +143,6 @@ export const FONT_FAMILY = {
 // FONT_ROLE.brandScript`) so the role-to-family mapping is
 // explicit. Components that need a specific weight can use the
 // nested FONT_FAMILY keys directly.
-export const FONT_ROLE = {
-  /** Brand wordmark role — Allura (single weight). */
-  brandScript: 'Allura' as const,
-  /** Cinematic display / hero titles role — Cormorant Garamond Bold. */
-  displaySerif: 'Cormorant Garamond' as const,
-  /** Section titles role — Manrope SemiBold. */
-  displaySans: 'Manrope SemiBold' as const,
-  /** UI body role — Inter Regular (token variants override to specific weights). */
-  ui: 'Inter' as const,
-  /** Code / monospace role — JetBrains Mono. */
-  mono: 'JetBrains Mono' as const,
-};
 
 // ─── FontFamily union (covers every leaf string) ──────────────
 export type FontFamily =

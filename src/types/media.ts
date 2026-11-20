@@ -145,27 +145,7 @@ export function linkedMediaFolderIdFromPath(path: string): string {
   return linkedMediaFolderId(path, 'audio');
 }
 
-/** Build the canonical classification for a local file scanner result. */
-export function classifyLocalMedia(mediaType: MediaLane): MediaClassification {
-  return {
-    source: 'local',
-    type: mediaType,
-    mediaType,
-  };
-}
 
-/** Build an API classification while retaining the provider for future badges. */
-export function classifyApiMedia(
-  type: MediaKind,
-  provider?: string,
-): MediaClassification {
-  return {
-    source: 'api',
-    type,
-    mediaType: mediaKindToLane(type),
-    ...(provider ? {provider} : {}),
-  };
-}
 
 /**
  * An item that can be queued, playlisted or bookmarked.

@@ -54,7 +54,7 @@ import {mediaKindToLane} from '../../types/media';
 import type {MediaKind, MediaLane, MediaSource} from '../../types/media';
 
 /** The MMKV key the mirror lives under. */
-export const PERSISTED_QUEUE_KEY = 'playerQueueMirror';
+ const PERSISTED_QUEUE_KEY = 'playerQueueMirror';
 
 /**
  * How many entries the mirror keeps.

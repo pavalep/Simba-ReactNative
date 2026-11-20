@@ -12,7 +12,7 @@ import {spacing, radius} from '../../../theme/tokens';
 import {EQ_BANDS, EQ_PRESETS} from '../../../services/audioSettingsService';
 
 // Re-export for consumers that historically imported from this panel.
-export {EQ_BANDS, EQ_PRESETS};
+export {EQ_PRESETS};
 
 // ─── Constants ───────────────────────────────────────────────
 

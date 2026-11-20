@@ -76,7 +76,6 @@ import {
   useMoreSheetExpansion,
   SHEET_MAX_HEIGHT,
   DISMISS_DRAG_PX,
-  DISMISS_VELOCITY,
 } from '../../shared/MoreSheet/MoreSheet';
 import {
   MoreSheetSection,
@@ -94,7 +93,7 @@ import {useCurrentPlaylistItem} from '../../shared/useCurrentPlaylistItem';
 // Re-exported so the sheet's public surface did not change for its
 // consumers and its tests: the sheet's geometry and its speed list are
 // the shared module's now, and this file is only the video lane's ROWS.
-export {SHEET_MAX_HEIGHT, DISMISS_DRAG_PX, DISMISS_VELOCITY, SPEED_OPTIONS};
+export {SHEET_MAX_HEIGHT, DISMISS_DRAG_PX, SPEED_OPTIONS};
 
 export type VideoMoreAction =
   | 'addToQueue'

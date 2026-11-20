@@ -86,7 +86,7 @@ export interface ScanHistory {
   unsupportedCount: number;
 }
 
-export const EMPTY_SCAN_HISTORY: ScanHistory = {
+ const EMPTY_SCAN_HISTORY: ScanHistory = {
   lastScanTime: null,
   filesAdded: 0,
   filesRemoved: 0,
@@ -107,7 +107,7 @@ export const EMPTY_SCAN_HISTORY: ScanHistory = {
  * on the `tracks` reference. The cost is paid only when `tracks`
  * actually changes, and the same reference is reused otherwise.
  */
-export function buildSearchIndex(tracks: ScannedTrack[]): SearchIndex {
+ function buildSearchIndex(tracks: ScannedTrack[]): SearchIndex {
   const index: SearchIndex = {};
   const addWord = (word: string, uri: string) => {
     if (!word) return;
@@ -328,12 +328,3 @@ export function useMediaVideoTracks(): ScannedTrack[] {
   return useMemo(() => tracks.filter(t => t.mediaType === 'video'), [tracks]);
 }
 
-/** Local video tracks (was `selectLocalVideos`). Filters on
- * `source === 'local'` AND `mediaType === 'video'`. */
-export function useMediaLocalVideos(): ScannedTrack[] {
-  const tracks = useMediaStore(s => s.tracks);
-  return useMemo(
-    () => tracks.filter(t => t.source === 'local' && t.mediaType === 'video'),
-    [tracks],
-  );
-}
