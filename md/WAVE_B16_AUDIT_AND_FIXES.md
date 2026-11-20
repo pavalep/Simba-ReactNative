@@ -578,22 +578,166 @@ One suite and thirteen tests more than the last wave: the new `byIdRetry` suite 
 
 ---
 
-## 15. CARRIED FORWARD
+
+## 15. Wave B16-L — the notification handed the framework the same bitmap twice
+
+### 15.1 The cause, measured from the tombstone
+
+The crash is the lib's media notification, not the app's navigation. The tombstone of the abort
+(`X:/Development/SIMBA/.scratch-figcraft/tombstone_12.txt`, 11,521 lines, pid 7874, SIGABRT on the
+main thread) says:
+
+```
+Abort message: 'fdsan: failed to exchange ownership of file descriptor:
+fd 223 is owned by unique_fd 0x79cc1c6e311c, was expected to be unowned'
+```
+
+and the frames run:
+
+```
+MediaPlaybackService.buildNotification
+MediaPlaybackService.handleStart
+Notification$Builder.build
+Notification.reduceImageSizes
+Icon.scaleDownToAshmem
+Icon.scaleDownIfNecessary
+BitmapCache.getShared
+Bitmap.asShared
+Bitmap.createAshmemBitmap
+Bitmap_copyAshmem
+bitmapCopyTo
+SkBitmap::tryAllocPixels
+AshmemPixelAllocator::allocPixelRef
+Bitmap::allocateAshmemBitmap
+ashmem_create_region
+ashmem_open
+unique_fd_impl::reset
+android_fdsan_exchange_owner_tag
+fdsan_error
+```
+
+The fd table in that same tombstone holds **TWO descriptors on the SAME ashmem region** — fd 145
+(unowned) and fd 223 (owned by unique_fd) — which is the framework in the middle of making a shared
+copy of an icon bitmap whose pixels already lived in a shared region.
+
+**⇒ THE CAUSE: the notification handed the framework a bitmap it had already been handed.** The
+framework SHARES the icon bitmap it is given — `Icon.scaleDownToAshmem` turns it into an
+ashmem-backed bitmap so the system UI can read it. Hand it the same instance twice and the second
+handover operates on a bitmap that is already shared.
+
+And the same instance WAS handed twice, back to back, on every start:
+
+- `handleStart` builds the notification **twice** — once inside `applyMetadata()` (which notifies)
+  and once for `startForeground()`;
+- when the artwork could not be loaded, BOTH builds fell back to
+  `BitmapFactory.decodeResource(resources, android.R.drawable.ic_media_play)` — the
+  **RESOURCES-CACHED** bitmap, one instance shared with every other user of that drawable.
+
+The radio rows are what made it reachable: they pass a **REMOTE** image URL, that fetch failed on
+device (`Failed to load artwork: null` once per second in the logcat — measured again on the old
+build at 16:54:26 → 16:54:31, one line per ticker tick), and so every notification build took the
+fallback.
+
+### 15.2 The fix — in the LIB
+
+The lib now has one owner for the notification's artwork: `NotificationArtwork`
+(`android/src/main/java/com/simba/player/NotificationArtwork.kt`). Three rules:
+
+1. **The framework is handed a FRESH copy on every notification build.** The bitmap the class owns
+   is never handed over — only copies of it are — so the framework's sharing can never touch the
+   source.
+2. **The fallback is OUR copy of the drawable**, not the Resources-cached instance.
+3. **The artwork is fetched OFF the notification thread**, once per artwork path. It used to be
+   fetched while the notification was being built — once a second, with a 3 s connect and a 5 s read
+   timeout, on the main thread.
+
+The service no longer decodes bitmaps at all. `setArtworkPath()` is the one owner of the artwork
+path; it tells the artwork, and the artwork fetches in the background.
+
+### 15.3 The release
+
+- lib `@simba-dev/react-native-media-player` **3.3.7** — committed as `a4c4564`, tagged `v3.3.7`,
+  published to npm by the tag-driven CI (run 44524499746) at 12:36:55 UTC.
+- the app now depends on `^3.3.7`, installed from npm (no local reference), and the APK was
+  rebuilt NATIVELY — the change is Kotlin, so a JS reload would not have carried it.
+
+### 15.4 The gates
+
+The lib's gates, on the 3.3.7 tree:
+
+```
+:simba-dev_react-native-media-player:testDebugUnitTest   BUILD SUCCESSFUL
+    NotificationArtworkTest   15 tests, 0 failures, 0 skipped
+    every pre-existing suite passes with the same skip counts
+npm run typecheck                                            clean
+npm test -- --ci                                             20 suites, 289 tests, all pass
+npm pack --dry-run                                           3.3.7, 59 files, android/src/test excluded
+```
+
+The Kotlin unit tests are run through the **example app's** gradle project (the lib has no gradle
+project of its own — it inherits the consumer's `rootProject.ext`).
+
+### 15.5 The device proof
+
+Measured on **emulator-5554** (AVD `Medium_Phone`, `sdk_gphone16k_x86_64`, Android 17 / API 37),
+on the natively rebuilt **3.3.7** APK installed with `adb install -r`. The station was driven
+through the app's own UI with argent — the Radio screen via the app's own
+`navigationRef.navigate('RadioScreen')` over the Metro debugger, then the row's play button — and
+the station was **Radio Armisa** (`https://onair.armisa.it/listen/armisa/radio.mp3`, MP3, 128 kbps).
+
+**The old build, for comparison:** `Failed to load artwork: null` once per ticker tick
+(16:54:26.117 → 16:54:31.323 — six lines in six seconds), then the process aborted with the fdsan
+message in §15.1 (tombstone, pid 7874).
+
+**The new build — the fallback path, deliberately exercised.** The crash needed the artwork fetch
+to FAIL, so the fetch was made to fail: the app's own
+`startAudioPlayback({ uri, title, artworkPath })` call — the same call the catalogue rows make —
+was handed an unreachable artwork URL (`http://127.0.0.1:9/unreachable-artwork.png`). The
+notification then had to fall back to the drawable, which is the exact state the old build died in.
+
+What the logcat shows after the marker `19:23:35` (3,403 lines scanned):
+
+| Measure | Old build | New build (3.3.7) |
+|---|---|---|
+| `Failed to load artwork` | once per ticker tick | **1** line in 78 s — `11-20 19:23:35.836 W/NotificationArtwork(22187): Failed to load artwork: Failed to connect to /127.0.0.1:9` |
+| `fdsan` / `Fatal signal` / `Abort message` | SIGABRT, pid 7874 | **none** |
+| the app process | aborted | **pid 22187 before and after** — no restart, no crash |
+| playback | died with the process | position advanced 75,139 ms → 77,175 ms, `PLAYING` throughout |
+
+The position ticker rebuilt the notification **once per second** for the whole 78 seconds — 78
+notification builds, 78 handovers of the fallback bitmap to the framework, and not one abort. The
+old build died on the second handover.
+
+Screenshots: `device_proof/B16_L01_radio_notification.png` (the media notification showing
+"Radio Armisa" with the **fallback** artwork — the failure path, visible on screen) and
+`device_proof/B16_L02_now_playing.png` (the Now Playing screen).
+
+Raw captures, outside the repo: `X:/Development/SIMBA/.scratch-figcraft/b16l-21-after.log` (the
+scanned logcat), `b16l-30-notification.png`, `b16l-31-nowplaying.png`.
+
+### 15.6 The app's gates
+
+All six, on the app tree with the 3.3.7 dependency installed:
+
+```
+tsc          exit=0
+eslint       exit=0    (--max-warnings 0)
+boundaries   exit=0
+fonts        exit=0
+boards       exit=0
+jest         exit=0    205 suites, 1968 passed + 1 todo, 0 failed, 50.9 s
+```
+
+Outputs: `X:/Development/SIMBA/.scratch-figcraft/gates-waveB16l/`.
+
+---
+
+## 16. CARRIED FORWARD
 
 Each item, individually, with the reason it could not be closed in this wave.
 
 ### From this wave
 
-- **B16-K-RADIO-NOTIFICATION — the media notification aborts the process.** The lib's
-  `MediaPlaybackService.buildNotification` hands the framework a large-icon bitmap that the
-  framework then downscales and shares; the second share of the same instance trips Android's
-  fdsan check and SIGABRTs the app on the main thread. Intermittent — it did not reproduce on the
-  re-test of the same station. **Reason: the fix is in the LIB.** The notification must not
-  reuse the framework's cached `ic_media_play` bitmap, must not hand the framework a bitmap it
-  will have to share twice, and must not fetch a remote artwork on the notification thread (it
-  does that today, once per ticker tick — `Failed to load artwork: null` in the logcat, once a
-  second). That is a lib change → a lib release → an app dependency bump → a NATIVE rebuild.
-  The app cannot fix it from its own side without working around the lib's contract.
 - **B16-K-THEME-SWEEP — 30 screens still have no themed root background.** The navigator's theme
   fixed every screen that sat behind it, but the sweep that found them
   (`src/theme` consumers without a `backgroundColor` on their root) also lists the screens that
