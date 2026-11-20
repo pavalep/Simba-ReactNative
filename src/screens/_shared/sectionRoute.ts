@@ -10,7 +10,18 @@
 // a thin `Readonly<Record<string, unknown>>` wrapper used by the
 // shell to pass route-time params to the content's `renderContent`.
 
-/** Union of all Home Discover destinations. */
+/**
+ * The routes that use the shared browse shell.
+ *
+ * It used to be "the Home Discover destinations" — the nine screens
+ * the Home's rails open. The LIST pages (All Audio, All Videos, Genre,
+ * Followed Podcasts, History, Downloads, Bookmarks) are on the same
+ * shell now, so the union is every route the shell serves.
+ *
+ * The type is an identity tag: `useSectionSearch` and
+ * `useSectionOptions` key their memoisation on it. It promises nothing
+ * about a screen's behaviour.
+ */
 export type SectionRouteKey =
   | 'MoviesScreen'
   | 'MusicScreen'
@@ -20,7 +31,14 @@ export type SectionRouteKey =
   | 'PodcastsScreen'
   | 'ShowsScreen'
   | 'ArchiveScreen'
-  | 'LocalFiles';
+  | 'LocalFiles'
+  | 'AllAudioScreen'
+  | 'AllVideosScreen'
+  | 'GenreScreen'
+  | 'FollowedPodcasts'
+  | 'History'
+  | 'Downloads'
+  | 'Bookmarks';
 
 // The params a section route may carry. The shape is deliberately
 // loose — the shell hands route-time params to the content's

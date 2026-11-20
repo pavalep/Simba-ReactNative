@@ -1,0 +1,37 @@
+{
+  "page": {
+    "title": "All Audio",
+    "searchPlaceholder": "Search audio…"
+  },
+  "groups": {
+    "artist": "Artist",
+    "sort": "Sort by",
+    "view": "View"
+  },
+  "sort": {
+    "title": "Title",
+    "artist": "Artist"
+  },
+  "view": {
+    "grid": "Grid",
+    "list": "List"
+  },
+  "states": {
+    "emptyTitle": "No Audio Files",
+    "emptyMessage": "No audio files found. Scan your media library to find audio tracks.",
+    "noResultsTitle": "No Results",
+    "noResultsMessage": "No audio files match your search.",
+    "noArtistTitle": "No Tracks by {artist}",
+    "noArtistMessage": "No audio files by {artist} were found."
+  },
+  "caption": {
+    "sortedBy": "Sorted by {sort}",
+    "count": "{shown} of {total}"
+  },
+  "menu": {
+    "playNext": "Play Next",
+    "addToQueue": "Add to Queue",
+    "addToPlaylist": "Add to Playlist",
+    "longPressHint": "Long press for more actions"
+  }
+}

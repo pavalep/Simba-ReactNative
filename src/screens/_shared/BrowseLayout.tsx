@@ -30,6 +30,7 @@
 
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {View, StyleSheet} from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
 import {spacing} from '../../theme/tokens';
@@ -99,7 +100,23 @@ interface Props {
    * own, so the action belongs inside it.
    */
   headerRightAction?: {
-    icon: IconName;
+    /**
+     * The action's glyph.
+     *
+     * A LABEL action carries no glyph — it is a named button (the
+     * Bookmarks page's "Clear all"), and the header's slot grows to
+     * fit the text.
+     */
+    icon?: IconName;
+    /** The action's text. */
+    label?: string;
+    /**
+     * `destructive` paints a LABEL action in the error colour.
+     *
+     * A control that wipes the page's content must not wear the same
+     * gold as a neutral action.
+     */
+    tone?: 'accent' | 'destructive';
     onPress: () => void;
     /** A button that carries only an icon has no name. */
     accessibilityLabel: string;
@@ -121,6 +138,31 @@ export const BrowseLayout: React.FC<Props> = ({
   const search = useSectionSearch(config, routeParams);
 
   const hasOptions = !!config.options?.groups?.length;
+  /**
+   * Does this screen have a FILTER axis?
+   *
+   * `sort` and `view` are not filter axes — they are single-valued
+   * options. The chip strip is the FILTER strip, so a screen with no
+   * filter axis has no strip and reserves no gutter for one; its sort
+   * and its view live in the option sheet, where the applied one is
+   * drawn in the accent colour.
+   *
+   * Every one of the eight browse catalogues HAS a filter axis, so
+   * this changes nothing for them. It is what lets a LIST page — no
+   * filters, no paging, no footer — use the same shell.
+   */
+  const hasFilterGroups = (config.options?.groups ?? []).some(
+    g => g.id !== 'sort' && g.id !== 'view',
+  );
+  /**
+   * Does this screen have a search field?
+   *
+   * THE CONFIG DECLARES THE CHROME. A screen that declares no
+   * `search` gets no search field, and one that declares no option
+   * groups gets no filter button. The eight catalogues all declare a
+   * search, so nothing changes for them.
+   */
+  const hasSearch = !!config.search;
   const [sheetVisible, setSheetVisible] = useState(false);
   const {state, setOption, reset, activeFilterCount, options} = optionsApi;
 
@@ -264,35 +306,62 @@ export const BrowseLayout: React.FC<Props> = ({
         styles.root,
         {backgroundColor: colors.background.primary, paddingTop: insets.top},
       ]}>
+      {/*
+        THE PAGE'S SURFACE.
+
+        The shell owns the surface, and the config says which one it is
+        (`background: 'flat'` | `'gradient'`). The gradient is drawn
+        FIRST, so it sits under the status bar, the header, the search
+        field and the content — and the root's own `backgroundColor`
+        under it is the gradient's first stop, so the strip above the
+        gradient reads the same either way.
+
+        The list pages (All Audio, All Videos, Downloads, Genre) wore
+        this gradient before they joined the shell. The browse
+        catalogues do not, and they did not start wearing one when the
+        shell arrived: the surface is the page's own choice, declared in
+        the config.
+      */}
+      {config.background === 'gradient' ? (
+        <LinearGradient
+          colors={[colors.background.primary, colors.background.elevated]}
+          style={StyleSheet.absoluteFill}
+        />
+      ) : null}
+
       <SimbaStatusBar variant="home" />
       <InternalHeader title={config.title} rightAction={headerRightAction} />
 
-      <View style={styles.searchSection}>
-        <SearchBar
-          value={search.query}
-          onChangeText={search.setQuery}
-          onDebouncedChange={search.handleDebouncedChange}
-          debounceMs={search.debounceMs}
-          placeholder={config.search?.placeholder ?? 'Search…'}
-          accessibilityLabel={`Search ${config.title}`}
-          onClear={search.clear}
-          returnKeyType="search"
-        />
-      </View>
-
-      <View style={styles.chipsSlot} testID="browse-active-filters">
-        {activeChips.length > 0 ? (
-          <FilterChips
-            items={activeChips}
-            selectedKeys={activeChips.map(c => c.key)}
-            onSelect={handleChipSelect}
-            singleSelect={false}
-            // The row's own 12 dp of horizontal padding is dropped so the
-            // strip's gutter is the shell's 16 dp and not 16 + 12.
-            contentContainerStyle={styles.chipsRow}
+      {hasSearch ? (
+        <View style={styles.searchSection}>
+          <SearchBar
+            value={search.query}
+            onChangeText={search.setQuery}
+            onDebouncedChange={search.handleDebouncedChange}
+            debounceMs={search.debounceMs}
+            placeholder={config.search?.placeholder ?? 'Search…'}
+            accessibilityLabel={`Search ${config.title}`}
+            onClear={search.clear}
+            returnKeyType="search"
           />
-        ) : null}
-      </View>
+        </View>
+      ) : null}
+
+      {hasFilterGroups ? (
+        <View style={styles.chipsSlot} testID="browse-active-filters">
+          {activeChips.length > 0 ? (
+            <FilterChips
+              items={activeChips}
+              selectedKeys={activeChips.map(c => c.key)}
+              onSelect={handleChipSelect}
+              singleSelect={false}
+              // The row's own 12 dp of horizontal padding is dropped so the
+              // strip's gutter is the shell's 16 dp and not 16 + 12.
+              contentContainerStyle={styles.chipsRow}
+            />
+          ) : null}
+        </View>
+      ) : null}
 
       <View style={styles.content}>{config.renderContent(ctx)}</View>
 

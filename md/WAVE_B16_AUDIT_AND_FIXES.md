@@ -863,19 +863,128 @@ jest         exit=0   205 suites, 1968 passed, 1 todo, 1969 total
 ```
 
 ---
-## 17. CARRIED FORWARD
+## 17. Wave B16-J — the list page's shell variant, and the All Audio rows
+
+§7's Group B was carried forward with the note that the list-page variant was `a design decision, not a code fact` — mapping `Genre`, `AllVideos`, `AllAudio`, `FollowedPodcasts`, `History`, `DownloadsScreen` and `Bookmarks` onto `BrowseLayout` changes the shared shell's contract, so it was not to be decided silently. The owner's instruction for this wave was to finish every carried-forward item, so the decision was taken here and is written down with its reasoning: a decision that is not written down is a decision the next screen makes differently.
+
+**This wave lands the variant and migrates All Audio onto it.** The other six list pages are migrated in the wave that follows; §18 names each one individually.
+
+### 17.1 The decision — the config declares the chrome
+
+A list page is the same shell with some of its parts left out, and the CONFIG says which parts:
+
+- `search` omitted → no search field. The eight browse catalogues all declare one, so nothing changes for them.
+- No option groups, or only single-valued `sort` / `view` groups → no chip strip, and no gutter reserved for one. **The chip strip is the FILTER strip** — `sort` and `view` are single-valued options and belong to the sheet, where the applied one is drawn in the accent colour.
+- `background: 'flat' | 'gradient'` → the page's surface. The shell owns it. A screen that painted its own background ON TOP of the shell's would cover the shell's, which is exactly the defect the themed-root gate (Wave B16-K, §16) exists to catch.
+- A list page has no next page, so its content does not report a list end — and the filter FAB therefore stays for the whole list instead of retreating at the end of a page that never ends.
+
+The shell's header slot was widened at the same time: `headerRightAction` now takes `{icon?, label?, tone?, onPress, accessibilityLabel}`, which is what `InternalHeader` has always accepted. The Bookmarks page's destructive `Clear all` is a LABEL action, and the shell could not pass one.
+
+### 17.2 The option model — sort and view get explicit-only state
+
+The sort and the view were the second half of the All Audio page's problem, and they turned out to be a defect in the shared model rather than in the page.
+
+§9 of this wave fixed the Movies screen's dead `View` group and its permanently visible `RESET FILTERS` footer. The cause was the option model's state: `state.view` defaulted to `'grid'` on every screen, so the sheet's value always carried a selection and the footer was always there. The fix in §9 was local to the Movies screen. **The cause was still in the model.**
+
+So the model was corrected:
+
+- `state.sort` and `state.view` are now **explicit-only** — undefined until the user picks one.
+- The DEFAULT belongs to the config (`defaultKey`), and `options.sort` / `options.view` carry the EFFECTIVE value (the explicit one, or the config's default). The content reads those, so the default lives in one place instead of being repeated as a literal in every screen that reads it.
+- `reset` clears both — a default is not an explicit selection.
+
+The route's `sort` param now seeds the sort group, and the route's `filter` param seeds the artist group. The seeding matches **case-insensitively and keeps the group's own spelling**: a caller that sends `filter: 'kavinsky'` for the artist the library knows as `Kavinsky` is naming the same artist, and a filter that silently failed to apply is worse than one that applies. `filter` was added to `FILTER_SEED_PARAMS` for this, and `SORT_SEED_PARAMS` was added beside it.
+
+The Movies screen was checked for a regression and is unaffected: `sortParamFor('popular')` and `sortParamFor(undefined)` both answer `'downloads desc'`.
+
+### 17.3 The All Audio screen — what it was
+
+One file, 328 lines, and none of the grammar's eight points. It drew its own `SafeAreaView`, its own full-bleed gradient, its own `BackButton` and title, its own `SearchBar`, its own two header buttons, and its own two `FlatList`s. Four separate facts about it were four separate mechanisms:
+
+- the SORT was a header BUTTON that flipped between two orders, so the page could not say which order it was in — the icon changed, and the icon was the only thing that said anything;
+- the VIEW was a second header button that flipped between a grid and a list;
+- the search term was a third piece of local state;
+- the route's `sort` and `filter` params were a fourth, read by the page's own hook.
+
+And the rows had **no menu at all** (B16-J-ALLAUDIO), so an audio file could not be played next or queued from that list, while the same file could be from every other list.
+
+### 17.4 What it is now
+
+The screen is a composition root ( `src/screens/AllAudio/index.tsx` ), and the grammar's eight points are all present:
+
+| point | file |
+|---|---|
+| composition root | `src/screens/AllAudio/index.tsx` |
+| config | `src/screens/AllAudio/related/browseConfig.ts` |
+| copy | `src/screens/AllAudio/related/textContent.json` |
+| content component | `src/screens/AllAudio/components/AllAudioContent.tsx` |
+| data provider | `src/screens/AllAudio/components/AllAudioDataProvider.tsx` |
+| data hook | `src/screens/AllAudio/hooks/useAllAudioScreen.ts` |
+| styles factory | `src/screens/AllAudio/styles/` |
+| shared types | `src/screens/AllAudio/types/index.ts` |
+
+The old `src/screens/AllAudio/components/AllAudioScreen.tsx` is gone — 328 lines that duplicated the shell.
+
+**The config is a factory**, like the Radio screen's: the artist axis is derived from the device's own scanned catalogue, so it is not known until the scan has run. The axis is single-select (the scope IS the artist), shows six rows with the shell's own SHOW MORE toggle, and **the seed's own value goes into the option list up front** — the Artist screen sends the name it knows the artist by, and if the library does not hold that artist the page has nothing to show, and a filter that is invisible cannot be removed. That is the Live TV deep-link seed's rule, and it is now the rule for every seeded filter.
+
+**The scope is pushed DOWN, not pulled up.** The shell owns the filter, the sort, the view and the search field; the content reads `ctx` and hands them to the provider, and the provider turns them into the hook's inputs. The hook is a pure function of `{artist, query, sort}` — it reads the media store and returns the list the scope asks for. The view is the exception: it is a rendering choice rather than a data scope, so the content reads it straight from `ctx`.
+
+**The row menu (B16-J-ALLAUDIO)** is the app's ONE media menu — `MediaActionsSheet` — with the same three rows the All Videos list offers: **Play Next**, **Add to Queue**, **Add to Playlist**, and the playlist row opens the app's `PlaylistSheet`. The queue item carries the track's own `type` / `mediaType` / `source` / `folderId`, so the playlist rule sees the truth rather than a guess.
+
+### 17.5 Three behaviour changes worth naming
+
+1. **The search field is always present.** The old screen hid it while the device held no audio at all (`audioTracks.length > 0`). Every other browse page shows its field unconditionally, and a field that appears and disappears with the data is a second thing to notice.
+2. **The row's duration.** The old screen had a private `formatDuration` that printed `'--:--'` for a length it did not have. The page now uses the shared `formatDuration`, which answers `''` for an unknown length — so the row omits the separator instead of printing a placeholder for a fact it does not have.
+3. **The grid's `getItemLayout` is gone.** The old one claimed every row was 76 dp tall. The grid cards are not 76 dp tall, so the claim was false and it was removed rather than corrected.
+
+The play path also changed shape: the old screen opened the player with a URI and a title, and the new one goes through `resolveStreamType(track.mediaType)` — the house pattern, and the same one the Library uses.
+
+### 17.6 The tests
+
+Two suites, 14 tests, both green:
+
+- `__tests__/screens/AllAudio/allAudioRouteParams.test.tsx` (rewritten, 11 tests) — the route's `sort` and `filter` params seed the option model, and the seeded scope reaches the hook.
+- `__tests__/screens/AllAudio/allAudioBrowseGrammar.test.tsx` (new, 3 tests) — the shell's search field and filter button are there, the artist draws a chip in `browse-active-filters`, and a long press opens Play Next / Add to Queue / Add to Playlist.
+
+### 17.7 The device proof — and what it does NOT show
+
+On `emulator-5554` (`com.simba.player`, the wave's build), the page renders on the shared shell: the centred `All Audio` header, the `Search All Audio` field, the `Sorted by Title` caption, the grid, the `Filter All Audio options` FAB, and the gradient surface.
+
+A real long-press gesture on a row opened the menu — the tree shows the `Close menu` scrim, the title, and the three buttons. A row tap started playback, which is a bonus proof of the play path.
+
+**What the proof does NOT show, stated plainly:** the emulator's file listing does not surface files pushed with `adb push`, so the app's own scanner still reports **0 files** for the linked `/storage/emulated/0/Music` folder — that is an emulator limitation, not an app defect. To make a row render at all, two `ScannedTrack` records were written into the app's own media store **from the app's runtime**. That is a **proof harness**, not app behaviour: the shipped app contains no injected data and no injection path.
+
+### 17.8 The gates
+
+```
+tsc          exit=0
+eslint       exit=0
+boundaries   exit=0   scanned 610 files — 0 error(s), 0 warning(s)
+fonts        exit=0   667 resolved text usages, 11 shipped font files
+boards       exit=0   51 app routes, 49 boards, 3 with no board on purpose
+themed       exit=0   every screen owns a themed background.
+jest         exit=0   206 suites, 1977 passed, 1 todo, 1978 total
+```
+
+---
+
+## 18. CARRIED FORWARD
 
 Each item, individually, with the reason it could not be closed in this wave.
 
 ### From this wave
 
-- **B16-J-LISTPAGES — the list-page variant of the grammar.** `Genre`, `AllVideos`, `AllAudio`,
-  `FollowedPodcasts`, `History`, `DownloadsScreen`, `Bookmarks` need a shell variant with no
-  filter groups, no paging and no footer. **Reason: a design decision, not a refactor** — it
-  changes the shared shell's contract and every screen that uses it.
-- **B16-J-ALLAUDIO — All Audio rows have no long-press menu.** An audio file cannot be played
-  next or queued from that list, while the same file can be from every other list. **Reason: it
-  belongs to the list-page wave, and it needs the `MediaActionsSheet` decision that wave makes.**
+- **B16-J-LISTPAGES (remainder) — the six list pages that are not on the shell yet.** The
+  shell's list-page variant is **landed** (§17.1) and **All Audio** is migrated onto it (§17.4).
+  Still to migrate, one screen each: **`Genre`**, **`AllVideos`**, **`FollowedPodcasts`**,
+  **`History`**, **`DownloadsScreen`**, **`Bookmarks`**. **Reason: the variant is the shared
+  half; each screen is its own migration, and they are not the same job** — `AllVideos`,
+  `Genre` and `DownloadsScreen` wore a full-bleed gradient and need `background: 'gradient'`;
+  `Bookmarks` needs the widened `headerRightAction` for its destructive "Clear all"; `History`
+  has a **documented reason** for having no pull-to-refresh; and `Genre` nests FlatLists inside
+  a ScrollView.
+- **B16-J-ALLAUDIO — CLOSED in §17.4.** The All Audio rows carry the app's one
+  `MediaActionsSheet` menu — Play Next, Add to Queue, Add to Playlist — and the playlist row
+  opens the app's `PlaylistSheet`. Device-proved with a real long-press gesture.
 - **B16-J-ARCHIVE-DEFAULT — the Archive's curated browse default is invisible.** The scope
   browses "old time radio" / "classic films" while the search field stays empty, so the list
   answers a question the user cannot see. **Reason: the grammar's search field owns the visible
@@ -937,6 +1046,12 @@ Each item, individually, with the reason it could not be closed in this wave.
 
 ### Closed in this wave (from the carried-forward lists)
 
+- **B16-J-ALLAUDIO** — the All Audio rows have the app's one media menu (Play Next, Add to
+  Queue, Add to Playlist) and the All Audio screen is on the shared browse shell (§17).
+- **The list-page shell variant** — the shell's contract now takes the chrome from the config
+  (`search`, the filter axes, `background`), the sort and the view are explicit-only option
+  states with the config owning the default, and the route's `sort` / `filter` params seed the
+  option model instead of being read by a page's own hook (§17.1–17.2).
 - **B16-K-THEME-SWEEP** — the three screens that borrowed their background (the Show detail, the
   Audiobook detail and the Archive item detail) now paint their own; the 20 screens that own a
   full-bleed themed gradient were left alone, and `scripts/check-themed-roots.js` is in CI.

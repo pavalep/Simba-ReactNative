@@ -22,14 +22,29 @@ const FILTER_SEED_PARAMS = [
   'initialTab',
   'initialGenre',
   'initialTag',
+  // The All Audio page's own scope: the Artist screen sends
+  // `filter: artistName` for its "view all tracks", and the page's
+  // ARTIST group is where that name belongs. It was read by the hook
+  // before the page joined the grammar, which meant the filter was
+  // invisible — the list answered a question the page never showed.
+  'filter',
 ] as const;
+
+/**
+ * The route params that seed the single-valued `sort` group.
+ *
+ * The All Audio page's route declares `sort?: string` and the Library
+ * sends `sort: 'artist'` for its "View All Artists". The page has a
+ * SORT group, so the param belongs to it — and the group is the only
+ * place a sort can live now that the page's own header button is gone.
+ */
+const SORT_SEED_PARAMS = ['sort'] as const;
 
 export interface SectionOptionsState {
   filters: Record<string, string[]>;
   sort?: string;
   /**
-   * The view mode — `undefined` unless the screen's config actually
-   * declares a `view` group.
+   * The view mode — the EXPLICIT selection.
    *
    * It used to default to `'grid'` for every screen, which had two
    * consequences and neither of them was intended:
@@ -43,6 +58,13 @@ export interface SectionOptionsState {
    *
    * The group is now declared only where it is used, and the state
    * follows the config.
+   *
+   * It is UNDEFINED until the user picks one. A group that merely sits
+   * at its default has no explicit selection, so the sheet folds the
+   * default in itself and the "RESET FILTERS" footer stays away — the
+   * same rule the `sort` group follows. The EFFECTIVE value (the
+   * explicit one, or the config's default) is what `options.view`
+   * carries.
    */
   view?: string;
 }
@@ -70,8 +92,17 @@ export function useSectionOptions(
   routeParams?: Readonly<Record<string, unknown>>,
 ): SectionOptionsApi {
   // The view mode exists only where the config declares a `view` group.
+  //
+  // The DEFAULT belongs to the config (`defaultKey`), and the state's
+  // `view` is the user's EXPLICIT choice. The sheet folds the default
+  // in when there is no explicit selection, so a page that has never
+  // been touched shows its default as the applied option without
+  // counting as an active filter.
   const viewGroup = config.options?.groups?.find(g => g.id === 'view');
-  const defaultView = viewGroup?.options?.[0]?.key;
+  const defaultView = viewGroup?.defaultKey ?? viewGroup?.options?.[0]?.key;
+  // The sort group's default, for the same reason.
+  const sortGroup = config.options?.groups?.find(g => g.id === 'sort');
+  const defaultSort = sortGroup?.defaultKey;
 
   /**
    * The route param that seeds a filter, and the GROUP it seeds.
@@ -100,9 +131,40 @@ export function useSectionOptions(
       if (typeof value !== 'string' && typeof value !== 'number') continue;
       const key = String(value);
       for (const group of filterGroups) {
-        const validKeys = new Set(group.options.map(o => o.key));
-        if (validKeys.has(key)) return {groupId: group.id, key};
+        // The match is CASE-INSENSITIVE, and the group's own spelling
+        // is the one that is kept.
+        //
+        // A caller that sends `filter: 'kavinsky'` for the artist the
+        // library knows as "Kavinsky" is naming the same artist, and a
+        // filter that silently failed to apply is worse than one that
+        // applies. The group keeps its own casing so the chip strip and
+        // the sheet do not grow a second copy of the same option.
+        const match = group.options.find(
+          o => o.key.toLowerCase() === key.toLowerCase(),
+        );
+        if (match) return {groupId: group.id, key: match.key};
       }
+    }
+    return undefined;
+  }, [routeParams, config.options]);
+
+  /**
+   * The route param that seeds the `sort` group.
+   *
+   * It is seeded only when the config declares a sort group and the
+   * param is one of its keys — the same rule the filter seed follows.
+   */
+  const seedSort = useMemo<string | undefined>(() => {
+    const sortGroup = config.options?.groups?.find(g => g.id === 'sort');
+    if (!sortGroup || !routeParams) return undefined;
+    for (const param of SORT_SEED_PARAMS) {
+      const value = (routeParams as Record<string, unknown>)[param];
+      if (typeof value !== 'string' && typeof value !== 'number') continue;
+      const key = String(value);
+      const match = sortGroup.options.find(
+        o => o.key.toLowerCase() === key.toLowerCase(),
+      );
+      if (match) return match.key;
     }
     return undefined;
   }, [routeParams, config.options]);
@@ -112,8 +174,11 @@ export function useSectionOptions(
 
   const [state, setState] = useState<SectionOptionsState>(() => ({
     filters: seedFilter ? {[seedFilter.groupId]: [seedFilter.key]} : {},
-    sort: undefined,
-    view: defaultView,
+    // The route's `sort` param seeds the sort group; the view has no
+    // route param and starts at the config's default (which the
+    // EFFECTIVE value below carries).
+    sort: seedSort,
+    view: undefined,
   }));
 
   const setOption = useCallback(
@@ -143,8 +208,11 @@ export function useSectionOptions(
   );
 
   const reset = useCallback(() => {
-    setState(() => ({filters: {}, sort: undefined, view: defaultView}));
-  }, [defaultView]);
+    // The reset returns every group to its DEFAULT, and a default is
+    // not an explicit selection — so the state is empty and the
+    // effective values come from the config.
+    setState(() => ({filters: {}, sort: undefined, view: undefined}));
+  }, []);
 
   const activeFilterCount = useMemo(() => {
     const filterCount = Object.values(state.filters).reduce(
@@ -158,13 +226,17 @@ export function useSectionOptions(
     const filterKeys = state.filters[filterGroupId];
     const merged: SectionOptionsMerged = {};
     if (filterKeys && filterKeys.length > 0) merged.filter = filterKeys;
-    if (state.sort) merged.sort = state.sort;
-    if (state.view) merged.view = state.view;
+    // The EFFECTIVE sort and view: the user's explicit choice, or the
+    // config's default. The content reads these, so the default lives
+    // in ONE place — the config — instead of being repeated as a
+    // literal in every screen that reads it.
+    if (state.sort || defaultSort) merged.sort = state.sort || defaultSort;
+    if (state.view || defaultView) merged.view = state.view || defaultView;
     // EVERY group's selection, by group id — so a screen with more than
     // one filter axis can read its own axis out of the context.
     if (Object.keys(state.filters).length > 0) merged.filters = state.filters;
     return merged;
-  }, [state, filterGroupId]);
+  }, [state, filterGroupId, defaultSort, defaultView]);
 
   return {state, setOption, reset, activeFilterCount, options};
 }
