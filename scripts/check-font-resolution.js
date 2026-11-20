@@ -804,6 +804,92 @@ function main() {
         }
       }
     }
+
+    // ── the TEXT INPUT pass ─────────────────────────────────────────────
+    //
+    // A `<TextInput>` renders text, and React Native does NOT apply the
+    // app's typography tokens to it: an input whose style names no
+    // `fontFamily` renders in the SYSTEM font, silently, with no warning.
+    //
+    // The SearchBar's field was fixed for exactly this at some point;
+    // `AppTextInput`'s field was not, so the app had two faces for two
+    // different text fields. The tag scan above could not see either one,
+    // because it only matched `<AppText` and `<Text`.
+    //
+    // So this pass audits the input tags the way RN resolves them:
+    //   • the family must come from the STYLE, because no token can
+    //     supply it for a raw input;
+    //   • no family -> the SYSTEM font, reported;
+    //   • the file must exist, and an explicit weight must not be lost.
+    // The lookahead keeps the TYPE position out: a real JSX tag is
+    // followed by whitespace, a `/` or the end of the name.
+    const inputRe = /<TextInput(?=[\s/>])/g;
+    let im;
+    while ((im = inputRe.exec(text)) !== null) {
+      // A TypeScript generic is not a tag: `useRef<TextInput>(null)` and
+      // `Array<TextInput>` are TYPES, and the character before the `<`
+      // is what tells them apart from a JSX element.
+      const before = im.index > 0 ? text[im.index - 1] : '';
+      if (/[A-Za-z0-9_$]/.test(before)) continue;
+      const tag = readTag(text, im.index);
+      const expr = styleProp(tag);
+      const sInfo =
+        expr === null
+          ? {condition: null, branches: [['']]}
+          : styleInfo(expr, lookup);
+
+      for (const bodies of sInfo.branches) {
+        for (const body of bodies) {
+          const merged = mergeBodies([body]);
+          if (!merged.family) {
+            problems.push({
+              rel,
+              line: lineOf(im.index),
+              what: 'no fontFamily -> renders in the SYSTEM font',
+            });
+            continue;
+          }
+          const family = families[merged.family];
+          if (!family) {
+            problems.push({
+              rel,
+              line: lineOf(im.index),
+              what: `unknown family key ${merged.family}`,
+            });
+            continue;
+          }
+          const weight = merged.weight || '400';
+          const style = merged.style || 'normal';
+
+          usages++;
+          const path_ = assetPath(family, weight, style);
+          const file = path_.split('/').pop();
+          if (!shipped.has(file)) {
+            problems.push({
+              rel,
+              line: lineOf(im.index),
+              what:
+                `${family} + weight ${weight}${style === 'italic' ? ' italic' : ''} -> ${path_} MISSING`,
+            });
+            continue;
+          }
+          if (merged.weight) {
+            const actual = weightOf.get(file);
+            if (actual != null && actual !== Number(merged.weight)) {
+              const hint = keyForWeight(family, merged.weight);
+              problems.push({
+                rel,
+                line: lineOf(im.index),
+                what:
+                  `${family} + weight ${merged.weight} opens ${file}, whose weight is ${actual}` +
+                  ` — the ${merged.weight} is LOST` +
+                  (hint ? ` (use FONT_FAMILY.${hint})` : ''),
+              });
+            }
+          }
+        }
+      }
+    }
   }
 
   // report

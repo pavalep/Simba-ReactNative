@@ -2105,3 +2105,156 @@ All seven gates on the committed state: `tsc`, `eslint`, `boundaries`, `fonts`, 
   and the cap is what keeps the ledger from growing forever.
 - **The dead-export census is a snapshot.** It is true of this tree at this commit; a later
   wave can make it stale again.
+
+---
+
+## 24. WAVE G1 — the app-side carry-forward: the iOS scheme, the font sweep, and the
+verification closes
+
+Wave G works through the §20 carry-forward list. It is split by what each item actually
+NEEDS: this wave is the part that is app-side code. The board work is §25, the lib work
+is §26, the device proofs are §27, and the standing backlog is §28.
+
+### 24.1 The iOS URL scheme — and the launch bug that was hiding under it
+
+The carried item was "the unregistered iOS URL scheme", and it was carried with a note
+that it "cannot be compiled on this host". It also carried a second sentence that turned
+out to matter more:
+
+> `AppDelegate.swift:27` starts RN with `"CinePlayer"` while the JS registers `"SimbaPlayer"`.
+
+**That was not a note about the URL scheme. It was a launch bug.**
+
+React Native looks the root component up BY NAME at start-up. `app.json` says
+`"name": "SimbaPlayer"`, `index.js` does `AppRegistry.registerComponent(appName, …)` with
+that name, and Android's `MainActivity.getMainComponentName()` returns `"SimbaPlayer"`.
+The iOS AppDelegate asked for `"CinePlayer"` — the name of the XCODE TARGET and of the
+built `.app` — so iOS asked the bundle for a component the bundle had never registered.
+The iOS app could not start at all.
+
+The fix keeps ONE owner for the name: `app.json` owns it, and the AppDelegate now mirrors
+it through a named constant that says so:
+
+```swift
+static let moduleName = "SimbaPlayer"
+```
+
+The target name is a build artefact. The registered component name is a contract.
+
+**The scheme itself.** `ios/CinePlayer/Info.plist` had no `CFBundleURLTypes`, and
+`AppDelegate.swift` had no `application(_:open:options:)`. Registering the scheme alone
+would have been the WORSE of the two states: iOS would open the app and then DROP the
+link, so every `simbaplayer://` URL would land on the Home screen with no sign of why.
+Both halves are in now:
+
+- `Info.plist` declares `CFBundleURLTypes` with the `simbaplayer` scheme — the same
+  scheme the Android manifest already carries on `MainActivity`
+  (`android/app/src/main/AndroidManifest.xml:109`) and the only prefix
+  `src/navigation/linking.ts` declares.
+- `AppDelegate` forwards the URL to `RCTLinkingManager`, which is the bridge's own
+  handler and the same entry point `Linking.getInitialURL()` and the `url` event go
+  through — so the URL reaches React Navigation in the shape it expects.
+
+**What was NOT done, honestly:** this host has no macOS and no Xcode, so the Swift was
+NOT compiled and the scheme was NOT proven on a device. The `import React` is sufficient
+for `RCTLinkingManager` because React-Core ships the `RCTLinkingHeaders` subspec
+(`React-Core.podspec:25` — `Libraries/LinkingIOS/*.h`), which is where
+`RCTLinkingManager.h` lives; that was read out of the installed package, not assumed.
+The build is still owed.
+
+### 24.2 B13.18 — the font sweep's last blind spot was the text INPUTS
+
+B13.18 was carried as "the `fontWeight` sweep beyond this wave's surfaces". The
+app-wide owner of font resolution is `scripts/check-font-resolution.js`, and it was
+already GREEN — it resolves every `<AppText>` and `<Text>` tag the way React Native
+does, including the style-array and conditional forms, and it also catches the second
+class of finding: a file that EXISTS but is the wrong face, so the weight is silently
+lost.
+
+It was green because of what it did NOT look at. It scanned text TAGS, and the app's
+text INPUT is not a text tag:
+
+```tsx
+// src/components/core/AppTextInput/AppTextInput.tsx
+input: {
+  flex: 1,
+  fontSize: 15,
+  paddingVertical: spacing.sm,
+},
+```
+
+React Native does not apply the app's typography tokens to a `TextInput`. An input
+whose style names no `fontFamily` renders in the **SYSTEM font** — silently, with no
+warning and no missing-file error, because there is no file to miss.
+
+The SearchBar's own field was fixed for exactly this at some point; its comment even
+says so ("the field used to render in the SYSTEM font because it set a size and no
+family at all"). `AppTextInput` was never fixed. The app therefore had **two faces for
+two different text fields** — and `AppTextInput` is the app's own input primitive, used
+by the bookmark sheet, the prompt dialog, the playlist create and manage modals and the
+queue screen.
+
+**The fix:** the input carries the app's Inter, exactly as the SearchBar's does:
+
+```tsx
+fontFamily: FONT_FAMILY.inter.regular,
+```
+
+**The guard:** the gate gained a text-input pass. It resolves the input tags the way RN
+resolves them — the family must come from the STYLE, because no token can supply it for
+a raw input — and it reports a missing family, a missing file and a lost weight.
+
+Two things had to be got right for the pass to be honest rather than noisy:
+
+- **A TypeScript generic is not a tag.** `useRef<TextInput>(null)` and
+  `Array<TextInput>` are TYPES. The pass reads the character BEFORE the `<`: a JSX
+  element is preceded by whitespace, `(` or the start of the line, and a generic is
+  preceded by an identifier. Without that check the pass reported two false positives.
+- **The pass does not borrow the typography tokens.** A `TextInput` has no `variant`,
+  so there is no token to pair it with; the family has to come from the style or not at
+  all.
+
+**The guard was verified by re-breaking the bug**, the way `md/ABOUT_PAGE_FIX.md` §3
+does: with the `fontFamily` line removed the gate fails with
+`src/components/core/AppTextInput/AppTextInput.tsx:123 — no fontFamily -> renders in the
+SYSTEM font` (exit 1), and with it restored the gate is green (exit 0).
+
+### 24.3 The board's false comment
+
+`designs/penpot/search.js` had a comment that said the opposite of what the code below
+it does:
+
+> // The chips — the label first, then the pill around it, so the pill's width follows
+> // the label's own width.
+
+The code paints the **pill first** and the label on top of it, and the detailed comment
+underneath explains why (the plan's order IS the painting order, and the pill's fill is
+opaque). The top comment was the leftover of the pre-fix version — B-11-2's own bug —
+left in place after the fix. It is corrected.
+
+### 24.4 The items this wave closed by VERIFICATION
+
+These were on the carry-forward list and are already correct in the tree. Each was read
+against the tree, not against the doc, and the doc was corrected where it was stale.
+
+| id | what the tree actually says |
+|---|---|
+| **B15-A1** | `AudiobookDetailScreen.tsx` builds `chapterRunEntries(chapters, author)` and hands the whole book to the player, so "EOF auto-advances to the next chapter" is TRUE. |
+| **B15-A2** | One owner: `CHAPTER_CLASSIFICATION` (`source: 'api'`, `type: 'audiobook'`, `mediaType: 'audio'`, `provider: 'librivox'`). The run, the queue, the playlist and the bookmark all write the same kind now. |
+| **B15-A3** | `resolveStreamType` is no longer imported by the audiobook screen. |
+| **B15-A4** | `StreamingRow.tsx` imports the app's `jamendoQueueItem` — there is ONE builder, not two copies. |
+| **B15-H6** | `AUDIOBOOKS_BROWSE` is gone (the R5 sweep deleted it with the rest of the dead exports). |
+| **B15-L1** | `useQueueActions` lives at `src/hooks/useQueueActions.ts`. Its docblock records the old home rather than pretending it never had one. |
+| **B15-Q4** | The Queue screen reads the app's own `recentHistoryStore`; the lib's never-written `playbackHistory` is not read by it any more. |
+| **B15-U1** | The toast offers **Undo** on both queue actions. "Play Next" PREPENDS, so its undo removes the FIRST match by URI; "Add to Queue" APPENDS, so its undo removes the LAST. Matching by URI, not by an index, is what makes it correct when the queue changed in between. |
+| **B15-D1** | `md/UI_UX_Elevation_Progress_Tracker_v3_DEPRECATED.md` already records that `MediaContextMenu.tsx` was deleted in Wave B15 and that the "Info" row was removed from the sheet. The carry-forward entry was stale. |
+| **B13.1-6** | INVALID, and closed in B14: the app already surfaces mpv's terminal failure with Retry/Close (`errorClassifier.ts`, `VideoErrorOverlay.tsx`). |
+| **B-11-2** | The Search board paints the PILL first and the label on top (`designs/penpot/search.js:791` and `:808`). |
+| **CO-07** | The DEFECT it exposed is closed: the download service is the ONE owner of the auto-delete policy, it persists it and applies it, and the Downloads page reads `downloadService.getKeepLastN()` — so the chip can no longer say "Off" while the app keeps 5 finished downloads. The PLACEMENT (the policy lives on the page it affects) is a deliberate decision, recorded at `md/CONTENT_OWNERSHIP.md`. |
+| **B12-2** | The live taxonomy is a CHECK, not a catalogue: `usePodcastCategories.ts` uses it to DROP tiles the taxonomy does not know. The curated shelf is the decision, and the raw 112-item list is never offered. |
+| **B12-9** | The board's content is a recorded snapshot and that is the intended behaviour — the live trending stream changes between runs, so no board could ever show what the device shows at the same moment. |
+
+### 24.5 The gates
+
+`X:/Development/SIMBA/.scratch-figcraft/gates-waveG1` — all seven gates exit 0.
+Jest: **219 suites, 2062 passed, 1 todo**.

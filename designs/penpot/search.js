@@ -766,8 +766,10 @@ function searchKit(themeName) {
       );
       y += SHEET.titleLine + SHEET.titleGap;
 
-      // The chips — the label first, then the pill around it, so the pill's
-      // width follows the label's own width.
+      // The chips — the PILL first, then the label on top of it. The
+      // pill's width still follows the label's own measured width, but
+      // the ORDER is the painting order, and the pill has to be painted
+      // first: its fill is opaque.
       let previousLabel = null;
       group.rows.forEach((row_) => {
         const labelName = name + ' chip ' + row_.key;

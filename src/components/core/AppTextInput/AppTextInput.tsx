@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import {useTheme} from '../../../theme';
 import {spacing, radius} from '../../../theme/tokens';
+import {FONT_FAMILY} from '../../../constants/fontFamily';
 import {AppText} from '../AppText/AppText';
 import {SvgIcon} from '../../utility/SvgIcon';
 
@@ -196,6 +197,14 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
+    // The app's own Inter. The field used to set a size and NO family,
+    // so it rendered in the SYSTEM font while the SearchBar's field
+    // rendered in Inter: the same app, two different faces, depending
+    // on which field you typed into. A `TextInput` does not inherit
+    // the typography tokens either - React Native gives it the system
+    // font unless the style names a family - so the family has to be
+    // here, in the style.
+    fontFamily: FONT_FAMILY.inter.regular,
     fontSize: 15,
     paddingVertical: spacing.sm,
   },
