@@ -228,10 +228,15 @@ describe('LiveTVScreen — the browse grammar', () => {
     // so the action could only ever open a sheet that refuses the channel.
     expect(view.queryByText('Add to Playlist')).toBeNull();
 
-    // The actions that were there before are still there.
+    // The actions that were there before are still there — except the
+    // BOOKMARK, which is gone: a bookmark is a POSITION in a file, and a
+    // live channel has none, so the bookmark it wrote was always
+    // position 0. The Radio browse row dropped it for the same reason
+    // (B16-J-RADIO-BOOKMARK), and the favourites list is the live
+    // surface's own save action.
     expect(view.getByText('Add to Favorites')).toBeOnTheScreen();
-    expect(view.getByText('Bookmark')).toBeOnTheScreen();
     expect(view.getByText('Share')).toBeOnTheScreen();
+    expect(view.queryByText('Bookmark')).toBeNull();
   });
 
   it('queues the channel through useQueueActions — the toast and the item', async () => {

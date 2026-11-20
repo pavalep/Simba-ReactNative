@@ -18,7 +18,6 @@
     "addToQueue": "Add to Queue",
     "addFavorite": "Add to Favorites",
     "removeFavorite": "Remove Favorite",
-    "bookmark": "Bookmark",
     "share": "Share"
   },
   "row": {
@@ -33,7 +32,6 @@
   },
   "toasts": {
     "savedToFavorites": "Saved to favorites",
-    "removedFromFavorites": "Removed from favorites",
-    "bookmarked": "Channel bookmarked"
+    "removedFromFavorites": "Removed from favorites"
   }
 }

@@ -44,6 +44,7 @@ import {useBottomChromeInset} from '../../../infrastructure/player/miniPlayerChr
 import {useListEnd} from '../../_shared/useListEnd';
 import {useTheme} from '../../../theme';
 import {spacing} from '../../../theme/tokens';
+import {AppText} from '../../../components/core/AppText/AppText';
 import {useArchiveData} from './ArchiveDataProvider';
 import {ArchiveRowCard} from './ArchiveRowCard';
 import {BrowseFooter} from '../../_shared/BrowseListFooter';
@@ -106,6 +107,8 @@ export const ArchiveContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => 
     refreshing,
     refresh,
     isSearchActive,
+    activeTerm,
+    isUsingScopeDefault,
     reachedPagingCeiling,
     setScope,
     setSearchTerm,
@@ -181,9 +184,30 @@ export const ArchiveContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => 
     reachedEnd,
   );
 
+  // WHAT THE LIST IS BROWSING.
+  //
+  // The archive's scope has a curated browse default, and while the
+  // search field is empty the source answers THAT term — so the list
+  // was answering a question the user could not see (B16-J-ARCHIVE-
+  // DEFAULT). The caption says which term is being browsed, in the
+  // shell's own caption affordance (the All Videos screen's "Sorted by
+  // Title" is the same one).
+  //
+  // It appears ONLY while the scope's default is what is being browsed:
+  // a term the user typed is already visible in the search field, and
+  // saying it twice is noise.
+  const caption = isUsingScopeDefault ? (
+    <View style={styles.caption}>
+      <AppText variant="caption" color="tertiary">
+        {text.caption.browsing.replace('{term}', activeTerm)}
+      </AppText>
+    </View>
+  ) : null;
+
   if (showLoadingEarly) {
     return (
       <View style={styles.sectionRoot}>
+        {caption}
         <ListStates
           state="loading"
           offline={offline}
@@ -196,6 +220,7 @@ export const ArchiveContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => 
 
   return (
     <View style={styles.sectionRoot}>
+      {caption}
       <FlatList
         testID="section-ArchiveScreen-list"
         style={styles.list}

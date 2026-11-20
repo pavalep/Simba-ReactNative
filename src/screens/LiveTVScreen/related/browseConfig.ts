@@ -133,6 +133,13 @@ export function createLiveTVSectionConfig(
     title: 'Live TV',
     search: {placeholder: 'Search channels…'},
     options: {
+      // NO SORT AXIS — and that is the decision (B16-J-LIVE-TV-SORT).
+      //
+      // A live-TV guide is not a catalogue the user reorders: Plex,
+      // YouTube TV and every IPTV client keep the guide's own order. The
+      // source publishes ONE order, so a sort group here would offer a
+      // set of arrangements the app has no business inventing — and the
+      // one thing a guide is for is knowing what is on now.
       groups: [liveTVFilterGroup(categories, seedCategoryId)],
     },
     // Stub — `index.tsx` overrides with the real content renderer via

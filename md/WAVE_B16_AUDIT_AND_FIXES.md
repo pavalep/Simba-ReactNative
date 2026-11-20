@@ -1170,7 +1170,173 @@ Outputs: `X:/Development/SIMBA/.scratch-figcraft/gates-waveB16t/`.
 
 ---
 
-## 19. CARRIED FORWARD
+## 19. Wave B16-J3 — the five one-screen behaviours
+
+The carried-forward list named five items that were NOT a shared-shell problem: each was a decision about one
+screen, and each had been carried forward because the decision had never been written down.
+Three of them turned out to be decisions to RECORD; two were behaviours to change. All five
+are settled here, and each one says which it was.
+
+### 19.1 B16-J-ARCHIVE-DEFAULT — the list now says what it is browsing
+
+The Archive screen's media scope has a **curated browse default**: the archive's raw mediatype
+buckets are not browsable (the movies bucket measured 17,735,977 rows and its first page is
+user uploads and test files; the cold page 1 did not answer inside 45 s), while a curated
+subject does (`(old time radio) AND mediatype:(audio)` → 52,794 rows; `(classic films) AND
+mediatype:(movies)` → 6,809 rows). So while the user has typed nothing, the source answers the
+scope's default — and **the search field said nothing about it**. The list was answering a
+question the user could not see.
+
+The carried-forward item's reason for not closing it was "the grammar's search field owns the
+visible term — surfacing the default would need the shell to pre-fill the field". That is true,
+and pre-filling the field would be the WRONG fix: the field would then hold a term the user
+never typed, and clearing it would change what the list answered. So the term is surfaced
+beside the field instead, in the shell's own caption affordance — the same one the All Videos
+screen uses for its "Sorted by Title".
+
+**The owner of the fact is the hook, not the content.** `useArchiveScreen` already decides
+which term the source is answering; it now says so:
+
+- `activeTerm` — the term the source is actually answering (unchanged);
+- `isUsingScopeDefault` — TRUE while the term is the scope's curated default rather than one
+  the user typed.
+
+The provider passes the flag down and the content renders it:
+
+```
+Browsing “old time radio”
+```
+
+**The caption appears only while the scope's default is what is being browsed.** A term the
+user typed is already in the search field, and saying it twice is noise. The one case where
+the two differ is a term of only quotes — the hook strips them (the archive's parser treats a
+quote as a phrase delimiter) and falls back to the default, so the caption appears and says
+what is really being browsed.
+
+Files: `hooks/useArchiveScreen.ts` (the flag), `components/ArchiveDataProvider.tsx` (it
+passes down), `components/ArchiveContent.tsx` (the caption), `styles/ArchiveScreen.styles.ts`
+(the caption's gutter) and `related/textContent.json` (the copy).
+
+### 19.2 B16-J-ARCHIVE-VIDEO — what an archive collection IS
+
+The Archive's video scope opens `MovieDetail` rather than resolving and playing the way the
+Movies screen's rows do, and the item was carried forward because "a separate decision about
+what an archive collection is" was needed. **This is a decision to RECORD, not a behaviour to
+change** — and the decision is:
+
+**AN ARCHIVE COLLECTION IS A COLLECTION.** A search result names a GROUP of files — a film
+with several parts, and with archive.org's own h.264 transcodes beside the uploaded original
+— and the adapter's rule picks ONE of them, the streamable one, by format and size
+(`internetArchiveVideoDetailsFromRaw`). The Movies catalogue's card plays that one file
+directly, because that card IS one curated film and the card's own menu needs a resolved url.
+The Archive's row is a SEARCH RESULT over a mixed corpus, so it opens the collection's page,
+where the item's files are listed and the user picks one.
+
+So the two screens differ on purpose: **the catalogue card plays, the search result opens the
+collection.** The Archive's audio scope already behaved this way (it opens the collection's
+own page, `ArchiveItemDetail`, which lists the tracks), so the video scope was already
+consistent with its own screen.
+
+The decision is written down where it lives — the provider's row handler — so the next screen
+does not make it differently. No behaviour changed.
+
+### 19.3 B16-J-RADIO-BOOKMARK — one answer for a live stream
+
+The Radio browse row had dropped its "Bookmark" action, with the reason in the code: *a
+bookmark is a POSITION in a file, and a station has none*. The Radio favourites row still
+offered it — and so did the Live TV channel row, which both Live TV surfaces draw.
+
+**The decision: a live stream has no bookmark, on any surface.** The bookmark a live row wrote
+was always `position: 0, duration: 0` — a bookmark at the start of a stream that has no start
+— and the favourites list is already where a station is saved. So the action is a second,
+emptier copy of the favourite.
+
+The item named the two Radio routes; the decision is the same FACT, so it is applied to all
+four live-stream surfaces, and they now agree:
+
+| surface | the menu, measured on device |
+|---|---|
+| Radio browse row | Play Next · Add to Queue · Add to Favorites · Share |
+| Radio favourites row | Play Next · Add to Queue · Remove Favorite · Share |
+| Live TV channel row (browse AND favourites — one card) | Play Next · Add to Queue · Add to Favorites · Share |
+
+Files: `src/screens/RadioScreen/components/RadioFavoritesScreen.tsx` and
+`src/screens/LiveTVScreen/components/ChannelCard.tsx` lose the action and the two now-unused
+imports; `src/screens/RadioScreen/related/textContent.json` and
+`src/screens/LiveTVScreen/related/textContent.json` lose the four dead copy keys
+(`favorites.menu.bookmark`, `favorites.toasts.stationBookmarked`, `menu.bookmark`,
+`toasts.bookmarked`).
+
+### 19.4 B16-J-LIVE-TV-SORT — no sort axis, and that is the answer
+
+A live-TV guide is not a catalogue the user reorders: Plex, YouTube TV and every IPTV client
+keep the guide's own order, and the source publishes ONE order. A sort group here would offer
+a set of arrangements the app has no business inventing — and the one thing a guide is for is
+knowing what is on now.
+
+So there is no sort group, and the reason is now written in the Live TV's own config
+(`related/browseConfig.ts`), where the chrome is decided. **A decision recorded, no behaviour
+changed.**
+
+### 19.5 B16-J-SHOWS-ORDER — the promise that lied was the NAME
+
+The Shows catalogue opens oldest-first: TVMaze's `/shows` is id-ascending, so page 1 is
+Downton Abbey and Hell's Kitchen. That is **the source's order, not a defect** — and the lie
+was never in the order but in the NAME: the adapter used to promise "popular"
+(`getPopularShows`), and it is `getShowsPage` now, with the reason in the adapter's comment.
+
+What this wave adds is the written-down reason in the screen's own config, next to the fact
+that the scope group is the screen's only axis: **the catalogue opens in the source's order,
+and the app does not reorder it or call it popular.** No behaviour changed.
+
+### 19.6 The tests
+
+- `__tests__/screens/ArchiveScreen/archiveBrowseGrammar.test.tsx` — three new tests: the
+  caption names the audio scope's default, the caption follows the scope (the video scope
+  browses "classic films"), and the caption does NOT repeat a term the user typed.
+- `__tests__/screens/LiveTVScreen/liveTvBrowseGrammar.test.tsx` — the row menu's "Bookmark"
+  is now asserted GONE, with the reason in the test.
+
+### 19.7 The device proof
+
+Driven on `emulator-5554` with the argent MCP, against the LIVE sources — the archive answered
+with real old-time-radio shows and real classic films, the radio directory with real stations,
+and Live TV with a real channel list.
+
+| what | what was seen |
+|---|---|
+| the Archive's audio scope | the search field EMPTY, the caption reading **"Browsing “old time radio””**, and a list of real old-time-radio shows (Boxcars711, Jack Benny, Relic Radio, …) |
+| the Archive's video scope | the **"Video"** chip in the shell's strip, the caption reading **"Browsing “classic films””**, and a list of real classic films (The Usual Cafés, Chevy Dream Machines, Classic Film Blooper Reel, …) |
+| a Live TV channel row, long-pressed | the app's ONE media menu with **Play Next · Add to Queue · Add to Favorites · Share** — **no Bookmark** |
+| a Radio favourites row, long-pressed | **Play Next · Add to Queue · Remove Favorite · Share** — **no Bookmark** |
+
+Screenshots: `device_proof/B16_C01_archive_audio_browse_caption.png`,
+`device_proof/B16_C02_archive_video_browse_caption.png`,
+`device_proof/B16_C03_live_tv_menu_no_bookmark.png`,
+`device_proof/B16_C04_radio_favorites_menu_no_bookmark.png`.
+
+**No data was injected.** Every list on these screens came from the source over the network —
+the archive, the radio directory and the IPTV catalogue all answered on the emulator. The only
+write was the favourite that was saved from the Radio browse row to give the favourites screen
+a row to open, which is the app's own action.
+
+### 19.8 The gates
+
+```
+tsc          exit=0
+eslint       exit=0
+boundaries   exit=0   scanned 636 files — 0 error(s), 0 warning(s)
+fonts        exit=0   661 resolved text usages, 11 shipped font files
+boards       exit=0   51 app routes, 49 boards, 3 with no board on purpose
+themed       exit=0   every screen owns a themed background.
+jest         exit=0   212 suites, 1997 passed, 1 todo, 1998 total
+```
+
+Outputs: `X:/Development/SIMBA/.scratch-figcraft/gates-waveB16u/`.
+
+---
+
+## 20. CARRIED FORWARD
 
 Each item, individually, with the reason it could not be closed in this wave.
 
@@ -1184,23 +1350,27 @@ Each item, individually, with the reason it could not be closed in this wave.
 - **B16-J-ALLAUDIO — CLOSED in §17.4.** The All Audio rows carry the app's one
   `MediaActionsSheet` menu — Play Next, Add to Queue, Add to Playlist — and the playlist row
   opens the app's `PlaylistSheet`. Device-proved with a real long-press gesture.
-- **B16-J-ARCHIVE-DEFAULT — the Archive's curated browse default is invisible.** The scope
-  browses "old time radio" / "classic films" while the search field stays empty, so the list
-  answers a question the user cannot see. **Reason: the grammar's search field owns the visible
-  term** — surfacing the default would need the shell to pre-fill the field, which is a shell
-  contract change.
-- **B16-J-ARCHIVE-VIDEO — the Archive's video scope opens `MovieDetail`** (today's behaviour)
-  rather than resolving and playing the way the Movies screen's rows do. **Reason: a separate
-  decision about what an archive collection is.**
-- **B16-J-SHOWS-ORDER — the Shows catalogue opens oldest-first.** TVMaze's `/shows` is
-  id-ascending, so page 1 is Downton Abbey and Hell's Kitchen. **Not a bug — the source's order.**
-  It is recorded because `getPopularShows` used to promise "popular".
-- **B16-J-RADIO-BOOKMARK — the two Radio routes now disagree about "Bookmark".** The browse row
-  dropped it (a bookmark is a POSITION in a file, and a live stream has none); the favourites
-  route still offers it. **Reason: one decision is needed — drop it from both, or keep it on
-  both with the same reason.**
-- **B16-J-LIVE-TV-SORT — no sort axis on Live TV.** **Reason: no shipping app sorts a live-TV
-  guide** (Plex / YouTube TV keep the guide's order), and the catalogue publishes one order.
+- **B16-J-ARCHIVE-DEFAULT — CLOSED in §19.1.** The Archive's list now SAYS what it is
+  browsing: while the scope's curated default is in use, a caption under the search field
+  reads `Browsing “old time radio”` / `Browsing “classic films”`. The search field keeps the
+  user's own term — pre-filling it would have been the wrong fix — and the caption appears
+  only while the default is what is really being browsed.
+- **B16-J-ARCHIVE-VIDEO — CLOSED in §19.2.** The decision is written down: an archive
+  collection is a COLLECTION, so its row opens the collection's page, where the item's files
+  are listed. The catalogue card plays (that card IS one curated film); the search result
+  opens the collection. No behaviour changed.
+- **B16-J-SHOWS-ORDER — CLOSED in §19.5.** The catalogue opens in the SOURCE's order
+  (TVMaze's `/shows` is id-ascending), the promise that lied was the adapter's old name
+  (`getPopularShows` → `getShowsPage`), and the reason is now written in the Shows screen's
+  own config, beside its scope group.
+- **B16-J-RADIO-BOOKMARK — CLOSED in §19.3.** One answer for a live stream: no bookmark on
+  any live-stream surface. A bookmark is a POSITION in a file, and a live stream has none —
+  the bookmark it wrote was always position 0 — and the favourites list is already where a
+  station is saved. The Radio browse row had already dropped it; the Radio favourites row and
+  the Live TV channel row (both Live TV surfaces) no longer offer it either.
+- **B16-J-LIVE-TV-SORT — CLOSED in §19.4.** No sort axis on Live TV, and the reason is now
+  written in the Live TV's own config: no shipping app sorts a live-TV guide (Plex / YouTube TV
+  keep the guide's order), and the catalogue publishes one order.
 - **B16-J-DEEP-LINK-PROOFS — the deep links are pinned by tests, not photographed.** `tv/news`,
   `shows/today` and `radio?initialTag=pop` seed their scopes in tests against a stubbed adapter;
   the device proofs show the screens, not the seeded states. **Reason: each seeded state needs
@@ -1245,6 +1415,10 @@ Each item, individually, with the reason it could not be closed in this wave.
 
 ### Closed in this wave (from the carried-forward lists)
 
+- **B16-J-ARCHIVE-DEFAULT / ARCHIVE-VIDEO / SHOWS-ORDER / RADIO-BOOKMARK / LIVE-TV-SORT** —
+  the five one-screen decisions are settled and written down (§19). The Archive says what it
+  is browsing, the archive collection's rule is recorded, the live-stream rows agree about
+  bookmarking, and the Live TV and Shows configs carry their reasons.
 - **B16-J-LISTPAGES** — the six remaining list pages — **`Genre`**, **`AllVideos`**,
   **`FollowedPodcasts`**, **`History`**, **`DownloadsScreen`**, **`Bookmarks`** — are on the
   shared browse shell (§18). Each declares its own chrome in a config; the shell gained a

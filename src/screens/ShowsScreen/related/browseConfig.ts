@@ -28,6 +28,19 @@
 // A filter whose options would have to be INVENTED is a filter that
 // cannot act, and a control that cannot act must not occupy space.
 //
+// THE CATALOGUE'S ORDER IS THE SOURCE'S
+// -------------------------------------
+// There is no SORT axis, and the reason is the source's own order:
+// TVMaze's `/shows` is id-ascending, so page 1 is Downton Abbey and
+// Hell's Kitchen — not what anyone would call "popular". The adapter
+// used to promise "popular" (`getPopularShows`) and it LIED; the
+// function is `getShowsPage` now and the promise is gone with the
+// name (B16-J-SHOWS-ORDER).
+//
+// So the catalogue opens oldest-first, by the source's design. The app
+// does not reorder a catalogue the source publishes in one order, and it
+// does not call that order "popular".
+//
 // THE OPTION KEYS ARE THE LEGACY TAB NAMES
 // ----------------------------------------
 // The route param is `initialTab?: 'search' | 'today' | 'browse'` — the

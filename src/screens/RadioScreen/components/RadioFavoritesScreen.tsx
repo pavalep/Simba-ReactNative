@@ -17,6 +17,12 @@
 // The station's classification comes from `stationQueueItem` — the same
 // owner the browse screen uses — so the same station is classified the
 // same way from either route.
+//
+// It used to offer "Bookmark" here as well as on the browse row. It
+// offers neither now: a bookmark is a POSITION in a file, and a station
+// has none — the bookmark was always position 0, duration 0, and the
+// favourites list is already the place a station is saved
+// (B16-J-RADIO-BOOKMARK).
 
 import React, {useCallback, useMemo, useState} from 'react';
 import {View, FlatList} from 'react-native';
@@ -39,8 +45,7 @@ import {
 } from '../../../components/sheets/MediaActionsSheet/MediaActionsSheet';
 import {useQueueActions} from '../../../hooks/useQueueActions';
 import {shareContent} from '../../../services/shareService';
-import {useBookmarks} from '../../../features/bookmarks';
-import {confirmBookmarkAdd} from '../../../features/bookmarks/confirmAdd';
+
 import {resolveStreamType, useResumeAwareLaunch} from '../../../infrastructure/player';
 import {useLiveFavoritesStore} from '../../../state';
 import {createRadioFavoritesStyles} from '../styles';
@@ -55,7 +60,6 @@ export const RadioFavoritesScreen: React.FC<Props> = () => {
   const toast = useToast();
   const haptics = useHaptics();
   const {openPlayer} = useResumeAwareLaunch();
-  const {add: addBookmark} = useBookmarks();
   const styles = useMemo(() => createRadioFavoritesStyles(), []);
   // The app's ONE queue wrapper: it owns the queue-store call AND the
   // toast (with its Undo), so this screen never calls the queue store
@@ -120,32 +124,7 @@ export const RadioFavoritesScreen: React.FC<Props> = () => {
           haptics.light();
         },
       },
-      {
-        label: text.favorites.menu.bookmark,
-        icon: 'bookmark',
-        onPress: () => {
-          const result = addBookmark({
-            fileUri: menuRow.url,
-            title: menuRow.name,
-            position: 0,
-            duration: 0,
-            label: '',
-            thumbnailPath: menuRow.image || undefined,
-            mediaType: 'audio',
-            source: 'api',
-            provider: 'radioBrowser',
-            type: 'radio',
-          });
-          // ONE owner for the cap — the same helper the browse screen and
-          // the Live TV screens use.
-          confirmBookmarkAdd(
-            result,
-            menuRow.name,
-            addBookmark,
-            () => toast.show(text.favorites.toasts.stationBookmarked),
-          );
-        },
-      },
+
       {
         label: text.menu.share,
         icon: 'share',
@@ -163,7 +142,7 @@ export const RadioFavoritesScreen: React.FC<Props> = () => {
           }),
       },
     ];
-  }, [menuRow, toast, haptics, addBookmark, playNext, addToQueue]);
+  }, [menuRow, toast, haptics, playNext, addToQueue]);
 
   return (
     <View

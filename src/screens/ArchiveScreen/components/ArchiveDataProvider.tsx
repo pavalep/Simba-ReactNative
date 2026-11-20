@@ -42,6 +42,11 @@ interface ArchiveDataContextValue {
   refresh: () => Promise<void>;
   /** The term the source is actually answering. */
   activeTerm: string;
+  /**
+   * True when the source is answering the scope's curated browse
+   * default rather than a term the user typed.
+   */
+  isUsingScopeDefault: boolean;
   /** True when the list ended at the archive's paging ceiling. */
   reachedPagingCeiling: boolean;
   /** Push the shell's filter down into the scope. */
@@ -115,7 +120,22 @@ export const ArchiveDataProvider: React.FC<{
    * opens the film's page, the Podcast row opens the feed's page.
    *
    * The video scope opens the movie page, the audio scope the archive
-   * item's own page — the same split the screen has always drawn.
+   * item's own page — the same split the screen has always drawn, and
+   * now the DECISION it rests on (B16-J-ARCHIVE-VIDEO):
+   *
+   * AN ARCHIVE COLLECTION IS A COLLECTION. A search result names a
+   * GROUP of files — a film with several parts, and with archive.org's
+   * own h.264 transcodes beside the uploaded original — and the
+   * adapter's rule picks ONE of them, the streamable one, by format
+   * and size (`internetArchiveVideoDetailsFromRaw`). The Movies
+   * catalogue's card plays that one file directly, because that card
+   * IS one curated film and the card's own menu needs a resolved url.
+   * The Archive's row is a SEARCH RESULT over a mixed corpus, so it
+   * opens the collection's page, where the item's files are listed and
+   * the user picks one.
+   *
+   * So the two screens differ on purpose: the catalogue card plays,
+   * the search result opens the collection.
    */
   const handleRowPress = useCallback(
     (row: ArchiveRow) => {
@@ -149,6 +169,7 @@ export const ArchiveDataProvider: React.FC<{
       refreshing: archive.refreshing,
       refresh: archive.refresh,
       activeTerm: archive.activeTerm,
+      isUsingScopeDefault: archive.isUsingScopeDefault,
       reachedPagingCeiling: archive.reachedPagingCeiling,
       setScope,
       setSearchTerm,
@@ -170,6 +191,7 @@ export const ArchiveDataProvider: React.FC<{
       archive.refreshing,
       archive.refresh,
       archive.activeTerm,
+      archive.isUsingScopeDefault,
       archive.reachedPagingCeiling,
       isSearchActive,
       handleRowPress,

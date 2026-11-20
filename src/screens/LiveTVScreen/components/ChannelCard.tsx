@@ -15,7 +15,7 @@
 //   OLD: Remove Favorite / Add to Favorites / Add to Playlist / Bookmark /
 //        Share
 //   NEW: Play Next / Add to Queue / (Add to Favorites | Remove Favorite) /
-//        Bookmark / Share
+//        Share
 //
 // "Add to Playlist" is GONE, and it had to go: the app's playlist rule
 // refuses live TV (`PLAYLIST_ALLOWED_MEDIA_KINDS` in
@@ -28,6 +28,12 @@
 // What replaced it is what the row could NOT do at all: a channel IS a
 // playable stream URL, so it can be played next and queued — the same two
 // actions the Music, Movies and Radio rows offer.
+//
+// "Bookmark" is GONE too, and for the reason the Radio browse row gave
+// it: a bookmark is a POSITION in a file, and a live channel has none —
+// the bookmark it wrote was always position 0, duration 0. The
+// favourites list is the live surface's own save action, so the
+// bookmark was a second, emptier copy of it (B16-J-RADIO-BOOKMARK).
 //
 // The menu lives HERE, in the row, because the row is what owns it: the
 // browse list and the favourites list draw the same card, so both get the
@@ -44,8 +50,7 @@ import {
   type MediaAction,
 } from '../../../components/sheets/MediaActionsSheet/MediaActionsSheet';
 import {useQueueActions} from '../../../hooks/useQueueActions';
-import {useBookmarks} from '../../../features/bookmarks';
-import {confirmBookmarkAdd} from '../../../features/bookmarks/confirmAdd';
+
 import {useToast} from '../../../components/feedback/Toast';
 import {useHaptics} from '../../../hooks/useHaptics';
 import {shareContent} from '../../../services/shareService';
@@ -71,8 +76,7 @@ export const ChannelCard: React.FC<ChannelCardProps> = React.memo(
     // toast (with its Undo), so this screen never calls the queue store
     // directly.
     const {playNext, addToQueue} = useQueueActions();
-    const {add: addBookmark} = useBookmarks();
-    const {addFavorite, removeFavorite} = useLiveTVFavoriteActions();
+      const {addFavorite, removeFavorite} = useLiveTVFavoriteActions();
     const [menuVisible, setMenuVisible] = useState(false);
 
     const handleMenuPress = useCallback(() => {
@@ -94,29 +98,6 @@ export const ChannelCard: React.FC<ChannelCardProps> = React.memo(
       haptics.light();
     }, [addFavorite, haptics, isFavorite, removeFavorite, row, toast]);
 
-    const handleBookmark = useCallback(() => {
-      // The cap is the store's business, and the confirmation is ONE
-      // owner's (`confirmBookmarkAdd`). The result used to be discarded
-      // here, so adding a bookmark past the cap did NOTHING and still
-      // toasted "Channel bookmarked".
-      confirmBookmarkAdd(
-        addBookmark({
-          fileUri: row.url,
-          title: row.name,
-          position: 0,
-          duration: 0,
-          label: '',
-          thumbnailPath: row.image || undefined,
-          mediaType: 'video',
-          source: 'api',
-          provider: 'iptv',
-          type: 'live-tv',
-        }),
-        row.name,
-        addBookmark,
-        () => toast.show(text.toasts.bookmarked),
-      );
-    }, [addBookmark, row, toast]);
 
     const handleShare = useCallback(() => {
       shareContent(channelShareTarget(row));
@@ -139,11 +120,7 @@ export const ChannelCard: React.FC<ChannelCardProps> = React.memo(
           icon: 'heart',
           onPress: handleToggleFavorite,
         },
-        {
-          label: text.menu.bookmark,
-          icon: 'bookmark',
-          onPress: handleBookmark,
-        },
+
         {
           label: text.menu.share,
           icon: 'share',
@@ -152,7 +129,6 @@ export const ChannelCard: React.FC<ChannelCardProps> = React.memo(
       ],
       [
         addToQueue,
-        handleBookmark,
         handleShare,
         handleToggleFavorite,
         isFavorite,

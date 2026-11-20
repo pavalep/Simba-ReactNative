@@ -16,6 +16,12 @@ export const createArchiveScreenStyles = (_colors: ColorTokens) =>
     list: {
       flex: 1,
     },
+    caption: {
+      // The caption sits above the list and under the shell's own
+      // chrome, so it carries the shell's gutter.
+      paddingHorizontal: spacing.lg,
+      paddingBottom: spacing.sm,
+    },
     listContent: {
       // The page's one gutter — 16 dp, the same as the search field and
       // the chip strip above it.

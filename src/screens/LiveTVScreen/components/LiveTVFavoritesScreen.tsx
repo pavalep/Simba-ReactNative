@@ -12,8 +12,9 @@
 // (`PLAYLIST_ALLOWED_MEDIA_KINDS`), so the action opened a
 // `PlaylistSheet` that could only refuse the channel. What replaced it is
 // the two actions the row could not do before — Play Next and Add to
-// Queue — plus the same favourite, bookmark and share actions the browse
-// row offers.
+// Queue — plus the same favourite and share actions the browse row
+// offers. The bookmark action is gone from both: a live channel has no
+// position to bookmark (B16-J-RADIO-BOOKMARK).
 //
 // Its SHARE link used to point at `LiveTVScreen` with `fileUri`/`fileTitle`
 // — a path (`tv/:categoryId?`) that parses NEITHER, so the recipient

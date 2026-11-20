@@ -357,4 +357,40 @@ describe('the Archive screen — the browse grammar', () => {
     expect(screen.queryByText('Add to Queue')).toBeNull();
     expect(screen.queryByText('Add to Playlist')).toBeNull();
   });
+
+  it('SAYS what it is browsing — the scope default is on screen', async () => {
+    await renderWithProviders(ArchiveScreen, {routeName: 'ArchiveScreen'});
+
+    // The search field is EMPTY, so the archive is answering the scope's
+    // curated default — and the list must SAY so. The field does not:
+    // it holds the user's term, and the term in use is not in it
+    // (B16-J-ARCHIVE-DEFAULT). Without this the list answered a
+    // question the user could not see.
+    await waitFor(() =>
+      expect(screen.getByText(`Browsing “${AUDIO_DEFAULT_TERM}”`)).toBeTruthy(),
+    );
+  });
+
+  it('the caption follows the SCOPE — the video scope browses its own default', async () => {
+    await renderWithProviders(ArchiveScreen, {
+      routeName: 'ArchiveScreen',
+      initialParams: {initialTab: 'video'},
+    });
+
+    await waitFor(() =>
+      expect(screen.getByText(`Browsing “${VIDEO_DEFAULT_TERM}”`)).toBeTruthy(),
+    );
+  });
+
+  it('does NOT repeat the term the USER typed', async () => {
+    await renderWithProviders(ArchiveScreen, {
+      routeName: 'ArchiveScreen',
+      initialParams: {query: 'jazz'},
+    });
+
+    // The user's term is already in the search field. Saying it again
+    // would be noise.
+    await waitFor(() => expect(screen.getByText('Audio Item 1')).toBeTruthy());
+    expect(screen.queryByText(/Browsing/)).toBeNull();
+  });
 });

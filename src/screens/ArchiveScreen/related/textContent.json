@@ -2,6 +2,9 @@
   "pills": {
     "loading": "Loading the archive…"
   },
+  "caption": {
+    "browsing": "Browsing “{term}”"
+  },
   "footer": {
     "windowEnd": "Showing {shown} of {total} items — the archive stops paging here"
   },

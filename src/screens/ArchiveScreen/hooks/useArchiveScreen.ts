@@ -120,6 +120,11 @@ export interface UseArchiveScreenResult {
   /** The term the source is actually answering. */
   activeTerm: string;
   /**
+   * True when the source is answering the scope's curated browse
+   * default rather than a term the user typed.
+   */
+  isUsingScopeDefault: boolean;
+  /**
    * True when the list ended at the archive's PAGING CEILING — the
    * archive has more rows than it will serve (10,000), so the list is
    * NOT "all caught up" and the footer must say what the ending is.
@@ -152,13 +157,28 @@ export function useArchiveScreen({
    * query — measured 2026-11-18: `() AND mediatype:(audio)` answers
    * with no total and no rows at all.
    */
-  const activeTerm = useMemo(() => {
-    const cleaned = trimmed.replace(/"/g, '').trim();
-    if (cleaned.length > 0) {
-      return cleaned;
-    }
-    return ARCHIVE_SCOPE_DEFAULT_TERM[scope];
-  }, [trimmed, scope]);
+  // The term the USER typed, cleaned.
+  const userTerm = useMemo(
+    () => trimmed.replace(/"/g, '').trim(),
+    [trimmed],
+  );
+
+  /**
+   * Is the source answering the scope's curated browse DEFAULT rather
+   * than a term the user typed?
+   *
+   * True while the search field is empty. The content uses it to say
+   * ON SCREEN what the list is browsing: the archive's scope has a
+   * curated default (old time radio for audio, classic films for
+   * video — the raw mediatype buckets are not browsable, see
+   * `related/scopeConfig.ts`), and while the field is empty the list
+   * answers a question the user cannot see (B16-J-ARCHIVE-DEFAULT).
+   */
+  const isUsingScopeDefault = userTerm.length === 0;
+
+  const activeTerm = isUsingScopeDefault
+    ? ARCHIVE_SCOPE_DEFAULT_TERM[scope]
+    : userTerm;
 
   const q = useInfiniteApiQuery<ArchivePage>({
     // The scope AND the term are the cache key: one entry per question.
@@ -251,6 +271,7 @@ export function useArchiveScreen({
     refreshing,
     refresh,
     activeTerm,
+    isUsingScopeDefault,
     reachedPagingCeiling,
   };
 }

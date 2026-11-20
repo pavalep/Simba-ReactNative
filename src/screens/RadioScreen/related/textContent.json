@@ -38,12 +38,6 @@
     "accessibilityLabel": "Radio favorites",
     "screenTitle": "Favorite Stations",
     "emptyTitle": "No favorite stations yet.",
-    "emptyMessage": "Long-press any station to save it here.",
-    "menu": {
-      "bookmark": "Bookmark"
-    },
-    "toasts": {
-      "stationBookmarked": "Station bookmarked"
-    }
+    "emptyMessage": "Long-press any station to save it here."
   }
 }
