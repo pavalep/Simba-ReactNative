@@ -54,6 +54,8 @@ const DELIBERATELY_WITHOUT_A_BOARD = {
   SongScreen: 'deep-link only — nothing navigates to it from a tap',
   AllVideosScreen: 'deep-link only — the Library reaches its contents',
   NowPlaying: 'deep-link only, and the screen renders null',
+  GenreScreen:
+    'deep-link only — the app deleted the Browse by Genre shelf on Home, so\n    nothing navigates to it from a tap; the app genre is a FILTER in the\n    Music screen sheet, not a list, so there is no genre list to hang a\n    door on',
 };
 
 /**
@@ -91,7 +93,7 @@ function appRoutes() {
   return routes;
 }
 
-const {ROUTES} = require('./penpot/app-boards');
+const {ROUTES, EDGES, V2_EDGES} = require('./penpot/app-boards');
 
 const boarded = new Set(ROUTES.map(r => r.route));
 const routes = appRoutes();
@@ -109,6 +111,17 @@ for (const route of boarded) {
   stale.push(route);
 }
 
+// The CONNECTORS are checked against the registry too. A connector to a
+// route the prototype has no board for is a walk that dead-ends, and it is
+// usually the LAST TRACE of a screen the app has deleted: the Home ->
+// GenreScreen edge outlived the Home's genre shelf (B15-H5, 2026-11-21)
+// and pointed at a chip the app no longer draws.
+const deadEnds = [];
+for (const edge of [...EDGES, ...V2_EDGES]) {
+  if (!boarded.has(edge.from)) deadEnds.push(edge.from + ' -> ' + edge.to + ' (the FROM route has no board)');
+  else if (!boarded.has(edge.to)) deadEnds.push(edge.from + ' -> ' + edge.to + ' (the TO route has no board)');
+}
+
 console.log('app routes      :', routes.length);
 console.log('boards          :', boarded.size);
 console.log('no board, on purpose:', Object.keys(DELIBERATELY_WITHOUT_A_BOARD).length);
@@ -122,11 +135,18 @@ if (stale.length) {
   for (const r of stale) console.error('  ' + r);
 }
 
-if (missing.length || stale.length) {
+if (deadEnds.length) {
+  console.error('\nCONNECTORS THAT DEAD-END (no board on one side):');
+  for (const e of deadEnds) console.error('  ' + e);
+}
+
+if (missing.length || stale.length || deadEnds.length) {
   console.error(
     '\nThe board registry has drifted from the app.\n' +
       'Add a board for each route above, or add it to\n' +
-      'DELIBERATELY_WITHOUT_A_BOARD with the reason it has none.',
+      'DELIBERATELY_WITHOUT_A_BOARD with the reason it has none.\n' +
+      'A connector that dead-ends points at a screen the app has deleted \n' +
+      'or never had — remove the edge, or draw the board it needs.',
   );
   process.exit(1);
 }

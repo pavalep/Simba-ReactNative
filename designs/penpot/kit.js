@@ -52,16 +52,48 @@ const SCREEN_W = 411;
 const SCREEN_H = 914;
 
 /**
- * The status band above the app's own content.
+ * The status band above the app's own content — the device's
+ * `insets.top`.
  *
- * Measured: the search button's circle starts at 44 dp and the header's
- * padding is 12 dp, so the band is 32 dp.
+ * MEASURED on the emulator (2026-11-21): the screen is 1080x2400 at
+ * density 420, so 2.6277 px per dp. The navigation bar is 63 px = 24 dp,
+ * and the app puts its own content `insets.top` down (the Home screen's
+ * root is `paddingTop: insets.top`).
+ *
+ * This constant used to say 32 dp, derived as "the search button's
+ * circle starts at 44 dp, and the header's padding is 12 dp". That
+ * derivation was WRONG: it assumes the button sits at the TOP of the
+ * header row. It does not. The row is 58.5 dp tall — the wordmark's
+ * line box is the tallest thing in it — and the 42 dp button is
+ * VERTICALLY CENTRED in it, so 8.25 dp of the 44 is the row's own
+ * centering, not the status band. The band's own height is 24 dp, which
+ * is what `movies.js`, `podcasts.js` and `music-radio.js` already use
+ * (their `STATUS_INSET`).
+ *
+ * The pixel evidence for the 44 dp button (and for the lion's ink at
+ * 46 dp) is in `md/WAVE_B16_AUDIT_AND_FIXES.md` §25.4 — B-11-4.
  */
-const INSETS_TOP = 32;
+const INSETS_TOP = 24;
 
 /** The app's spacing scale (`src/theme/tokens.ts`). */
 const spacing = {xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32};
 const radius = {none: 0, sm: 8, md: 12, lg: 16, full: 999};
+
+/**
+ * The Home header's ROW top: the band plus the header's own 12 dp of
+ * vertical padding (`HomeHeader.tsx`, `styles.root.paddingVertical`).
+ */
+const HEADER_ROW_TOP = INSETS_TOP + spacing.md; // 36
+
+/**
+ * The Home header's search button — its top edge, MEASURED on the
+ * device (44.15 dp) and NOT derived from the band.
+ *
+ * It is the row's own centering that puts it there:
+ *   36 (the row's top) + (58.5 (the row's height) - 42 (the button)) / 2
+ *   = 44.25 dp.
+ */
+const HOME_SEARCH_TOP = 44;
 
 /**
  * The app's font FILES map onto Penpot's Google-Fonts catalogue.
@@ -397,7 +429,7 @@ function kit(themeName) {
    * the 44 dp lion and the 12 dp gap.
    */
   function homeHeader(name, o = {}) {
-    const top = o.y != null ? o.y : INSETS_TOP + spacing.md;
+    const top = o.y != null ? o.y : HOME_SEARCH_TOP;
     const wordmarkSize = o.wordmarkSize || 52;
     const wordmarkLH = 56;
     const searchX = SCREEN_W - spacing.lg - 42 - spacing.sm - 42;
@@ -1015,6 +1047,8 @@ module.exports = {
   SCREEN_W,
   SCREEN_H,
   INSETS_TOP,
+  HEADER_ROW_TOP,
+  HOME_SEARCH_TOP,
   spacing,
   radius,
   spec,

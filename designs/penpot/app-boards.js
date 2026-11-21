@@ -9,9 +9,14 @@
  *
  *    "Actually being used" is the rule: a screen is in the registry if an
  *    in-app tap can reach it, or if it is part of the auth flow. That
- *    excludes three routes which are deep-link-only (`SongScreen`,
- *    `AllVideosScreen`, `NowPlaying`) — `NowPlaying` additionally renders
- *    `null`, so it has nothing to draw.
+ *    excludes the routes which are deep-link-only (`SongScreen`,
+ *    `AllVideosScreen`, `NowPlaying`, and — since 2026-11-21 —
+ *    `GenreScreen`) — `NowPlaying` additionally renders `null`, so it has
+ *    nothing to draw. `GenreScreen` joined them when the app deleted the
+ *    Home's "Browse by Genre" shelf: with the shelf gone, nothing in the
+ *    app navigates to the Genre page, and the app's genre is a FILTER in the
+ *    Music screen's sheet rather than a list, so there is no genre list to
+ *    hang a door on.
  *
  *    `MusicDetail` was one of the four until 2026-11-17: the Music row was
  *    the play action, so a track had no page of its own. The owner decided
@@ -89,7 +94,10 @@ const ROUTES = [
   {route: 'AllPlaylistsScreen', title: 'All Playlists', group: 'Your library'},
   {route: 'ArtistScreen', title: 'Artist', group: 'Your library'},
   {route: 'AlbumScreen', title: 'Album', group: 'Your library'},
-  {route: 'GenreScreen', title: 'Genre', group: 'Your library'},
+  // `GenreScreen` was here until 2026-11-21. The app deleted the Home's genre
+  // shelf, so the page is reachable by a shared link only - the same place
+  // `SongScreen` and `AllVideosScreen` already sit (see
+  // `designs/check-board-routes.js`, DELIBERATELY_WITHOUT_A_BOARD).
   {route: 'ArtistDetail', title: 'Artist', group: 'Your library'},
   {route: 'AlbumDetail', title: 'Album', group: 'Your library'},
   // "My Podcasts" — the feeds the user FOLLOWS.
@@ -190,7 +198,14 @@ const EDGES = [
   {from: 'Home', to: 'Bookmarks', trigger: 'click', shape: 'Bookmarks See All', label: 'See all Bookmarks'},
   {from: 'Home', to: 'FollowedPodcasts', trigger: 'click', shape: 'Followed Podcasts See All', label: 'See all Followed Podcasts'},
   {from: 'Home', to: 'PodcastDetail', trigger: 'click', shape: 'Followed podcast card 1 artwork', family: 'Followed podcast card 1', label: 'podcast'},
-  {from: 'Home', to: 'GenreScreen', trigger: 'click', shape: 'Genre Jazz bg', family: 'Genre Jazz', label: 'genre'},
+  // The Home → GenreScreen edge is GONE (2026-11-21). The app deleted the
+  // "Browse by Genre" shelf - `src/screens/Home/components/GenreChipsShelf.tsx`
+  // is gone (`md/HOME_V2_REFACTOR.md`, the Home V2 pass) - so there is no card
+  // on the Home screen to press, and no `navigate('GenreScreen')` anywhere in the
+  // app. The edge pointed at the V1 board's "Genre Jazz" chip, which was the
+  // last trace of the deleted shelf. The app's genre is a FILTER in the Music
+  // screen's filter sheet, not a list, so there is no genre list to hang a door
+  // on: a genre index would be a new feature, not a carried-forward fix.
   {from: 'Home', to: 'PlaylistDetail', trigger: 'click', shape: 'Pinned playlist tile 1 cover', family: 'Pinned playlist tile 1', label: 'playlist'},
   // The Queue is the app's ONLY route that starts inside a COMPONENT: the
   // audio player's minimise handler is `navigate('Queue', {from: 'audio'})`

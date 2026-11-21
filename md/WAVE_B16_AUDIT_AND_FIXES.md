@@ -2423,3 +2423,138 @@ instruction for its own stream, and the app already reaches that provider.
 `X:/Development/SIMBA/.scratch-figcraft/gates-waveG2` - all seven gates exit 0.
 Jest: **219 suites, 2066 passed, 1 todo** (2067 total). The four new m3u
 tests are inside that 2066.
+
+---
+
+## 26. WAVE G3 — the board items: three facts, measured on the device
+
+### 26.1 B-11-4 — the status band was 24 dp, not 32 dp
+
+The carry-forward item was a disagreement between two constants in the board sources:
+`designs/penpot/kit.js` said `INSETS_TOP = 32` and `movies.js`, `podcasts.js` and
+`music-radio.js` each said `STATUS_INSET = 24`. Both claimed to be the device's status
+band.
+
+**Measured on the emulator** (2026-11-21, 1080x2400 at density 420, so 2.6277 px per dp),
+from the app's own Home screen:
+
+| what | how | result |
+|---|---|---|
+| the search button's top edge | the accessibility frame of the `Search` button, `0.048` of the screen height | **44.15 dp** |
+| the search button's top edge | the first non-background pixel row in its column, on a full-resolution capture | **44.15 dp** (116 px) |
+| the wordmark's box top | the accessibility frame of the `Simba` text | **36.5 dp** |
+| the lion's ink | the first non-background pixel row in its column | **46.05 dp** (121 px) |
+
+The wordmark's box top is **36.5 dp**, and the Home screen's root is
+`paddingTop: insets.top` with the header's own `paddingVertical: 12`. So
+`insets.top` cannot be more than ~24 dp:
+
+```
+insets.top = 36.5 - 12 = 24.5 dp   (the wordmark's box sits at the header row's top)
+```
+
+**And the 44 dp button is not `insets.top + 12`.** The header row is 58.5 dp tall - the
+wordmark's line box is the tallest thing in it - and the 42 dp button is VERTICALLY CENTRED
+in that row (`alignItems: 'center'`):
+
+```
+36 (the row's top) + (58.5 (the row's height) - 42 (the button)) / 2 = 44.25 dp
+```
+
+So `kit.js`'s derivation - "the search circle starts at 44 dp and the header's padding is 12
+dp, so the band is 32 dp" - was wrong: it assumed the button sits at the TOP of the row. The
+8 dp it charged to the status band is the row's own centering.
+
+**The band's own height is 24 dp** - the same number the other three boards already used, and
+the same number the navigation bar measures (63 px = 24 dp at 420 dpi).
+
+The fix keeps the board's GEOMETRY exactly where it was (the button is at 44 dp on the
+device, and the board drew it at 44) and makes the FACT right:
+
+- `INSETS_TOP` is 24, with the measurement and the failed derivation written down;
+- the Home header's row top is a named constant (`HEADER_ROW_TOP` = 36);
+- the search button's top edge is its own named, MEASURED constant (`HOME_SEARCH_TOP` = 44),
+  not something derived from the band.
+
+The board's other positions were checked against the device while I was there: the greeting
+line is at **122.4 dp** on the device and the board draws it at 123 dp.
+
+### 26.2 B15-H5 — the Genre shelf the app DELETED
+
+**The fact.** The app's Home used to carry a "Browse by Genre" shelf
+(`src/screens/Home/components/GenreChipsShelf.tsx`). The file is GONE - `md/HOME_V2_REFACTOR.md`
+lists the deletion in the Home V2 pass - and nothing in `src/` reads a track's genre on the
+Home screen any more. The V2 board already said so ("THE GENRE SHELF IS GONE",
+`home-v2.js`).
+
+**What was left behind.** Two traces of the deleted shelf:
+
+1. `designs/penpot/home.js` - the **V1** Home board, the one the prototype's walk starts
+   from - still DREW the shelf (three chips with a music glyph and a count).
+2. `designs/penpot/app-boards.js` still had the connector
+   `{from: 'Home', to: 'GenreScreen', shape: 'Genre Jazz bg'}` - the edge that opened the Genre
+   page from that chip.
+
+So the prototype's main screen claimed a card the app does not have, and a walk that could
+reach a page the app cannot reach. A board is a claim about the app, and the claim was false.
+
+**The decision.** No door was added to the app. The app's genre is a **FILTER** in the Music
+screen's filter sheet (single-select, a Jamendo tag) - not a list - so there is no genre list
+anywhere to hang a door on, and building one is a new feature, not a carried-forward fix. The
+Genre page stays a **deep-link-only** route, next to `SongScreen` and `AllVideosScreen`.
+
+**What changed:**
+
+- the V1 Home board no longer draws the shelf (and its records carry no genre, because
+  nothing read it);
+- the Home -> GenreScreen connector is gone;
+- `GenreScreen` is on the deliberate no-board list, with the reason;
+- the registry's own rule now says it in so many words.
+
+### 26.3 B13.1-2 — the Radio and Live TV empty states: ALREADY the house `EmptyState`
+
+The carry-forward entry said the Radio and Live TV empty states were still a `Placeholder`
+and that `EmptyState` was "not a drop-in". The tree says otherwise:
+
+- `src/screens/RadioScreen/components/ListStates.tsx` renders the house `EmptyState` with an
+  icon (`search` or `radioTower`), a title and a description - and its copy is
+  scope-aware (search / filters / everything).
+- `src/screens/LiveTVScreen/components/ListStates.tsx` does the same, with the category's own
+  name in the empty message.
+
+The error state on both is the house `ErrorState` card with its OWN retry button - the old
+`Placeholder` used to name "Use Retry at the bottom of the screen", and there is no bottom
+retry.
+
+**Closed by verification.** The entry was stale.
+
+### 26.4 A new gate: a connector that dead-ends
+
+`designs/check-board-routes.js` checked that every app route has a board. It did not check
+the CONNECTORS - and a connector to a route the prototype has no board for is a walk that
+dead-ends. That is exactly the shape the Genre drift had: the edge outlived the screen.
+
+The gate now also checks every edge in `EDGES` and `V2_EDGES`: both ends must be routes the
+registry covers.
+
+**The guard is proven by re-breaking it**: re-injecting the `Home -> GenreScreen` edge makes
+the gate fail with
+
+```
+CONNECTORS THAT DEAD-END (no board on one side):
+  Home -> GenreScreen (the TO route has no board)
+```
+
+and removing it again makes the gate pass. The registry now reads **51 app routes, 48
+boards, 4 with no board on purpose**.
+
+`node designs/build-penpot-app.js` still builds after the change: **83 boards, 158 links in 16
+calls, 176 media** - the generators are consistent. Applying them to the Penpot canvas needs
+the Penpot MCP plugin connected; that is a user action, and it is listed below.
+
+### 26.5 The gates
+
+`X:/Development/SIMBA/.scratch-figcraft/gates-waveG3` - all seven gates exit 0.
+Jest: **219 suites, 2066 passed, 1 todo** (2067 total).
+The board gate reads **51 app routes, 48 boards, 4 with no board on purpose**,
+and the connector check is in it.

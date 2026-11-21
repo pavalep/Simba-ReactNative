@@ -31,7 +31,17 @@
  *   7. Followed Podcasts          what the user subscribed to
  *   8. "Discover"                 the catalogue's front door
  *   9. Explore Contents           every catalogue section, one card each
- *  10. Browse by Genre            the cheap way into the catalogue
+ *
+ * "Browse by Genre" IS GONE.
+ *
+ * The app DELETED the shelf - `src/screens/Home/components/GenreChipsShelf.tsx`
+ * is gone (`md/HOME_V2_REFACTOR.md` lists the deletion in the Home V2
+ * pass). The V2 board said so first ("THE GENRE SHELF IS GONE", in
+ * `home-v2.js`); this board is the one the prototype's walk starts from,
+ * and it still drew the shelf - and the connector that opened the Genre
+ * page from it.
+ *
+ * A board is a claim about the app, and the claim was false.
  *
  * THE FIRST VERSION OF THIS BOARD WAS WRONG
  * ----------------------------------------
@@ -119,17 +129,15 @@ const CATEGORIES = [
  * `position / duration` format (`utils/mediaTime.ts:63-70`), the progress
  * fraction, and the bookmark's `position · date` line.
  *
- * The genres on the records are what the "Browse by Genre" shelf counts:
- * the app derives that shelf from the local track store
- * (`useHomeScreen.ts:143-155`), so the chip counts are the board's own
- * library tallied by genre. They agree with the cards that are on the
- * board — nothing is counted that is not shown.
+ * The records carry no genre: the "Browse by Genre" shelf they used to
+ * be counted by is gone (see the header above), and nothing else on this
+ * page reads a track's genre.
  */
 const RECENT = [
-  {title: 'Kind of Blue', lane: 'audio', subtitle: '12:44 / 46:12', media: 'ph.rail1', progress: 0.27, genre: 'Jazz'},
-  {title: 'Blue in Green', lane: 'audio', subtitle: '1:08 / 5:42', media: 'ph.rail4', progress: 0.2, genre: 'Jazz'},
-  {title: 'Clair de Lune', lane: 'audio', subtitle: '3:41 / 5:12', media: 'ph.rail2', progress: 0.71, genre: 'Classical'},
-  {title: 'Music for Airports', lane: 'audio', subtitle: '22:10 / 49:00', media: 'ph.rail5', progress: 0.45, genre: 'Ambient'},
+  {title: 'Kind of Blue', lane: 'audio', subtitle: '12:44 / 46:12', media: 'ph.rail1', progress: 0.27},
+  {title: 'Blue in Green', lane: 'audio', subtitle: '1:08 / 5:42', media: 'ph.rail4', progress: 0.2},
+  {title: 'Clair de Lune', lane: 'audio', subtitle: '3:41 / 5:12', media: 'ph.rail2', progress: 0.71},
+  {title: 'Music for Airports', lane: 'audio', subtitle: '22:10 / 49:00', media: 'ph.rail5', progress: 0.45},
 ];
 
 /** The pinned playlists — the app's own tile (`QuickAccessShelf.tsx`). */
@@ -152,19 +160,6 @@ const PODCASTS = [
   {title: 'The Rest Is History', author: 'Tommy Bowker', media: 'ph.pod2'},
   {title: 'Huberman Lab', author: 'Andrew Huberman', media: 'ph.pod3'},
 ];
-
-/**
- * The genre shelf.
- *
- * The app's shelf is a row of pills, each with a music glyph in a circle,
- * the genre's name and a count of the tracks in it
- * (`GenreChipsShelf.tsx`). It is NOT a `SectionHeader` — it has its own
- * plain title — and it is drawn LAST, after Explore Contents, because
- * `useHomeScreen.ts:421-424` pushes it after the literal section array.
- *
- * The counts are the board's own library tallied by genre (see `RECENT`).
- */
-const GENRES = ['Jazz', 'Classical', 'Ambient'];
 
 /**
  * Draw the Home screen.
@@ -368,42 +363,6 @@ function homeBoard(theme, opts = {}) {
   });
   y += 160 + spacing.lg;
 
-  // ── 10. Browse by Genre ───────────────────────────────────────────
-  // The shelf's own header is NOT a `SectionHeader` — it is a plain
-  // `displaySans` title on the content gutter (`GenreChipsShelf.tsx:29-33`).
-  shapes.push(
-    k.text('Genre shelf title', 'Browse by Genre', {
-      x: spacing.md,
-      y,
-      family: 'Manrope SemiBold',
-      weight: 700,
-      size: 22,
-      lineHeight: 28,
-      letterSpacing: -0.5,
-      fill: k.c.text.primary,
-    }),
-  );
-  y += 28 + spacing.md;
-
-  const chipShapes = [];
-  GENRES.forEach((genre, i) => {
-    const name = 'Genre ' + genre;
-    const count = RECENT.filter(r => r.genre === genre).length;
-    const chip = k.genreChip(name, {
-      x: spacing.md,
-      y,
-      label: genre,
-      count,
-    });
-    // The chip's own width is measured by Penpot (the label decides it),
-    // so the next chip hangs off the one before it and the count badge
-    // hangs off the label.
-    chip[0].x = i === 0 ? spacing.md : {chain: {prev: 'Genre ' + GENRES[i - 1] + ' bg', gap: CARD_GAP}};
-    chipShapes.push(...chip);
-  });
-  shapes.push(...chipShapes);
-  y += 44 + spacing.xxl;
-
   if (!full) {
     // ── the FAB, floating over the viewport ────────────────────────
     // `Fab.tsx` positions it at `insets.bottom + spacing.lg` — it is a
@@ -419,7 +378,6 @@ function homeBoard(theme, opts = {}) {
 module.exports = {
   homeBoard,
   CATEGORIES,
-  GENRES,
   RECENT,
   PINNED,
   BOOKMARKS,
