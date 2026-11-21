@@ -125,10 +125,16 @@ adb_logcat_*
 *_trace*.txt
 *.diff
 
-# graphify knowledge graph
-graphify-out/cache/
-graphify-out/.graphify_*
-graphify-out/20*/
+# graphify knowledge graph — GENERATED output, never committed.
+#
+# It was tracked by accident: the three partial rules below were added
+# after the cache and the dated copies had already been committed, and the
+# rules never took the tracked files back out. The whole directory is
+# ~14 MB of regenerated output (an 8.9 MB graph.json, a 429 KB
+# graph.html, the AST cache and a dozen debug screenshots), it is stale
+# the moment the next run happens, and the tool that makes it is
+# external. It was untracked on 2026-11-21.
+graphify-out/
 v13-trash-2026-09-04/
 
 # Local scratch folder — temporary debug logs, scan outputs, throwaway

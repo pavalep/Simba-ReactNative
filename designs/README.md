@@ -133,6 +133,28 @@ The **probe** is the transport that talks to the Penpot MCP endpoint. It is not
 in this repository because the endpoint's URL and its key live in the agent's
 own MCP settings; pass its path as an argument, or set `$PENPOT_PROBE`.
 
+### If the plugin tab is closed (F-15)
+
+The **MCP button in Penpot's toolbar** starts the plugin tab. If that tab was
+closed, the endpoint answers:
+
+```
+No Penpot instance connected for user token.
+```
+
+That is not a permissions problem and not a problem with the design — the
+plugin simply is not running against this file. The recovery is by hand, and
+it is two steps:
+
+1. **Restart Penpot and reopen the design file.** The plugin lives in the
+   plugin tab, and the tab does not survive the app being closed.
+2. **Press the MCP button in the toolbar** to start the plugin tab again.
+
+Nothing in this repository can do either step: the plugin runs inside
+Penpot, and the probe only carries calls to the endpoint. A generator run
+that fails with the message above has NOT failed — it has never reached
+Penpot.
+
 ### Two owners, and what they own
 
 The media ids are the part that bites, because there are two places they can
