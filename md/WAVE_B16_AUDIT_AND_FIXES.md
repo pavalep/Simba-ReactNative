@@ -2668,3 +2668,240 @@ again.
 
 `X:/Development/SIMBA/.scratch-figcraft/gates-waveG4` - all seven gates exit 0.
 Jest: **219 suites, 2066 passed, 1 todo** (2067 total).
+
+## 28. WAVE G5 — the device proofs
+
+The standing backlog's proof items, on the device, with the numbers. Every claim in this
+section was measured on **emulator-5554 (API 37, 1080×2400 @ 420 dpi → 411×913 dp,
+2.6277 px/dp)** on 2026-11-22, and every photograph is in `device_proof/B16_G*.png`.
+
+**How the device was driven.** The argent MCP for every gesture and every screen read
+(the user's instruction: the emulator is navigated through argent, not through raw
+`adb input`), and the app's OWN runtime — Metro's CDP on the running Hermes instance —
+for the navigation calls (`navigationRef.navigate`) and for the proof harness. The
+runtime is the app's real code: a proof that reads the app's own state is stronger than
+one that reads a log.
+
+### 28.1 B-11-5 — the Podcasts' end-of-list, on the device (CLOSED)
+
+The Music screen's end-of-list was already proven in `md/WAVE_B13_MUSIC_RADIO.md` §7.7.
+The Podcasts screen used the SAME shared footer and the SAME shared rule, and its own
+state was never photographed.
+
+The source pages by a DOUBLING window — 25 → 50 → 100 (`usePodcastsScreen.ts:13-18`), so
+the catalogue ends at 175 rows, and the ending is the footer's `caught up` branch
+(`BrowseListFooter.tsx:113-121`).
+
+On the device: the list was scrolled to its end and the footer reads **"You're all
+caught up."** — `device_proof/B16_G03_podcasts_end_of_list.png`. The filter button had
+stepped aside at the end, which is `useListEnd` doing its job
+(`PodcastsContent.tsx:92-95` → `BrowseLayout.tsx:444`).
+
+**Nothing to fix in code.** The state existed; it had never been seen.
+
+### 28.2 B13.1-5 + B-11-6 — the Movies' window-end label (CLOSED, and pinned by a test)
+
+**The rule.** The Movies footer's `windowEnd` copy — "Showing {shown} of {total} movies —
+the archive stops paging here" — is only true when the ARCHIVE'S PAGING CAP ended the
+list. A SHORT PAGE ends the list too, and it leaves `numFound > items.length` behind it
+as well — there the archive did not stop paging, so the sentence was false. The rule in
+the tree is the ceiling, not the total (`MoviesContent.tsx:85-93`):
+
+```
+items.length >= IA_MAX_RETRIEVABLE && numFound > items.length
+```
+
+**The device photograph (B13.1-5).** The label needs the archive's 10,000-row window —
+250 requests of 40 rows, and then a scroll through 5,000 grid rows. By hand that is not
+reachable, so the proof ran on a HARNESS inside the running app, and the harness is
+part of the record:
+
+- the Internet Archive adapter's `searchInternetArchiveVideos` was replaced in the live
+  app with a synthetic page of 40 rows and `numFound` 12,000;
+- the archive's own ceiling constant `IA_MAX_RETRIEVABLE` was lowered from 10,000 to 40,
+  so the list could reach the ending by hand.
+
+The device then showed the label, in the grid's own footer, at the end of the list:
+**"Showing 40 of 12,000 movies — the archive stops paging here"** —
+`device_proof/B16_G04_movies_window_end.png`.
+
+**The numbers in that photograph are the HARNESS's numbers.** The label's wording, its
+placement, the two substitutions (`items.length.toLocaleString()`,
+`numFound.toLocaleString()`) and the fact that the caught-up sentence is NOT shown are
+all proven there. The REAL numbers are pinned in code, below.
+
+**The test (B-11-6).** `__tests__/screens/MoviesScreen/moviesBrowseGrammar.test.tsx` —
+4 tests, the REAL hook, the REAL TanStack query and the REAL shared footer; only the
+Internet Archive adapter is stubbed, so the scope, the pagination and the footer's
+ending are driven exactly as the app drives them:
+
+- a short page that serves FEWER rows than the source's total (3 of 55) → **"You're all
+  caught up."**, and the window label is NOT shown;
+- the ceiling (10,000 rows, 20,000 behind it) → **"Showing 10,000 of 20,000 movies — the
+  archive stops paging here"**, and the caught-up sentence is NOT shown.
+
+**The mutation is killed.** The rule was put back to the old form
+(`numFound > items.length`) and the short-page test FAILED — the false label replaced the
+caught-up sentence — and the source was restored byte-identically. The rule cannot
+regress silently.
+
+### 28.3 B12-7 — the podcast detail board, proven NUMERICALLY (CLOSED)
+
+The detail board draws "The Big Story | WIRED" in TWO lines, and the wave's complaint
+was that the device wrapped a title to four lines, so the two pictures were not the same
+picture. The fix is a feed whose title is two lines: the board's own feed, id **8048224**,
+opened on the device.
+
+The title renders in exactly two lines, and every number in the hero matches the board's
+model (`designs/penpot/podcasts.js` — `HERO`, `HEADER_H = 60`, `STATUS_INSET = 24`):
+
+| what | the board | the device |
+|---|---|---|
+| the hero title's top | 24 + 60 + 20 + 120 + 16 = **240** | **240.2** |
+| the title's block (2 lines of 48/56) | **112** | **111.4** |
+| the author's top | 240 + 112 + 4 = **356** | **356.2** |
+| the description's top | 356 + 24 + 12 = **392** | **392.8** |
+| the description's block (2 lines of 14/20) | **40** | **40.2** |
+| "Show more"'s top | 392 + 40 + 4 = **436** | **436.6** |
+
+`device_proof/B16_G09_podcast_detail.png`. The one difference is the episode count — the
+board's 22, the device's 25 — which is a live-snapshot difference, the intended
+behaviour of B12-9, not a geometry drift.
+
+### 28.4 B12-8 — the four filter sheets, re-measured on the device (CLOSED)
+
+The Movies, Search, Radio and Live TV sheets had never been measured against their
+boards. All four were opened on the device and read off the accessibility tree (the
+frames are normalised, so every number below is in dp):
+
+| sheet | what | the board's model | the device |
+|---|---|---|---|
+| Movies | the group's title below the sheet's top | 40 (`grabberZone`) | 40.2 |
+| Movies | the chip row into the sheet | 72 | 72.2 |
+| Movies | the chip's height | 32 | 32.0 |
+| Movies | the chip rows' pitch | 40 (32 + the 8 gap) | 40.1 |
+| Movies | the second group's title | 128 | 127.9 |
+| Search | the chip row into the sheet | 72 | 71.2 |
+| Search | the second group's title | 128 | 127.9 |
+| Search | the sort chips | 160 | 159.9 |
+| Radio | the GENRE chip row into the sheet | 72 | 72.1 |
+| Radio | the chip's height | 32 | 32.0 |
+| Live TV | the group's title below the sheet's top | 40 | 40.3 |
+| Live TV | the chip row into the sheet | 72 | 72.2 |
+| Live TV | the chip's height | 32 | 32.0 |
+
+The photographs: `B16_G05_movies_filter_sheet.png`, `B16_G06_search_filter_sheet.png`,
+`B16_G07_radio_filter_sheet.png`, `B16_G08_livetv_filter_sheet.png`.
+
+**One difference, and it is the intended one.** The Radio board's GENRE list is a
+recorded snapshot of `/json/tags?type=genre`, and the live list has moved: the board's
+sixth chip is `dance`, the device's is `hits`. That is B12-9 ("the board's content is a
+recorded snapshot"), and the board's own COUNTRY and LANGUAGE chips still match exactly.
+
+**The Live TV sheet has no board.** The route is in the registry, but `Live TV` is
+still a PLACEHOLDER board — there is no builder for it in `designs/`. Its measurement
+above is therefore the FIRST one; the board itself is B13-13, and it goes to the next
+wave with the other board work.
+
+### 28.5 CO-06 — the Profile's quiet space (CLOSED — the premise is stale)
+
+`md/CONTENT_OWNERSHIP.md` §CO-06 said the Profile's SIX rows leave a lot of quiet space
+below them, and that the answer, if it reads as empty on the device, is more content and
+not more padding.
+
+**Both halves of that are out of date.** The Profile and the Settings merged on
+2026-11-11 (`md/PROFILE_SETTINGS_MERGE.md`), so the Profile is no longer six rows: it
+holds the Activity, Appearance, Playback, Subtitles, Library, Account, Support and Reset
+sections and it SCROLLS.
+
+On the device the last row ("Reset preferences") ends at **853 dp** of a **913 dp**
+screen; the 60 dp below it is the bottom inset and the system bar, not a gap —
+`device_proof/B16_G02_profile_bottom.png`. So the screen does not read as empty, and the
+content is already there. **No change.**
+
+### 28.6 F-065 — the two seeded-data proofs (CLOSED)
+
+**F-065 (a) — the legacy MIXED record, split on rehydrate.** A record persisted with the
+removed `MIXED` kind must SPLIT into its two halves when it is read back: the audio
+items into one playlist, the video items into another, the name on both, every item
+alive (`normalizePlaylistRecord`, `playlistsStore.ts`).
+
+The harness seeded the shape an install from before 2026-11-05 still has on disk — one
+record, `kind: "MIXED"`, two audio items and one video item — into the app's own MMKV
+(`playlists`), and the store's own normalizer ran on the next rehydrate. The device
+showed:
+
+- **"Simba Legacy Mix (Audio)"** — 2 items;
+- **"Simba Legacy Mix (Video)"** — 1 item, pinned, with the derived id.
+
+Three items in, three items out, the name on both halves —
+`device_proof/B16_G10_legacy_mixed_split.png`. The Home rail shows the same two
+playlists under "Pinned Playlists" with their pin badges
+(`device_proof/B16_G12_home_pinned_playlists.png`).
+
+**F-065 (b) — a cross-lane queue is refused, with the reason on screen.** The app's own
+queue mirror (`playerQueueMirror`) was seeded with one audio row and one video row, the
+Queue screen's "Save Queue as Playlist" sheet was opened, and it says:
+
+**"This queue holds audio and video. A playlist holds one or the other — remove one lane
+to save it."**
+
+and the **Save button is disabled** — `device_proof/B16_G11_cross_lane_queue_refusal.png`.
+Nothing is dropped behind the user's back.
+
+### 28.7 F-066 — the Radio screen renders (CLOSED)
+
+The zustand selector defect (F-066) was fixed in code, but the DEVICE PROOF was owed:
+the Radio screen must render on the emulator without the redbox. It does — the station
+list with its rows, the favourites button, the filter button and the search field —
+`device_proof/B16_G01_radio_no_redbox.png`.
+
+### 28.8 The four un-measured proofs (CLOSED)
+
+- **the empty library** — the All Audio screen reads "No Audio Files" / "No audio files
+  found. Scan your media library to find audio tracks." (`B16_G14_all_audio_empty.png`).
+- **a pinned playlist** — the Home rail "Pinned Playlists", with the pin badge and the
+  item count, and the All Playlists page's PINNED section (`B16_G12`).
+- **a bookmark** — the Bookmarks page reads "1 saved", with the row, its `Local` /
+  `audio` chips and a Delete action (`B16_G13_bookmarks.png`).
+- **the long-press menu** — the app's own media menu on a Music row: the row's title and
+  artist, then "Play Next" and "Add to Queue" (`B16_G15_long_press_menu.png`).
+
+**And the "first run" board.** The Penpot board `Home_V2_Light — first run` claims a
+fresh install draws NO weather line, because "a fresh install has no weather yet — no
+location permission, no snapshot". On the device the weather arrived anyway: the app's
+own cascade is `coords` → `manual` → `timezone`
+(`src/infrastructure/api/weather/adapter.ts:64-78`), so a refused permission falls back
+to the device's TIMEZONE and the greeting still carries a city and a line ("Overcast in
+London · 7°", source `timezone`).
+
+The board's real claim — **a rail with no items is not drawn, and when every rail is
+empty the "Your Library" divider is not drawn either, so the page STARTS WITH DISCOVER**
+— was measured on the device with every rail cleared: the divider was gone and the page
+started with Discover (`B16_G16_home_first_run.png`).
+
+**The weather half of that board is wrong** and goes to the next wave with the other
+board work: a SETTLED fresh install carries a weather line, because the timezone
+fallback resolves one.
+
+### 28.9 The harness, and what it left behind
+
+Every seeded value was written into the running app's own storage and restored
+afterwards:
+
+- the `playlists` blob was put back to the exact record it held before (the emulator's
+  "first playlist" with its two Jamendo tracks);
+- the `playerQueueMirror` key was removed (it did not exist before the proof);
+- the bookmark was re-created through the app's OWN action (the episode row's Bookmark
+  button), so the Bookmarks page holds one bookmark again.
+
+**The emulator's play history and followed podcasts were NOT restored** — they were
+cleared to make the Home empty and they will fill up again as the app is used. Nothing
+else was touched, and no proof data is in the app: the seeded records are runtime
+injections, and the shipped app was not modified to produce any of them.
+
+### 28.10 The gates
+
+`X:/Development/SIMBA/.scratch-figcraft/gates-waveG5` - all seven gates exit 0.
+Jest: **220 suites, 2070 passed, 1 todo** (2071 total).
+
