@@ -55,6 +55,7 @@ export function useLiveTVFavoriteActions() {
       url: row.url,
       image: row.image || '',
       subtitle: row.subtitle,
+      ...(row.headers ? {headers: row.headers} : {}),
       addedAt: new Date().toISOString(),
     });
   }, []);

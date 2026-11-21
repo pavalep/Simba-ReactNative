@@ -35,6 +35,14 @@ export interface ChannelRow {
   url: string;
   image: string; // logo
   subtitle: string; // "Sports · US"
+  /**
+   * The request headers the playlist declared for this stream, if any.
+   *
+   * They are part of the channel, not of the app: they say how the
+   * SOURCE wants its stream fetched, and a launch that dropped them
+   * asked a provider that checks them for a stream it would refuse.
+   */
+  headers?: Record<string, string>;
 }
 
 /**
@@ -58,6 +66,7 @@ export function toRow(channel: IPTVChannelResult): ChannelRow {
     url: channel.url,
     image: channel.image || '',
     subtitle: channelSubtitle(channel),
+    ...(channel.headers ? {headers: channel.headers} : {}),
   };
 }
 
@@ -69,6 +78,10 @@ export function favToRow(fav: LiveFavoriteItem): ChannelRow {
     url: fav.url,
     image: fav.image,
     subtitle: fav.subtitle,
+    // A saved channel keeps the headers it was saved with: a favourite
+    // of a stream whose provider checks its User-Agent has to play the
+    // same way the browser played it.
+    ...(fav.headers ? {headers: fav.headers} : {}),
   };
 }
 
@@ -123,6 +136,9 @@ export function channelLaunchOptions(row: ChannelRow) {
     mediaKind: 'live-tv' as const,
     mediaLane: 'video' as const,
     ...(row.image ? {thumbnailPath: row.image} : {}),
+    // The headers the playlist declared for this stream. They ride the
+    // LAUNCH, because they are how the source wants the stream fetched.
+    ...(row.headers ? {headers: row.headers} : {}),
   };
 }
 

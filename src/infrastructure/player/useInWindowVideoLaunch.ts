@@ -60,6 +60,10 @@ export function useInWindowVideoLaunch(): void {
       type: 'video',
       startPositionMs: session.startPositionMs,
       requestId: String(session.sessionId),
+      // The request headers the source declared for this stream. The
+      // payload is rebuilt from the session alone, so they have to be
+      // in the session to be in the launch.
+      ...(session.headers ? {headers: session.headers} : {}),
     };
   }, [session]);
 

@@ -73,6 +73,9 @@ export function buildIPTVCatalogue(
       category,
       categoryId,
       isPlayable: true,
+      // The headers the playlist declared for this stream, when it
+      // declared any.
+      ...(entry.headers ? {headers: entry.headers} : {}),
     });
   }
 

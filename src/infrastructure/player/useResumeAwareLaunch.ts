@@ -305,6 +305,12 @@ export function useResumeAwareLaunch(
           mediaLane: mediaLane ?? bridgeOpts.type,
           ...(provider ? {provider} : {}),
           ...(thumbnailPath ? {thumbnailPath} : {}),
+          // The request headers the source declared for this stream.
+          // They go on the SESSION because the in-window video loader
+          // rebuilds the launch payload from the session alone — a
+          // video launch that dropped them would fetch the stream
+          // without the headers its provider asked for.
+          ...(bridgeOpts.headers ? {headers: bridgeOpts.headers} : {}),
         });
 
         // V20 Phase C — an audio launch shows the full player.

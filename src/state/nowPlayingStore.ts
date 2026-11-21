@@ -95,6 +95,15 @@ export interface NowPlaying {
   readonly provider?: string;
   /** Artwork URI, when known — carried so the shelf can render a thumb. */
   readonly thumbnailPath?: string;
+  /**
+   * The request headers the source declared for this stream, if any.
+   *
+   * They are on the SESSION because the in-window video loader rebuilds
+   * the launch payload from the session alone: without them here, the
+   * video lane would fetch the stream without the headers the provider
+   * asked for.
+   */
+  readonly headers?: Record<string, string>;
   /** Monotonic id of this session. Bumped per launch. */
   readonly sessionId: number;
 }

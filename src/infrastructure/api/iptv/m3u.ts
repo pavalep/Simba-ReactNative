@@ -52,6 +52,20 @@ export interface IPTVM3UEntry {
   logo: string;
   /** The `group-title` — the category id, or 'Undefined'. */
   group: string;
+  /**
+   * The request headers the playlist declared for this stream, if any.
+   *
+   * A playlist can tell the player how to FETCH a stream, not only what
+   * to play: `#EXTVLCOPT` lines carry a `User-Agent` and a `Referer` for
+   * the providers that check them. Measured on the live index
+   * (2026-11-21): 999 of them across 12,396 entries, and every one of
+   * them is one of those two.
+   *
+   * They used to be dropped: the parser skipped every comment line, and
+   * a stream whose provider demands its own User-Agent was then asked
+   * for without one.
+   */
+  headers?: Record<string, string>;
 }
 
 /** The attribute pattern every M3U entry uses: `key="value"`. */
@@ -67,6 +81,27 @@ const RESOLUTION_PATTERN = /\s*\(\d{3,4}p\)/g;
 
 /** Only an http(s) URL can be played by the app's player. */
 const PLAYABLE_URL = /^https?:\/\//i;
+
+/** The directive that opens a header block. */
+const EXTVLCOPT_PREFIX = '#EXTVLCOPT:';
+
+/**
+ * The `#EXTVLCOPT` directives the app forwards, and the HTTP header each
+ * one becomes.
+ *
+ * ONLY the directives that are HTTP request HEADERS are forwarded. The
+ * playlist uses `#EXTVLCOPT` for transport settings too (a proxy, an RTSP
+ * option), and those are not headers: forwarding them as headers would put
+ * nonsense in front of the provider.
+ *
+ * The two keys below are the two the source actually uses. Measured on the
+ * live index (2026-11-21): of 999 `#EXTVLCOPT` directives, every one is
+ * `http-user-agent` or `http-referrer`.
+ */
+const EXTVLCOPT_HEADERS: Record<string, string> = {
+  'http-user-agent': 'User-Agent',
+  'http-referrer': 'Referer',
+};
 
 /**
  * The country code of a channel, read from its id.
@@ -140,10 +175,24 @@ export function parseIPTVM3U(text: string): IPTVM3UEntry[] {
     // ends this entry, so an entry with no URL of its own has no URL
     // (it does not borrow the next channel's stream).
     let url = '';
+    const headers: Record<string, string> = {};
     for (let j = i + 1; j < lines.length; j++) {
       const candidate = lines[j].trim();
       if (!candidate) continue;
       if (candidate.startsWith('#EXTINF')) break;
+      if (candidate.startsWith(EXTVLCOPT_PREFIX)) {
+        // A directive for THIS entry. It sits between the `#EXTINF` line
+        // and the URL line, which is where the playlist puts it.
+        const directive = candidate.slice(EXTVLCOPT_PREFIX.length);
+        const eq = directive.indexOf('=');
+        if (eq > 0) {
+          const key = directive.slice(0, eq).trim().toLowerCase();
+          const value = directive.slice(eq + 1).trim();
+          const header = EXTVLCOPT_HEADERS[key];
+          if (header && value) headers[header] = value;
+        }
+        continue;
+      }
       if (candidate.startsWith('#')) continue;
       url = candidate;
       break;
@@ -157,6 +206,10 @@ export function parseIPTVM3U(text: string): IPTVM3UEntry[] {
       url,
       logo: (attributes['tvg-logo'] ?? '').trim(),
       group: (attributes['group-title'] ?? '').trim(),
+      // Only when there are any: an entry with no directives must not
+      // grow an empty object that every reader would then have to check
+      // for.
+      ...(Object.keys(headers).length > 0 ? {headers} : {}),
     });
   }
 

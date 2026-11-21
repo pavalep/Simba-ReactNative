@@ -222,6 +222,14 @@ export interface IPTVChannelResult extends ApiMediaClassification {
    */
   categoryId: string;
   isPlayable: boolean;
+  /**
+   * The request headers the playlist declared for this stream, if any.
+   *
+   * They travel with the channel because they are part of HOW the source
+   * says to fetch it: a provider that checks its own User-Agent needs it
+   * on the request, and it belongs to the stream rather than to the app.
+   */
+  headers?: Record<string, string>;
 }
 
 export interface IPTVCategory {

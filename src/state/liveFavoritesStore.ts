@@ -22,6 +22,14 @@ export interface LiveFavoriteItem {
   subtitle: string;
   codec?: string;
   bitrate?: number;
+  /**
+   * The request headers the source declared for this stream, if any.
+   *
+   * Only a TV channel has them: the radio directories do not publish
+   * per-stream request headers. A saved channel keeps them so it plays
+   * the way the browser played it.
+   */
+  headers?: Record<string, string>;
   addedAt: string; // ISO date string
 }
 

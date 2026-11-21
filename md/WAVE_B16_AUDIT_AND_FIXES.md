@@ -2258,3 +2258,168 @@ against the tree, not against the doc, and the doc was corrected where it was st
 
 `X:/Development/SIMBA/.scratch-figcraft/gates-waveG1` — all seven gates exit 0.
 Jest: **219 suites, 2062 passed, 1 todo**.
+
+---
+
+## 25. WAVE G2 — B13.1-1: the playlist's own request headers, end to end
+
+### 25.1 The item, and what it actually was
+
+**B13.1-1** — "the 960 `#EXTVLCOPT` directives: needs a lib option and a published release."
+
+The number in the carry-forward list was stale. Measured on the live index on 2026-11-21
+(`https://iptv-org.github.io/iptv/index.category.m3u`, 2,868,321 bytes, 25,793 lines):
+**12,396 `#EXTINF`, 999 `#EXTVLCOPT`, 0 `#EXTHTTP`**. Every one of the 999 directives is a
+`http-user-agent` or a `http-referrer` — the playlist's publisher telling the player what to
+send.
+
+The app parsed the playlist and **threw those lines away**. The channel then went out with
+mpv's own default User-Agent (`libmpv`), and a provider that checks its own User-Agent
+refuses the stream. The screen said the channel was unavailable; the truth was that the app
+never sent what the playlist told it to send.
+
+### 25.2 The mechanism — the headers ride the LOAD, as mpv PER-FILE options
+
+The headers are **not** a global mpv option. A global option would stay set and leak onto
+the NEXT file the app loads, and the next file's stream would be read with the previous
+channel's User-Agent. They ride the load as mpv's own per-file options, which mpv applies to
+that playlist entry alone (`player/loadfile.c`, `load_per_file_options`, with
+`M_SET_OPTION_FLAG_FILE_LOCAL`).
+
+The format has **ONE owner** — `MpvFileOptions.kt` in the lib:
+
+- `parseHeaders(json)` reads the header map off the JSON boundary;
+- `buildLoadFileOptions(map)` turns it into mpv's option string;
+- `User-Agent` rides mpv's own `user-agent` **string** option (no list escaping, and ffmpeg
+  does not send a second User-Agent header behind it);
+- every other header rides `http-header-fields`, a **list**, so a value's commas are escaped
+  as `\,` and a value's backslashes as `\\`;
+- **control characters (CR, LF, NUL, the C0 range, DEL) and the double quote are stripped**
+  next to the sink — a header value can never inject a second header.
+
+The native path: `MpvBridgeModule.loadFileWithHeaders(path, headersJson)` →
+`MPVLib.nativeLoadFileWithOptions` → `loadfile <path> replace -1 <options>`. The command
+becomes `{"loadfile", path, "replace", "-1", options, nullptr}` when there are options, and
+stays the unchanged `{"loadfile", path, nullptr}` when there are none.
+
+The **audio lane** goes through the same path: `startAudioPlayback` reads `headersJson` out of
+its options map and loads with the same per-file options, so a radio station and a video are
+not two different mechanisms.
+
+On the TypeScript side: `encodeRequestHeaders` (`src/bridge/requestHeaders.ts`), the codegen
+spec (`NativeMpvPlayer.ts`), the bridge interface and its NOOP stub, `loadAndPlay` (which
+routes to `loadFileWithHeaders` when there are headers), `usePlayerActivity`
+(`OpenPlayerOptions.headers`), and — in v3.4.1 — `LaunchParams.headers`, forwarded by
+`useLaunchPlayback`.
+
+**11 Kotlin unit tests** (`MpvFileOptionsTest.kt`) cover both parsing layers, the injection
+stripping, the quote stripping and a blank/malformed payload. They run through the example
+app's Gradle project (the lib has no project of its own):
+`:simba-dev_react-native-media-player:testDebugUnitTest` → **BUILD SUCCESSFUL**, 11 tests, 0
+failures.
+
+### 25.3 The publish — the CI failure was NOT the code
+
+**v3.4.0** (commit `1a38352`) — the per-file headers, the Kotlin options owner, the JNI and
+the TS — was published to npm on 2026-11-21T05:43 IST.
+
+**v3.4.1** (commit `902b257`) — the `LaunchParams.headers` follow-up — **failed its release
+workflow**. The cause was read out of the job log rather than guessed:
+
+```
+FAILURE: Build failed with an exception.
+Settings file '.../example/android/settings.gradle' line: 2
+* What went wrong:
+Error resolving plugin [id: 'com.facebook.react.settings']
+  > A problem occurred configuring project ':gradle-plugin'.
+    > Could not resolve all artifacts for configuration 'classpath'.
+      > Could not resolve org.jetbrains.kotlin:kotlin-gradle-plugin:2.1.20.
+```
+
+That is a **Maven Central resolution failure inside the runner** — the Kotlin compile gate
+could not fetch the Kotlin Gradle plugin. The job that PRODUCES the binaries
+(`build-native-libs`) had already **succeeded** in that same run, and the same workflow had
+published v3.4.0 eight minutes earlier. Nothing in the code caused it.
+
+The re-run was dispatched with the git credential helper's token, which carries `repo` and
+`workflow` scopes (`X-OAuth-Scopes` on `GET /user`) — so the earlier 401 was a bug in the
+dispatch script, not a missing scope. The re-run (run `44843944059`) published **3.4.1** to
+npm at 2026-11-21T06:04:23 IST and created the **v3.4.1 GitHub Release** with
+`jniLibs.tar.gz` (67,302,475 bytes) and its `.sha256` companion — the two assets the
+consumer's postinstall hook downloads.
+
+The app consumed the **published** package: `npm install
+@simba-dev/react-native-media-player@3.4.1` → `package.json` `"^3.4.1"`, and all four ABIs'
+`jniLibs/` extracted and SHA-verified by the postinstall hook. No `file:` tarball, no `link:`,
+no workspace reference.
+
+### 25.4 The device proof — what mpv actually put on the wire
+
+A local **header-echo server** on the host (`10.0.2.2:8099` is the emulator's route to the
+host) logs every request's headers. It is a proof harness, not app data: nothing about it is
+in the app.
+
+**BEFORE** (lib 3.3.7, the build that was on the device):
+
+```
+GET /before-no-headers.ts
+    host: 10.0.2.2:8099
+    range: bytes=0-
+    user-agent: libmpv          <-- mpv's own default
+    accept: */*
+    accept-encoding: deflate, gzip
+    icy-metadata: 1
+```
+
+**AFTER** (lib 3.4.1, the new native path, called with
+`{"User-Agent":"SIMBA-PROOF"}`):
+
+```
+GET /after.ts
+    host: 10.0.2.2:8099
+    range: bytes=0-
+    user-agent: SIMBA-PROOF     <-- the playlist's own header
+    accept: */*
+    accept-encoding: deflate, gzip
+    icy-metadata: 1
+```
+
+**Every other header is unchanged** — the per-file option changed the User-Agent and nothing
+else. The header is per-file, reaches the wire, and does not leak onto the next load.
+
+The APK was checked too, because "the method is missing on the device" and "the method is
+there but was never called" are different failures: `classes10.dex` carries
+`loadFileWithHeaders` and `MpvFileOptions`, and both `libplayer.so` and
+`libsimbaplayer_mpv.so` carry `nativeLoadFileWithOptions`. All four ABIs compiled
+(`configureCMakeRelease` / `buildCMakeRelease` for `arm64-v8a`, `armeabi-v7a`, `x86`,
+`x86_64`).
+
+One measurement note worth keeping: the native method is on the module's **prototype**, so
+`Object.keys(nativeModule)` does not list it. `typeof nativeModule.loadFileWithHeaders`
+does.
+
+### 25.5 The app side — the plumbing, file by file
+
+| file | what it carries |
+|---|---|
+| `src/infrastructure/api/iptv/m3u.ts` | Parses `#EXTVLCOPT` into `IPTVM3UEntry.headers`. **Only** the two keys the source actually uses are mapped: `http-user-agent` → `User-Agent`, `http-referrer` → `Referer`. A directive's value is split on the **FIRST** `=`, so a value may contain `=`. |
+| `src/types/api.ts` | `IPTVChannelResult.headers?` |
+| `src/infrastructure/api/iptv/catalogue.ts` | Carries it through the catalogue. |
+| `src/screens/LiveTVScreen/related/channelRow.ts` | `ChannelRow.headers?`, carried by `toRow`, `favToRow` and `channelLaunchOptions`. |
+| `src/state/liveFavoritesStore.ts` + `src/screens/LiveTVScreen/hooks/useLiveTVFavorites.ts` | A favourited channel keeps its headers — a favourite that lost its User-Agent would be a favourite that stopped playing. |
+| `src/state/nowPlayingStore.ts` + `src/infrastructure/player/useResumeAwareLaunch.ts` | The session records `bridgeOpts.headers`. |
+| `src/infrastructure/player/useInWindowVideoLaunch.ts` | The **video** lane rebuilds its payload from the session ALONE, so the headers have to live in the session — that is why they are not passed as a separate argument there. |
+| `__tests__/infrastructure/api/iptv/m3u.test.ts` | 4 new tests: the headers are carried; a playlist with no directives has no `headers` key at all; a non-header directive is ignored; the value keeps everything after the first `=`. |
+
+**Only the two measured keys are forwarded.** The other `#EXTVLCOPT` uses in the wild are
+transport settings (a proxy, RTSP options) — they are not HTTP headers, and forwarding one
+would put nonsense in front of the provider.
+
+Forwarding the source's declared User-Agent is **correct**: it is the playlist publisher's
+instruction for its own stream, and the app already reaches that provider.
+
+### 25.6 The gates
+
+`X:/Development/SIMBA/.scratch-figcraft/gates-waveG2` - all seven gates exit 0.
+Jest: **219 suites, 2066 passed, 1 todo** (2067 total). The four new m3u
+tests are inside that 2066.

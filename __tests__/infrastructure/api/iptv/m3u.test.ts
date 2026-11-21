@@ -126,6 +126,67 @@ describe('iptv m3u — the parser', () => {
     expect(parseIPTVM3U('#EXTM3U\n')).toEqual([]);
   });
 
+
+  it('carries the request headers the playlist declared', () => {
+    // Measured on the live index (2026-11-21): 999 `#EXTVLCOPT`
+    // directives across 12,396 entries, every one of them a
+    // `http-user-agent` or a `http-referrer`. A provider that checks its
+    // own User-Agent refuses a stream asked for without one, so these
+    // lines are the difference between a channel that plays and one that
+    // does not.
+    const playlist = [
+      '#EXTM3U',
+      '#EXTINF:-1 tvg-id="A.us@SD" group-title="News",A',
+      '#EXTVLCOPT:http-user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+      '#EXTVLCOPT:http-referrer=https://example.com',
+      'https://example.com/a.m3u8',
+    ].join('\n');
+
+    const entry = parseIPTVM3U(playlist)[0];
+    expect(entry.headers).toEqual({
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+      Referer: 'https://example.com',
+    });
+  });
+
+  it('gives an entry with no directives no headers at all', () => {
+    const playlist = [
+      '#EXTM3U',
+      '#EXTINF:-1 tvg-id="A.us@SD" group-title="News",A',
+      'https://example.com/a.m3u8',
+    ].join('\n');
+
+    const entry = parseIPTVM3U(playlist)[0];
+    expect(entry.headers).toBeUndefined();
+  });
+
+  it('ignores a directive that is not an HTTP request header', () => {
+    // The playlist uses `#EXTVLCOPT` for transport settings too, and a
+    // proxy is not a header. Forwarding one as a header would put
+    // nonsense in front of the provider.
+    const playlist = [
+      '#EXTM3U',
+      '#EXTINF:-1 tvg-id="A.us@SD" group-title="News",A',
+      '#EXTVLCOPT:http-proxy=http://proxy.example.com:3128',
+      'https://example.com/a.m3u8',
+    ].join('\n');
+
+    expect(parseIPTVM3U(playlist)[0].headers).toBeUndefined();
+  });
+
+  it('keeps everything after the first equals in a directive value', () => {
+    const playlist = [
+      '#EXTM3U',
+      '#EXTINF:-1 tvg-id="A.us@SD" group-title="News",A',
+      '#EXTVLCOPT:http-referrer=https://example.com/?a=b&c=d',
+      'https://example.com/a.m3u8',
+    ].join('\n');
+
+    expect(parseIPTVM3U(playlist)[0].headers).toEqual({
+      Referer: 'https://example.com/?a=b&c=d',
+    });
+  });
+
   it('reads the country code out of the id', () => {
     expect(countryCodeFromIPTVId('3ABNKids.us@SD')).toBe('us');
     expect(countryCodeFromIPTVId('AnimaxAsia.sg@Taiwan')).toBe('sg');
